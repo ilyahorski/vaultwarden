@@ -47,6 +47,7 @@ export interface CellData {
   type: CellType;
   item: ItemType;
   enemy: EnemyType;
+  enemyHp?: number;
   isRevealed: boolean;
   isVisible: boolean;
 }
@@ -77,7 +78,9 @@ export interface Player {
   gold: number;
   name: string;
   class: ClassType;
-  inventory: PotionType[];
+  inventory: (PotionType | WeaponType | ArmorType)[]; // Обновили тип инвентаря
+  equippedWeapon: WeaponType | null; // <-- НОВОЕ ПОЛЕ
+  equippedArmor: ArmorType | null;   // <-- НОВОЕ ПОЛЕ
   dungeonLevel: number;
 }
 
@@ -104,7 +107,7 @@ export interface PotionStats {
 export interface GearStats {
   val: number;
   name: string;
-  type: string;
+  type: 'atk' | 'def'; // Уточнили тип
 }
 
 // --- Интерфейс артефакта ---

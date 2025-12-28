@@ -1,5 +1,5 @@
 import type { CellData, Player, LogEntry, CombatTarget } from '../types';
-import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS } from '../constants';
+import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX_INVENTORY_SIZE } from '../constants';
 import type { PotionType, WeaponType, ArmorType } from '../types';
 
 interface UsePlayerMovementProps {
@@ -178,7 +178,7 @@ export function usePlayerMovement({
       if (itemKey.includes('potion')) {
         const potion = POTION_STATS[itemKey as PotionType];
 
-        if (updates.inventory.length < 5) {
+        if (updates.inventory.length < MAX_INVENTORY_SIZE) {
           updates.inventory = [...updates.inventory, itemKey as PotionType];
           addLog(`Подобрано: ${potion.name}`, 'loot');
         } else {

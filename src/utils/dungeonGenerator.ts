@@ -1,5 +1,5 @@
-import type { CellData, ItemType } from '../types';
-import { GRID_SIZE } from '../constants';
+import type { CellData, ItemType, EnemyType } from '../types';
+import { GRID_SIZE, MONSTER_STATS } from '../constants';
 import { rand, createEmptyGrid } from './index';
 
 interface Room {
@@ -84,9 +84,17 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
       const ey = rand(room.y, room.y + room.h - 1);
       if (!newGrid[ey][ex].item) {
         const enemyRoll = rand(0, 100);
-        if (enemyRoll + levelIndex > 95) newGrid[ey][ex].enemy = 'boss';
-        else if (enemyRoll + levelIndex * 2 > 80) newGrid[ey][ex].enemy = 'orc';
-        else newGrid[ey][ex].enemy = 'goblin';
+        let enemyType: EnemyType = 'goblin';
+        
+        if (enemyRoll + levelIndex > 95) enemyType = 'boss';
+        else if (enemyRoll + levelIndex * 2 > 80) enemyType = 'orc';
+        
+        newGrid[ey][ex].enemy = enemyType;
+        
+        // Расчет и сохранение HP врага
+        const stats = MONSTER_STATS[enemyType];
+        const maxHp = Math.floor(stats.hp * (1 + (levelIndex - 1) * 0.1));
+        newGrid[ey][ex].enemyHp = maxHp;
       }
     }
   });

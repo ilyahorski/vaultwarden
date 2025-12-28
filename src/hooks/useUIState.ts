@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CombatTarget, ActiveMenu } from '../types';
 
-export function useUIState() {
+export const useUIState = () => {
   const [combatTarget, setCombatTarget] = useState<CombatTarget | null>(null);
   const [activeMenu, setActiveMenu] = useState<ActiveMenu>('main');
   const [mainMenuIndex, setMainMenuIndex] = useState(0);
@@ -9,6 +9,9 @@ export function useUIState() {
   const [activeRoll, setActiveRoll] = useState<number | null>(null);
   const [selectedTool, setSelectedTool] = useState<string>('wall');
   const [isMovingEnemy, setIsMovingEnemy] = useState<{ x: number; y: number } | null>(null);
+  
+  // --- НОВОЕ: Состояние открыто ли меню игрока ---
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return {
     combatTarget,
@@ -24,6 +27,9 @@ export function useUIState() {
     selectedTool,
     setSelectedTool,
     isMovingEnemy,
-    setIsMovingEnemy
+    setIsMovingEnemy,
+    // --- Экспортируем новое состояние ---
+    isMenuOpen,
+    setIsMenuOpen
   };
-}
+};

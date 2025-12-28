@@ -1,73 +1,108 @@
 import React from 'react';
-import { Sword, Zap, Ghost } from 'lucide-react';
-import type { ClassType, ClassData, MonsterStats, PotionType, PotionStats, GearStats, Artifact } from '../types';
+import { Sword, Shield, Zap } from 'lucide-react';
+import type { ClassData, MonsterStats, PotionStats, GearStats, Artifact } from '../types';
 
 // --- Конфигурация карты ---
 export const GRID_SIZE = 40;
 export const CELL_SIZE = 15;
 export const VISIBILITY_RADIUS = 3;
 export const AGGRO_RADIUS = 6;
+export const MAX_INVENTORY_SIZE = 100;
+export const SAVE_KEY = 'dungeon_save_v1';
 
-// --- Классы персонажей ---
-export const CLASSES: Record<ClassType, ClassData> = {
+// --- Стартовый игрок ---
+export const INITIAL_PLAYER = {
+  x: 1,
+  y: 1,
+  hp: 100,
+  maxHp: 100,
+  mp: 50,
+  maxMp: 50,
+  atk: 5,
+  def: 0,
+  moves: 4,
+  maxMoves: 4,
+  xp: 0,
+  level: 1,
+  nextLevelXp: 100,
+  gold: 0,
+  name: 'Hero',
+  class: 'warrior',
+  inventory: [],
+  equippedWeapon: null,
+  equippedArmor: null,
+  dungeonLevel: 1
+};
+
+// --- Характеристики снаряжения ---
+export const GEAR_STATS: Record<string, GearStats> = {
+  // Оружие
+  weapon_weak: { val: 2, name: 'Ржавый меч', type: 'atk' },
+  weapon_mid: { val: 5, name: 'Стальной меч', type: 'atk' },
+  weapon_strong: { val: 9, name: 'Мифриловый клинок', type: 'atk' },
+  // Броня
+  armor_weak: { val: 1, name: 'Кожаная куртка', type: 'def' },
+  armor_mid: { val: 3, name: 'Кольчуга', type: 'def' },
+  armor_strong: { val: 6, name: 'Латный доспех', type: 'def' },
+};
+
+// --- Характеристики зелий ---
+export const POTION_STATS: Record<string, PotionStats> = {
+  potion_weak: { heal: 30, mana: 0, name: 'Малое зелье лечения', color: 'red', type: 'hp' },
+  potion_mid: { heal: 60, mana: 0, name: 'Среднее зелье лечения', color: 'red', type: 'hp' },
+  potion_strong: { heal: 100, mana: 0, name: 'Большое зелье лечения', color: 'red', type: 'hp' },
+  potion_mana: { heal: 0, mana: 30, name: 'Зелье маны', color: 'blue', type: 'mp' },
+};
+
+// --- Характеристики монстров ---
+export const MONSTER_STATS: Record<string, MonsterStats> = {
+  goblin: { hp: 30, atk: 8, xp: 20, gold: 5, name: 'Гоблин', color: 'green' },
+  orc: { hp: 60, atk: 15, xp: 50, gold: 15, name: 'Орк', color: 'emerald' },
+  boss: { hp: 150, atk: 25, xp: 200, gold: 100, name: 'Тёмный Рыцарь', color: 'purple' },
+};
+
+// --- Классы ---
+// (В React компонентах иконки создаются через React.createElement)
+export const CLASSES: Record<string, ClassData> = {
   warrior: {
     name: 'Воин',
-    hp: 120, maxHp: 120, mp: 20, maxMp: 20, atk: 14, def: 8,
+    hp: 120, maxHp: 120,
+    mp: 20, maxMp: 20,
+    atk: 8, def: 2,
     baseMoves: 4,
-    desc: 'Мастер ближнего боя. Высокая выживаемость.',
-    icon: React.createElement(Sword, { size: 32, className: 'text-orange-500' }),
+    desc: 'Мастер ближнего боя. Высокое здоровье и урон.',
+    icon: React.createElement(Sword, { size: 24 }),
     skills: [
-      { id: 'bash', name: 'Сокрушение', mpCost: 5, desc: 'Урон x1.5', dmgMult: 1.5 },
-      { id: 'rally', name: 'Второе дыхание', mpCost: 10, desc: '+20 HP', heal: 20 }
+      { id: 'heavy_strike', name: 'Тяжелый удар', mpCost: 5, desc: 'Наносит 200% урона', dmgMult: 2 },
+      { id: 'rage', name: 'Ярость', mpCost: 10, desc: 'Восстанавливает 20 HP и бьет врага', heal: 20, dmgMult: 1 }
     ]
   },
   mage: {
     name: 'Маг',
-    hp: 70, maxHp: 70, mp: 60, maxMp: 60, atk: 6, def: 3,
-    baseMoves: 5,
-    desc: 'Хрупкий, но обладает разрушительной магией.',
-    icon: React.createElement(Zap, { size: 32, className: 'text-blue-500' }),
+    hp: 70, maxHp: 70,
+    mp: 100, maxMp: 100,
+    atk: 4, def: 0,
+    baseMoves: 4,
+    desc: 'Владеет мощными заклинаниями, но слаб телом.',
+    icon: React.createElement(Zap, { size: 24 }),
     skills: [
-      { id: 'fireball', name: 'Огненный Шар', mpCost: 10, desc: 'Урон x2.5', dmgMult: 2.5 },
-      { id: 'drain', name: 'Вампиризм', mpCost: 15, desc: 'Урон x1.5 + Лечение 15', dmgMult: 1.5, heal: 15 }
+      { id: 'fireball', name: 'Огненный шар', mpCost: 15, desc: 'Мощный магический урон (300%)', dmgMult: 3 },
+      { id: 'heal', name: 'Лечение', mpCost: 20, desc: 'Восстанавливает 40 HP', heal: 40 }
     ]
   },
   rogue: {
-    name: 'Плут',
-    hp: 90, maxHp: 90, mp: 30, maxMp: 30, atk: 12, def: 5,
-    baseMoves: 6,
-    desc: 'Ловкий и быстрый. Критические удары.',
-    icon: React.createElement(Ghost, { size: 32, className: 'text-green-500' }),
+    name: 'Разбойник',
+    hp: 90, maxHp: 90,
+    mp: 40, maxMp: 40,
+    atk: 6, def: 1,
+    baseMoves: 5,
+    desc: 'Быстрый и ловкий. Умеет избегать ударов.',
+    icon: React.createElement(Shield, { size: 24 }),
     skills: [
-      { id: 'backstab', name: 'Удар в спину', mpCost: 8, desc: 'Урон x2.0', dmgMult: 2.0 },
-      { id: 'bandage', name: 'Перевязка', mpCost: 5, desc: '+25 HP', heal: 25 }
+      { id: 'backstab', name: 'Удар в спину', mpCost: 10, desc: 'Критический удар (250%)', dmgMult: 2.5 },
+      { id: 'quick_heal', name: 'Перевязка', mpCost: 10, desc: 'Быстрое лечение (+25 HP)', heal: 25 }
     ]
   }
-};
-
-// --- Статистика монстров ---
-export const MONSTER_STATS: Record<string, MonsterStats> = {
-  goblin: { hp: 20, atk: 8, xp: 20, gold: 15, name: 'Гоблин', color: 'text-green-500' },
-  orc: { hp: 50, atk: 15, xp: 50, gold: 40, name: 'Орк', color: 'text-red-500' },
-  boss: { hp: 150, atk: 30, xp: 200, gold: 300, name: 'Демон', color: 'text-purple-600' }
-};
-
-// --- Статистика зелий ---
-export const POTION_STATS: Record<PotionType, PotionStats> = {
-  potion_weak: { heal: 20, mana: 0, name: 'Малое зелье', color: 'bg-red-400', type: 'hp' },
-  potion_mid: { heal: 50, mana: 0, name: 'Среднее зелье', color: 'bg-red-500', type: 'hp' },
-  potion_strong: { heal: 100, mana: 0, name: 'Мощное зелье', color: 'bg-red-600', type: 'hp' },
-  potion_mana: { heal: 0, mana: 30, name: 'Эликсир Маны', color: 'bg-blue-500', type: 'mp' }
-};
-
-// --- Статистика снаряжения ---
-export const GEAR_STATS: Record<string, GearStats> = {
-  weapon_weak: { val: 15, name: 'Ржавый меч', type: 'atk' },
-  weapon_mid: { val: 25, name: 'Стальной меч', type: 'atk' },
-  weapon_strong: { val: 50, name: 'Меч Героя', type: 'atk' },
-  armor_weak: { val: 12, name: 'Кожаная куртка', type: 'def' },
-  armor_mid: { val: 20, name: 'Кольчуга', type: 'def' },
-  armor_strong: { val: 35, name: 'Латный доспех', type: 'def' },
 };
 
 // --- Редкие артефакты ---
@@ -79,27 +114,3 @@ export const RARE_ARTIFACTS: Artifact[] = [
   { name: 'Кольцо Власти', val: 500 }
 ];
 
-// --- Начальное состояние игрока ---
-export const INITIAL_PLAYER = {
-  x: 1,
-  y: 1,
-  hp: 100,
-  maxHp: 100,
-  mp: 20,
-  maxMp: 20,
-  atk: 10,
-  def: 5,
-  moves: 4,
-  maxMoves: 4,
-  xp: 0,
-  level: 1,
-  nextLevelXp: 100,
-  gold: 0,
-  name: 'Игрок',
-  class: 'warrior' as ClassType,
-  inventory: ['potion_weak' as const],
-  dungeonLevel: 1
-};
-
-// --- Ключ сохранения ---
-export const SAVE_KEY = 'dungeon_save_v1';

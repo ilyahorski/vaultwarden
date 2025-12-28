@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { Player, GameMode, ActiveMenu, ClassType, CombatTarget } from '../types';
+import type { GameMode, CombatTarget, ActiveMenu, Player } from '../types';
 import { CLASSES } from '../constants';
 
 interface UseKeyboardControlsProps {
@@ -8,16 +8,20 @@ interface UseKeyboardControlsProps {
   combatTarget: CombatTarget | null;
   activeMenu: ActiveMenu;
   mainMenuIndex: number;
-  setMainMenuIndex: (value: number | ((prev: number) => number)) => void;
+  setMainMenuIndex: (idx: number | ((prev: number) => number)) => void;
   subMenuIndex: number;
-  setSubMenuIndex: (value: number | ((prev: number) => number)) => void;
+  setSubMenuIndex: (idx: number | ((prev: number) => number)) => void;
   setActiveMenu: (menu: ActiveMenu) => void;
   player: Player;
   activeRoll: number | null;
   rollActionDie: () => void;
   movePlayer: (dx: number, dy: number) => void;
-  executeCombatAction: (combatTarget: CombatTarget, type: 'attack' | 'skill' | 'item', skillId?: string, itemId?: string) => void;
+  executeCombatAction: (target: CombatTarget, type: 'attack' | 'skill' | 'item', skillId?: string, itemId?: string) => void;
   setCombatTarget: (target: CombatTarget | null) => void;
+  
+  isMenuOpen: boolean;
+  setIsMenuOpen: (isOpen: boolean) => void;
+  useItem: (index: number) => void; // <-- Новый пропс
 }
 
 export function useKeyboardControls({
@@ -35,97 +39,124 @@ export function useKeyboardControls({
   rollActionDie,
   movePlayer,
   executeCombatAction,
-  setCombatTarget
+  setCombatTarget,
+  isMenuOpen,
+  setIsMenuOpen,
+  useItem // <--
 }: UseKeyboardControlsProps) {
-  
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (mode !== 'player' || !hasChosenClass) return;
-
-      // Бросок кубика на Shift
-      if (e.key === 'Shift') {
-        if (!(activeRoll !== null && player.moves > 0)) {
+      // 1. Бросок кубика (пробел)
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (activeRoll === null && mode === 'player') {
           rollActionDie();
         }
         return;
       }
 
+      // 2. Логика в бою
       if (combatTarget) {
-        e.preventDefault();
-        
+        if (activeRoll === null) return; 
+
         if (activeMenu === 'main') {
-          const count = 4;
-          if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev - 1 + count) % count);
-          else if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev + 1) % count);
-          else if (e.key === 'Enter' || e.key === 'ArrowRight') {
-            if (mainMenuIndex === 0) { 
-              if (e.key === 'Enter') executeCombatAction(combatTarget, 'attack'); 
-            }
-            else if (mainMenuIndex === 1) { 
-              setActiveMenu('skills'); 
-              setSubMenuIndex(0); 
-            }
-            else if (mainMenuIndex === 2) { 
-              setActiveMenu('items'); 
-              setSubMenuIndex(0); 
-            }
-            else if (mainMenuIndex === 3) { 
-              if (e.key === 'Enter') setCombatTarget(null); 
+          if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 3));
+          if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 3 ? prev + 1 : 0));
+          if (e.key === 'Enter') {
+            if (mainMenuIndex === 0) executeCombatAction(combatTarget, 'attack');
+            if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
+            if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
+            if (mainMenuIndex === 3) setCombatTarget(null); // Побег
+          }
+        } else if (activeMenu === 'skills') {
+          const skills = CLASSES[player.class].skills;
+          if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
+          if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
+          if (e.key === 'Escape') setActiveMenu('main');
+          if (e.key === 'Enter' && skills.length > 0) {
+            const skill = skills[subMenuIndex];
+            if (player.mp >= skill.mpCost) {
+              executeCombatAction(combatTarget, 'skill', skill.id);
             }
           }
-        } else if (activeMenu === 'skills' || activeMenu === 'items') {
-          const items = activeMenu === 'skills' 
-            ? CLASSES[player.class as ClassType].skills 
-            : Array.from(new Set(player.inventory));
-          const count = items.length;
-          
-          if (count === 0 && e.key === 'ArrowLeft') { 
-            setActiveMenu('main'); 
-            return; 
+        } else if (activeMenu === 'items') {
+          const items = player.inventory;
+          if (items.length === 0) {
+            if (e.key === 'Escape') setActiveMenu('main');
+            return;
           }
-          
-          if (count > 0) {
-            if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev - 1 + count) % count);
-            else if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev + 1) % count);
-            else if (e.key === 'ArrowLeft') setActiveMenu('main');
-            else if (e.key === 'Enter') {
-              if (activeMenu === 'skills') {
-                const skill = CLASSES[player.class as ClassType].skills[subMenuIndex];
-                if (player.mp >= skill.mpCost) executeCombatAction(combatTarget, 'skill', skill.id);
-              } else {
-                const item = items[subMenuIndex];
-                executeCombatAction(combatTarget, 'item', undefined, typeof item === 'string' ? item : undefined);
-              }
-            }
+          if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
+          if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
+          if (e.key === 'Escape') setActiveMenu('main');
+          if (e.key === 'Enter') {
+            // В бою используем item по ID (передаем только тип, т.к. в бою логика удаления своя)
+            executeCombatAction(combatTarget, 'item', undefined, items[subMenuIndex]);
           }
         }
         return;
       }
 
-      // Движение
-      if (['ArrowUp', 'w'].includes(e.key)) movePlayer(0, -1);
-      if (['ArrowDown', 's'].includes(e.key)) movePlayer(0, 1);
-      if (['ArrowLeft', 'a'].includes(e.key)) movePlayer(-1, 0);
-      if (['ArrowRight', 'd'].includes(e.key)) movePlayer(1, 0);
+      // 3. Логика Меню (вне боя)
+      if (isMenuOpen) {
+        if (activeMenu === 'main') {
+          if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 2));
+          if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 2 ? prev + 1 : 0));
+          if (e.key === 'Enter') {
+            if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
+            if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
+            if (mainMenuIndex === 2) setIsMenuOpen(false);
+          }
+          if (e.key === 'Escape') setIsMenuOpen(false);
+        } 
+        else if (activeMenu === 'skills') {
+          const skills = CLASSES[player.class].skills;
+          if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
+          if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
+          if (e.key === 'Escape') setActiveMenu('main');
+        } 
+        else if (activeMenu === 'items') {
+          const items = player.inventory;
+          if (items.length === 0) {
+            if (e.key === 'Escape') setActiveMenu('main');
+            return;
+          }
+          // Навигация
+          if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
+          if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
+          if (e.key === 'Escape') setActiveMenu('main');
+          
+          // Использование / Экипировка
+          if (e.key === 'Enter') {
+            useItem(subMenuIndex);
+            // После использования предмета список может уменьшиться
+            // Корректируем индекс, чтобы он не вышел за пределы
+            setSubMenuIndex(prev => Math.max(0, Math.min(prev, items.length - 2)));
+          }
+        }
+        return;
+      }
+
+      // 4. Обычное движение
+      if (mode === 'player' && hasChosenClass) {
+        if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+        if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+        if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
+        if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+        
+        if (e.key === 'Enter') {
+          setIsMenuOpen(true);
+          setActiveMenu('main');
+          setMainMenuIndex(0);
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
-    mode, 
-    hasChosenClass, 
-    combatTarget, 
-    activeMenu, 
-    mainMenuIndex, 
-    subMenuIndex, 
-    player, 
-    activeRoll,
-    rollActionDie,
-    movePlayer,
-    executeCombatAction,
-    setCombatTarget,
-    setMainMenuIndex,
-    setSubMenuIndex,
-    setActiveMenu
+    mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, 
+    subMenuIndex, player, activeRoll, rollActionDie, movePlayer, 
+    executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, useItem
   ]);
 }

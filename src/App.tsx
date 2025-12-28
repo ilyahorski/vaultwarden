@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -12,6 +12,7 @@ import { useFogOfWar } from './hooks/useFogOfWar';
 
 // Компоненты
 import { ClassSelection, PlayerHeader, EventLog, GameGrid, CombatMenu, MobileControls } from './components/game';
+import { PlayerMenu } from './components/game/PlayerMenu';
 import { Sidebar } from './components/editor';
 
 // Утилиты
@@ -33,7 +34,8 @@ export default function DungeonApp() {
     generateDungeon,
     selectClass,
     handleExport,
-    handleImport
+    handleImport,
+    useItem // <-- Получаем функцию
   } = useGameState();
 
   // UI состояние
@@ -44,8 +46,14 @@ export default function DungeonApp() {
     subMenuIndex, setSubMenuIndex,
     activeRoll, setActiveRoll,
     selectedTool, setSelectedTool,
-    isMovingEnemy, setIsMovingEnemy
+    isMovingEnemy, setIsMovingEnemy,
+    isMenuOpen, setIsMenuOpen
   } = useUIState();
+
+  // Автоскролл логов
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
 
   // ИИ врагов
   const { processEnemyTurn } = useEnemyAI({
@@ -126,7 +134,10 @@ export default function DungeonApp() {
     rollActionDie: handleRollActionDie,
     movePlayer,
     executeCombatAction,
-    setCombatTarget
+    setCombatTarget,
+    isMenuOpen, 
+    setIsMenuOpen,
+    useItem // <-- Передаем в хук
   });
 
   // Fog of War
@@ -181,6 +192,17 @@ export default function DungeonApp() {
                   onCellClick={handleCellClick}
                 />
 
+                {/* Меню игрока */}
+                {isMenuOpen && !combatTarget && (
+                  <PlayerMenu 
+                    player={player}
+                    activeMenu={activeMenu}
+                    mainMenuIndex={mainMenuIndex}
+                    subMenuIndex={subMenuIndex}
+                    onClose={() => setIsMenuOpen(false)}
+                  />
+                )}
+
                 {/* Меню боя */}
                 {combatTarget && (
                   <CombatMenu 
@@ -200,7 +222,7 @@ export default function DungeonApp() {
               </div>
 
               {/* Мобильные контроллеры */}
-              {!combatTarget && (
+              {!combatTarget && !isMenuOpen && (
                 <MobileControls onMove={movePlayer} />
               )}
             </div>

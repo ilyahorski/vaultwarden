@@ -69,8 +69,15 @@ export function useEnemyAI({
           }
 
           if (bestMove.x !== enemy.x || bestMove.y !== enemy.y) {
+            // Перемещаем врага вместе с его текущим HP
+            const currentHp = newGrid[enemy.y][enemy.x].enemyHp;
+
             newGrid[bestMove.y][bestMove.x].enemy = enemy.type;
+            newGrid[bestMove.y][bestMove.x].enemyHp = currentHp;
+            
             newGrid[enemy.y][enemy.x].enemy = null;
+            newGrid[enemy.y][enemy.x].enemyHp = undefined;
+            
             enemyMoved = true;
           }
         }
@@ -121,8 +128,16 @@ export function useEnemyAI({
             const cell = prevGrid[ny][nx];
             if (cell.type !== 'wall' && !cell.enemy && cell.type !== 'door') {
               const newGrid = prevGrid.map(row => row.map(c => ({ ...c })));
+              
+              // Перемещаем босса с сохранением HP
+              const currentHp = newGrid[bossPos.y][bossPos.x].enemyHp;
+              
               newGrid[ny][nx].enemy = 'boss';
+              newGrid[ny][nx].enemyHp = currentHp;
+              
               newGrid[bossPos.y][bossPos.x].enemy = null;
+              newGrid[bossPos.y][bossPos.x].enemyHp = undefined;
+              
               return newGrid;
             }
           }

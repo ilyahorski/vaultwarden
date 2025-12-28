@@ -107,16 +107,26 @@ export function useCombat({
     }
 
     let isVictory = false;
+    
+    // Новая логика расчета урона
     if (playerDmg > 0) {
       addLog(`${prefix} ${actionName} по ${enemyStats.name}: ${playerDmg} ур.`, 'combat');
+      
+      // Берем текущее HP врага из клетки, либо макс. HP, если оно не задано
+      const currentEnemyHp = grid[combatTarget.y][combatTarget.x].enemyHp ?? scaledEnemyHp;
+      const newEnemyHp = currentEnemyHp - playerDmg;
 
-      let killThreshold = (playerDmg / scaledEnemyHp) * 100 + 20;
-      if (isSuccess) killThreshold += 30;
-      if (isFail) killThreshold -= 20;
-
-      const rollCheck = Math.random() * 100;
-      if (rollCheck < killThreshold) {
+      if (newEnemyHp <= 0) {
         isVictory = true;
+      } else {
+        // Обновляем HP врага на карте
+        const newGrid = [...grid];
+        newGrid[combatTarget.y][combatTarget.x] = {
+          ...newGrid[combatTarget.y][combatTarget.x],
+          enemyHp: newEnemyHp
+        };
+        setGrid(newGrid);
+        addLog(`${enemyStats.name} ранен (${newEnemyHp}/${scaledEnemyHp} HP)`, 'info');
       }
     }
 
@@ -126,6 +136,7 @@ export function useCombat({
 
       const newGrid = [...grid];
       newGrid[combatTarget.y][combatTarget.x].enemy = null;
+      newGrid[combatTarget.y][combatTarget.x].enemyHp = undefined; // Сбрасываем HP
       setGrid(newGrid);
 
       updates.gold += scaledEnemyGold;
@@ -167,6 +178,9 @@ export function useCombat({
     setActiveMenu('main');
     setMainMenuIndex(0);
 
+    // Важно передать grid (который мог обновиться, если враг выжил)
+    // Но так как setGrid асинхронный, в этом тике мы используем локальную копию для следующего шага
+    // Для простоты передаем текущий стейт, так как ИИ сработает на следующем рендере или получит обновленный
     processEnemyTurn(grid, updates);
   };
 
