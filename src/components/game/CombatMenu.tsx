@@ -37,8 +37,8 @@ export const CombatMenu: React.FC<CombatMenuProps> = ({
       ? (combatTarget.x * CELL_SIZE) - 10
       : (combatTarget.x * CELL_SIZE) + CELL_SIZE + 10,
     transform: isRightSide
-      ? 'translate(-100%, -25%)'
-      : 'translate(0, -25%)',
+      ? 'translate(-100%, -70%)'
+      : 'translate(0, -70%)',
     zIndex: 100,
     pointerEvents: 'none'
   };

@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Skull,
   Ghost,
+  Crown, // Добавили корону для босса
   Sword,
   Shield,
   Box,
@@ -14,7 +15,8 @@ import {
   Trees,
   ArrowDownCircle,
   ArrowUpCircle,
-  AlertCircle
+  AlertCircle,
+  FlaskConical // Добавили колбу для зелий
 } from 'lucide-react';
 import type { CellData, GameMode, PotionType } from '../../types';
 import { CELL_SIZE, MONSTER_STATS, POTION_STATS, AGGRO_RADIUS } from '../../constants';
@@ -43,17 +45,29 @@ export const GameCell: React.FC<GameCellProps> = ({
 
   let content = null;
 
+  // --- ЛОГИКА ВРАГОВ ---
   if (cell.enemy) {
     const info = MONSTER_STATS[cell.enemy];
     const dist = mode === 'player' ? calculateDistance(cell.x, cell.y, playerX, playerY) : 999;
     const isAggro = dist <= AGGRO_RADIUS && mode === 'player';
+    
+    // Определяем иконку для каждого типа
+    let EnemyIcon = Ghost;
+    if (cell.enemy === 'orc') EnemyIcon = Skull;
+    if (cell.enemy === 'boss') EnemyIcon = Crown;
+
+    // Формируем цвет (если в конфиге 'green', то делаем 'text-green-500')
+    // Если в конфиге уже 'text-green-500', это тоже сработает, но лучше унифицировать
+    const colorClass = info.color.startsWith('text-') ? info.color : `text-${info.color}-500`;
 
     content = (
       <div className="relative">
-        {cell.enemy === 'boss'
-          ? <Skull size={CELL_SIZE * 0.9} className="text-purple-500 animate-pulse drop-shadow-md" />
-          : <Ghost size={CELL_SIZE * 0.7} className={info.color} />
-        }
+        <EnemyIcon 
+          size={CELL_SIZE * 0.8} 
+          className={`${colorClass} ${cell.enemy === 'boss' ? 'animate-pulse drop-shadow-md' : ''}`} 
+          fill="currentColor"
+          fillOpacity={0.2}
+        />
         {isAggro && (
           <div className="absolute -top-2 -right-2 text-red-500 animate-bounce">
             <AlertCircle size={8} fill="currentColor" />
@@ -61,16 +75,31 @@ export const GameCell: React.FC<GameCellProps> = ({
         )}
       </div>
     );
-  } else if (cell.item) {
+  } 
+  // --- ЛОГИКА ПРЕДМЕТОВ ---
+  else if (cell.item) {
     if (cell.item.includes('potion')) {
-      const color = POTION_STATS[cell.item as PotionType].color;
-      content = <div className={`w-2.5 h-3.5 rounded-full ${color} shadow-lg border border-white/30`} />;
+      const stats = POTION_STATS[cell.item as PotionType];
+      // Используем цвет из конфига (red/blue)
+      const colorClass = `text-${stats.color}-500`;
+      
+      content = (
+        <FlaskConical 
+          size={CELL_SIZE * 0.7} 
+          className={`${colorClass} drop-shadow-sm`} 
+          fill="currentColor" 
+          fillOpacity={0.5} 
+        />
+      );
     } else if (cell.item.includes('weapon')) {
-      content = <Sword size={CELL_SIZE * 0.7} className="text-blue-300" />;
+      content = <Sword size={CELL_SIZE * 0.7} className="text-slate-300" />;
     } else if (cell.item.includes('armor')) {
-      content = <Shield size={CELL_SIZE * 0.7} className="text-slate-400" />;
+      content = <Shield size={CELL_SIZE * 0.7} className="text-slate-300" />;
     } else if (cell.item === 'chest') {
-      content = <Box size={CELL_SIZE * 0.7} className="text-yellow-500" />;
+      content = <Box size={CELL_SIZE * 0.7} className="text-amber-500" />;
+    } else if (cell.item === 'gold') {
+      // Можно добавить иконку золота, если нужно, пока используем желтый круг или Box
+      content = <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]" />;
     }
   }
 

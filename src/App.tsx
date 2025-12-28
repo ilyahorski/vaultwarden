@@ -11,7 +11,8 @@ import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useFogOfWar } from './hooks/useFogOfWar';
 
 // Компоненты
-import { ClassSelection, PlayerHeader, EventLog, GameGrid, CombatMenu, MobileControls } from './components/game';
+import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls } from './components/game';
+// Note: EventLog удален из импорта компонентов App, так как он теперь внутри Sidebar (или можно оставить импорт, если Sidebar его не экспортирует, но здесь он не нужен напрямую)
 import { PlayerMenu } from './components/game/PlayerMenu';
 import { Sidebar } from './components/editor';
 
@@ -26,7 +27,7 @@ export default function DungeonApp() {
   const {
     grid, setGrid,
     player, setPlayer,
-    logs,
+    logs, // Берем логи
     mode, setMode,
     hasChosenClass,
     levelHistory, setLevelHistory,
@@ -35,7 +36,7 @@ export default function DungeonApp() {
     selectClass,
     handleExport,
     handleImport,
-    useItem // <-- Получаем функцию
+    useItem
   } = useGameState();
 
   // UI состояние
@@ -137,7 +138,7 @@ export default function DungeonApp() {
     setCombatTarget,
     isMenuOpen, 
     setIsMenuOpen,
-    useItem // <-- Передаем в хук
+    useItem
   });
 
   // Fog of War
@@ -151,7 +152,7 @@ export default function DungeonApp() {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
       
-      {/* Sidebar */}
+      {/* Sidebar - теперь с логами! */}
       <Sidebar 
         mode={mode}
         selectedTool={selectedTool}
@@ -161,6 +162,8 @@ export default function DungeonApp() {
         onExport={handleExport}
         onImport={handleImport}
         fileInputRef={fileInputRef}
+        logs={logs} // <-- Передаем логи
+        logsEndRef={logsEndRef} // <-- Передаем реф
       />
 
       {/* Основная область */}
@@ -226,9 +229,8 @@ export default function DungeonApp() {
                 <MobileControls onMove={movePlayer} />
               )}
             </div>
-
-            {/* Журнал событий */}
-            <EventLog logs={logs} logsEndRef={logsEndRef} />
+            
+            {/* ИЗМЕНЕНИЕ: EventLog удален отсюда */}
           </>
         )}
 

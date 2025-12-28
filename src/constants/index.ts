@@ -3,7 +3,7 @@ import { Sword, Shield, Zap } from 'lucide-react';
 import type { ClassData, MonsterStats, PotionStats, GearStats, Artifact } from '../types';
 
 // --- Конфигурация карты ---
-export const GRID_SIZE = 40;
+export const GRID_SIZE = 50;
 export const CELL_SIZE = 15;
 export const VISIBILITY_RADIUS = 3;
 export const AGGRO_RADIUS = 6;

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CellData, GameMode } from '../../types';
 import { GRID_SIZE, CELL_SIZE } from '../../constants';
 import { GameCell } from './GameCell';
@@ -15,7 +14,7 @@ interface GameGridProps {
 export function GameGrid({ grid, mode, playerX, playerY, isMovingEnemy, onCellClick }: GameGridProps) {
   return (
     <div 
-      className="grid shadow-2xl bg-slate-950 border-[1px] border-black rounded-lg relative"
+      className="grid shadow-2xl bg-black border-[1px] border-black rounded-lg relative"
       style={{ 
         gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
         gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
