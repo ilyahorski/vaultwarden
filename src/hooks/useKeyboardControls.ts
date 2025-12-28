@@ -21,7 +21,7 @@ interface UseKeyboardControlsProps {
   
   isMenuOpen: boolean;
   setIsMenuOpen: (isOpen: boolean) => void;
-  useItem: (index: number) => void; // <-- Новый пропс
+  useItem: (index: number) => void;
 }
 
 export function useKeyboardControls({
@@ -42,14 +42,13 @@ export function useKeyboardControls({
   setCombatTarget,
   isMenuOpen,
   setIsMenuOpen,
-  useItem // <--
+  useItem
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Бросок кубика (пробел)
-      if (e.code === 'Space') {
-        e.preventDefault();
+      // 1. Бросок кубика / Отдых (Shift)
+      if (e.key === 'Shift') {
         if (activeRoll === null && mode === 'player') {
           rollActionDie();
         }
@@ -58,79 +57,89 @@ export function useKeyboardControls({
 
       // 2. Логика в бою
       if (combatTarget) {
-        if (activeRoll === null) return; 
-
         if (activeMenu === 'main') {
           if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 3));
           if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 3 ? prev + 1 : 0));
-          if (e.key === 'Enter') {
-            if (mainMenuIndex === 0) executeCombatAction(combatTarget, 'attack');
+          
+          // Вход в подменю по Enter или Стрелке Вправо
+          if (e.key === 'Enter' || e.key === 'ArrowRight') {
+            if (mainMenuIndex === 0 && e.key === 'Enter') executeCombatAction(combatTarget, 'attack'); // Атака только по Enter
             if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
             if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 3) setCombatTarget(null); // Побег
+            if (mainMenuIndex === 3 && e.key === 'Enter') setCombatTarget(null); // Побег только по Enter
           }
-        } else if (activeMenu === 'skills') {
+        } 
+        else if (activeMenu === 'skills') {
           const skills = CLASSES[player.class].skills;
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
-          if (e.key === 'Escape') setActiveMenu('main');
+          
+          // Выход назад по Escape или Стрелке Влево
+          if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
+          
           if (e.key === 'Enter' && skills.length > 0) {
             const skill = skills[subMenuIndex];
             if (player.mp >= skill.mpCost) {
               executeCombatAction(combatTarget, 'skill', skill.id);
             }
           }
-        } else if (activeMenu === 'items') {
+        } 
+        else if (activeMenu === 'items') {
           const items = player.inventory;
           if (items.length === 0) {
-            if (e.key === 'Escape') setActiveMenu('main');
+            if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
             return;
           }
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
-          if (e.key === 'Escape') setActiveMenu('main');
+          
+          // Выход назад
+          if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
+          
           if (e.key === 'Enter') {
-            // В бою используем item по ID (передаем только тип, т.к. в бою логика удаления своя)
             executeCombatAction(combatTarget, 'item', undefined, items[subMenuIndex]);
           }
         }
         return;
       }
 
-      // 3. Логика Меню (вне боя)
+      // 3. Логика Меню Игрока (вне боя)
       if (isMenuOpen) {
         if (activeMenu === 'main') {
           if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 2));
           if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 2 ? prev + 1 : 0));
-          if (e.key === 'Enter') {
+          
+          // Вход в подменю по Enter или Стрелке Вправо
+          if (e.key === 'Enter' || e.key === 'ArrowRight') {
             if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
             if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 2) setIsMenuOpen(false);
+            if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false); // Закрыть меню только по Enter
           }
-          if (e.key === 'Escape') setIsMenuOpen(false);
+          
+          if (e.key === 'Escape' || e.key === 'ArrowLeft') setIsMenuOpen(false);
         } 
         else if (activeMenu === 'skills') {
           const skills = CLASSES[player.class].skills;
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
-          if (e.key === 'Escape') setActiveMenu('main');
+          
+          // Назад
+          if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
         } 
         else if (activeMenu === 'items') {
           const items = player.inventory;
           if (items.length === 0) {
-            if (e.key === 'Escape') setActiveMenu('main');
+            if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
             return;
           }
-          // Навигация
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
-          if (e.key === 'Escape') setActiveMenu('main');
           
-          // Использование / Экипировка
+          // Назад
+          if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
+          
           if (e.key === 'Enter') {
             useItem(subMenuIndex);
-            // После использования предмета список может уменьшиться
-            // Корректируем индекс, чтобы он не вышел за пределы
             setSubMenuIndex(prev => Math.max(0, Math.min(prev, items.length - 2)));
           }
         }

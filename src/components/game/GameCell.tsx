@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Skull,
   Ghost,
-  Crown, // Добавили корону для босса
+  Crown,
   Sword,
   Shield,
   Box,
@@ -16,7 +16,8 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   AlertCircle,
-  FlaskConical // Добавили колбу для зелий
+  FlaskConical,
+  Bug // Используем Bug как замену Змее, если нет Snake
 } from 'lucide-react';
 import type { CellData, GameMode, PotionType } from '../../types';
 import { CELL_SIZE, MONSTER_STATS, POTION_STATS, AGGRO_RADIUS } from '../../constants';
@@ -31,7 +32,7 @@ interface GameCellProps {
   onClick: (x: number, y: number) => void;
 }
 
-export const GameCell: React.FC<GameCellProps> = ({
+export const GameCell: React.FC<GameCellProps> = React.memo(({
   cell,
   mode,
   playerX,
@@ -51,20 +52,19 @@ export const GameCell: React.FC<GameCellProps> = ({
     const dist = mode === 'player' ? calculateDistance(cell.x, cell.y, playerX, playerY) : 999;
     const isAggro = dist <= AGGRO_RADIUS && mode === 'player';
     
-    // Определяем иконку для каждого типа
+    // Выбор иконки на основе iconType
     let EnemyIcon = Ghost;
-    if (cell.enemy === 'orc') EnemyIcon = Skull;
-    if (cell.enemy === 'boss') EnemyIcon = Crown;
+    if (info.iconType === 'skull') EnemyIcon = Skull;
+    if (info.iconType === 'crown') EnemyIcon = Crown;
+    if (info.iconType === 'snake') EnemyIcon = Bug; // Замена для змеи
 
-    // Формируем цвет (если в конфиге 'green', то делаем 'text-green-500')
-    // Если в конфиге уже 'text-green-500', это тоже сработает, но лучше унифицировать
     const colorClass = info.color.startsWith('text-') ? info.color : `text-${info.color}-500`;
 
     content = (
       <div className="relative">
         <EnemyIcon 
           size={CELL_SIZE * 0.8} 
-          className={`${colorClass} ${cell.enemy === 'boss' ? 'animate-pulse drop-shadow-md' : ''}`} 
+          className={`${colorClass} ${cell.enemy === 'boss' || cell.enemy === 'lich' ? 'animate-pulse drop-shadow-md' : ''}`} 
           fill="currentColor"
           fillOpacity={0.2}
         />
@@ -80,15 +80,16 @@ export const GameCell: React.FC<GameCellProps> = ({
   else if (cell.item) {
     if (cell.item.includes('potion')) {
       const stats = POTION_STATS[cell.item as PotionType];
-      // Используем цвет из конфига (red/blue)
-      const colorClass = `text-${stats.color}-500`;
+      // Используем цвет из конфига (теперь там red-300, red-500 и т.д.)
+      // stats.color уже содержит "red-300" или "blue-500"
+      const colorClass = `text-${stats.color}`;
       
       content = (
         <FlaskConical 
           size={CELL_SIZE * 0.7} 
           className={`${colorClass} drop-shadow-sm`} 
           fill="currentColor" 
-          fillOpacity={0.5} 
+          fillOpacity={0.6} // Чуть прозрачнее заливка
         />
       );
     } else if (cell.item.includes('weapon')) {
@@ -98,7 +99,6 @@ export const GameCell: React.FC<GameCellProps> = ({
     } else if (cell.item === 'chest') {
       content = <Box size={CELL_SIZE * 0.7} className="text-amber-500" />;
     } else if (cell.item === 'gold') {
-      // Можно добавить иконку золота, если нужно, пока используем желтый круг или Box
       content = <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]" />;
     }
   }
@@ -128,7 +128,7 @@ export const GameCell: React.FC<GameCellProps> = ({
     >
       {content}
 
-      {/* Иконки ландшафта (фоновые) */}
+      {/* Ландшафт */}
       {cell.type === 'water' && !content && <Droplets size={10} className="text-blue-400/30 absolute" />}
       {cell.type === 'lava' && !content && <Flame size={10} className="text-yellow-500/40 absolute animate-pulse" />}
       {cell.type === 'grass' && !content && <Trees size={10} className="text-green-400/20 absolute" />}
@@ -150,7 +150,7 @@ export const GameCell: React.FC<GameCellProps> = ({
 
       {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && <Flame size={12} className="absolute text-orange-500 opacity-70" />}
 
-      {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-black/50 z-10" />}
+      {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-zinc-300/10 z-10" />}
     </div>
   );
-};
+});

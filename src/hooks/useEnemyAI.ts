@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { CellData, Player, LogEntry, CombatTarget } from '../types';
 import { GRID_SIZE, AGGRO_RADIUS, MONSTER_STATS } from '../constants';
 
@@ -98,12 +98,21 @@ export function useEnemyAI({
     }
   };
 
+  // Реф для хранения актуального состояния игрока
+  const playerRef = useRef(player);
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
   // Boss AI - случайное движение когда игрок далеко
   useEffect(() => {
     if (mode !== 'player' || combatTarget) return;
 
     const timer = setInterval(() => {
       setGrid((prevGrid: CellData[][]) => {
+        // Используем playerRef для получения координат без перезапуска таймера
+        const currentPlayer = playerRef.current;
+        
         let bossPos = null;
         for (let y = 0; y < GRID_SIZE; y++) {
           for (let x = 0; x < GRID_SIZE; x++) {
@@ -117,7 +126,7 @@ export function useEnemyAI({
 
         if (!bossPos) return prevGrid;
 
-        const dist = Math.sqrt(Math.pow(bossPos.x - player.x, 2) + Math.pow(bossPos.y - player.y, 2));
+        const dist = Math.sqrt(Math.pow(bossPos.x - currentPlayer.x, 2) + Math.pow(bossPos.y - currentPlayer.y, 2));
         if (dist > AGGRO_RADIUS) {
           const moves = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
           const randomMove = moves[Math.floor(Math.random() * moves.length)];
@@ -147,7 +156,7 @@ export function useEnemyAI({
     }, 1500);
 
     return () => clearInterval(timer);
-  }, [mode, player.x, player.y, combatTarget, setGrid]);
+  }, [mode, combatTarget, setGrid]); // Убраны player.x, player.y из зависимостей
 
   return { processEnemyTurn };
 }

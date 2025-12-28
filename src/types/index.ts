@@ -4,13 +4,45 @@ import React from 'react';
 export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up';
 
 // --- Типы предметов ---
-export type PotionType = 'potion_weak' | 'potion_mid' | 'potion_strong' | 'potion_mana';
-export type WeaponType = 'weapon_weak' | 'weapon_mid' | 'weapon_strong';
-export type ArmorType = 'armor_weak' | 'armor_mid' | 'armor_strong';
+// HP Зелья
+export type PotionHpType = 'potion_weak' | 'potion_mid' | 'potion_strong';
+// MP Зелья (теперь градация)
+export type PotionMpType = 'potion_mana_weak' | 'potion_mana_mid' | 'potion_mana_strong';
+export type PotionType = PotionHpType | PotionMpType;
+
+// Оружие (7 тиров)
+export type WeaponType = 
+  | 'weapon_rusty'   // Ржавый (бывший weak)
+  | 'weapon_dagger'  // Кинжал
+  | 'weapon_mace'    // Булава
+  | 'weapon_sword'   // Меч (бывший mid)
+  | 'weapon_axe'     // Топор
+  | 'weapon_greatsword' // Двуручник (бывший strong)
+  | 'weapon_legend'; // Легендарный
+
+// Броня (7 тиров)
+export type ArmorType = 
+  | 'armor_cloth'    // Ткань (бывший weak)
+  | 'armor_leather'  // Кожа
+  | 'armor_studded'  // Клепаная кожа
+  | 'armor_chain'    // Кольчуга (бывший mid)
+  | 'armor_plate_light' // Легкие латы
+  | 'armor_plate_heavy' // Тяжелые латы (бывший strong)
+  | 'armor_legend';  // Легендарная
+
 export type ItemType = PotionType | WeaponType | ArmorType | 'gold' | 'chest' | null;
 
 // --- Типы врагов ---
-export type EnemyType = 'goblin' | 'orc' | 'boss' | null;
+export type EnemyType = 
+  | 'snake'      // Животные
+  | 'goblin'     // Животные/Простые
+  | 'skeleton'   // Нежить
+  | 'zombie'     // Нежить
+  | 'lich'       // Нежить (Босс)
+  | 'orc'        // Орда
+  | 'orc_chief'  // Орда (Босс)
+  | 'boss'       // Тёмный Рыцарь (Главный босс)
+  | null;
 
 // --- Типы классов ---
 export type ClassType = 'warrior' | 'mage' | 'rogue';
@@ -78,9 +110,9 @@ export interface Player {
   gold: number;
   name: string;
   class: ClassType;
-  inventory: (PotionType | WeaponType | ArmorType)[]; // Обновили тип инвентаря
-  equippedWeapon: WeaponType | null; // <-- НОВОЕ ПОЛЕ
-  equippedArmor: ArmorType | null;   // <-- НОВОЕ ПОЛЕ
+  inventory: (PotionType | WeaponType | ArmorType)[]; 
+  equippedWeapon: WeaponType | null; 
+  equippedArmor: ArmorType | null;   
   dungeonLevel: number;
 }
 
@@ -91,7 +123,8 @@ export interface MonsterStats {
   xp: number;
   gold: number;
   name: string;
-  color: string;
+  color: string; // tailwind color class
+  iconType: 'ghost' | 'skull' | 'crown' | 'snake' | 'user'; // для выбора иконки
 }
 
 // --- Интерфейс статистики зелья ---
@@ -99,7 +132,7 @@ export interface PotionStats {
   heal: number;
   mana: number;
   name: string;
-  color: string;
+  color: string; // tailwind color
   type: 'hp' | 'mp';
 }
 
@@ -107,7 +140,8 @@ export interface PotionStats {
 export interface GearStats {
   val: number;
   name: string;
-  type: 'atk' | 'def'; // Уточнили тип
+  type: 'atk' | 'def';
+  color: string; // цвет для градации (text-slate-400 etc)
 }
 
 // --- Интерфейс артефакта ---

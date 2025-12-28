@@ -82,6 +82,9 @@ export function usePlayerMovement({
 
     const r = { val: roll, type: 'info' };
 
+    // Переменная для хранения актуальной версии сетки в процессе хода
+    let currentGrid = grid;
+
     // --- ЛОГИКА ЛЕСТНИЦ ---
     if (targetCell.type === 'stairs_down') {
       addLog(`Вы спускаетесь глубже... Этаж ${updates.dungeonLevel + 1}`, 'level');
@@ -148,7 +151,7 @@ export function usePlayerMovement({
     // Обычное движение
     if (targetCell.type === 'wall') {
       if (!autoRolled) addLog(`Вы потратили подготовленный бросок ${r.val} в стену...`, 'info');
-      processEnemyTurn(grid, updates);
+      processEnemyTurn(currentGrid, updates);
       return;
     }
 
@@ -157,16 +160,18 @@ export function usePlayerMovement({
         addLog(`[D20: ${r.val}] Дверь заклинило!`, 'fail');
         updates.moves -= 1;
         setPlayer(updates);
-        processEnemyTurn(grid, updates);
+        processEnemyTurn(currentGrid, updates);
         return;
       } else {
         addLog(`[D20: ${r.val}] Дверь открыта.`, 'info');
-        const newGrid = [...grid];
+        const newGrid = [...currentGrid];
         newGrid[newY][newX].type = 'door_open';
         setGrid(newGrid);
+        currentGrid = newGrid; // Обновляем ссылку
+
         updates.moves -= 1;
         setPlayer(updates);
-        processEnemyTurn(newGrid, updates);
+        processEnemyTurn(currentGrid, updates);
         return;
       }
     }
@@ -224,18 +229,20 @@ export function usePlayerMovement({
       }
 
       if (consumed) {
-        const newGrid = [...grid];
+        const newGrid = [...currentGrid];
         newGrid[newY][newX].item = null;
         setGrid(newGrid);
+        currentGrid = newGrid; // Обновляем ссылку
       }
     }
 
     if (targetCell.type === 'trap') {
       if (r.val >= 16) {
         addLog(`[D20: ${r.val}] Вы заметили ловушку и обезвредили её!`, 'success');
-        const newGrid = [...grid];
+        const newGrid = [...currentGrid];
         newGrid[newY][newX].type = 'floor';
         setGrid(newGrid);
+        currentGrid = newGrid; // Обновляем ссылку
       } else {
         let dmg = 15;
         if (r.val <= 5) {
@@ -261,12 +268,14 @@ export function usePlayerMovement({
 
     if (targetCell.type === 'secret_door') {
       addLog('Внимательный взгляд заметил скрытый проход!', 'info');
-      const newGrid = [...grid];
+      const newGrid = [...currentGrid];
       newGrid[newY][newX].type = 'door';
       setGrid(newGrid);
+      currentGrid = newGrid; // Обновляем ссылку
     }
 
-    processEnemyTurn(grid, updates);
+    // Передаем актуальную сетку
+    processEnemyTurn(currentGrid, updates);
   };
 
   return { movePlayer };

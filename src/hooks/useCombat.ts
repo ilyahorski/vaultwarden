@@ -40,6 +40,9 @@ export function useCombat({
   ) => {
     if (!combatTarget || !combatTarget.enemy) return;
 
+    // Локальная ссылка на актуальную сетку
+    let currentGrid = grid;
+
     const enemyStats = MONSTER_STATS[combatTarget.enemy];
     const levelMultiplier = 1 + (player.dungeonLevel - 1) * 0.1;
     const scaledEnemyHp = Math.floor(enemyStats.hp * levelMultiplier);
@@ -112,20 +115,21 @@ export function useCombat({
     if (playerDmg > 0) {
       addLog(`${prefix} ${actionName} по ${enemyStats.name}: ${playerDmg} ур.`, 'combat');
       
-      // Берем текущее HP врага из клетки, либо макс. HP, если оно не задано
-      const currentEnemyHp = grid[combatTarget.y][combatTarget.x].enemyHp ?? scaledEnemyHp;
+      // Берем текущее HP врага из currentGrid
+      const currentEnemyHp = currentGrid[combatTarget.y][combatTarget.x].enemyHp ?? scaledEnemyHp;
       const newEnemyHp = currentEnemyHp - playerDmg;
 
       if (newEnemyHp <= 0) {
         isVictory = true;
       } else {
         // Обновляем HP врага на карте
-        const newGrid = [...grid];
+        const newGrid = [...currentGrid];
         newGrid[combatTarget.y][combatTarget.x] = {
           ...newGrid[combatTarget.y][combatTarget.x],
           enemyHp: newEnemyHp
         };
         setGrid(newGrid);
+        currentGrid = newGrid; // Обновляем ссылку
         addLog(`${enemyStats.name} ранен (${newEnemyHp}/${scaledEnemyHp} HP)`, 'info');
       }
     }
@@ -134,10 +138,11 @@ export function useCombat({
       addLog(`⚔️ Победили ${enemyStats.name}!`, 'combat');
       addLog(`Награда: +${enemyStats.xp} XP, +${scaledEnemyGold} Золота`, 'loot');
 
-      const newGrid = [...grid];
+      const newGrid = [...currentGrid];
       newGrid[combatTarget.y][combatTarget.x].enemy = null;
       newGrid[combatTarget.y][combatTarget.x].enemyHp = undefined; // Сбрасываем HP
       setGrid(newGrid);
+      currentGrid = newGrid; // Обновляем ссылку
 
       updates.gold += scaledEnemyGold;
       applyLevelUp(updates, enemyStats.xp, addLog);
@@ -147,7 +152,8 @@ export function useCombat({
       setActiveMenu('main');
       setMainMenuIndex(0);
 
-      processEnemyTurn(grid, updates);
+      // Передаем обновленную сетку
+      processEnemyTurn(currentGrid, updates);
       return;
     }
 
@@ -178,10 +184,8 @@ export function useCombat({
     setActiveMenu('main');
     setMainMenuIndex(0);
 
-    // Важно передать grid (который мог обновиться, если враг выжил)
-    // Но так как setGrid асинхронный, в этом тике мы используем локальную копию для следующего шага
-    // Для простоты передаем текущий стейт, так как ИИ сработает на следующем рендере или получит обновленный
-    processEnemyTurn(grid, updates);
+    // Передаем обновленную сетку
+    processEnemyTurn(currentGrid, updates);
   };
 
   return { executeCombatAction };
