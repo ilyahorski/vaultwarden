@@ -11,6 +11,11 @@ interface UseEditorHandlersProps {
   setPlayer: Dispatch<SetStateAction<Player>>;
 }
 
+// Выносим список простых структурных типов в константу (readonly tuple)
+const BASIC_STRUCTURE_TYPES = [
+  'wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap'
+] as const;
+
 export function useEditorHandlers({
   mode,
   selectedTool,
@@ -68,8 +73,6 @@ export function useEditorHandlers({
     }
     // Зелья (HP/MP)
     else if (selectedTool.startsWith('item_potion')) {
-       // item_potion_weak, item_potion_mana_strong etc.
-       // префикс 'item_' убираем, остается 'potion_weak' или 'potion_mana_strong'
        cell.item = selectedTool.replace('item_', '') as PotionType;
        cell.type = 'floor';
     }
@@ -85,17 +88,18 @@ export function useEditorHandlers({
     }
     // Структура (стены, пол и т.д.)
     else {
-       // Проверяем, валидный ли это CellType
-       // (Можно типизировать строже, но пока оставляем как есть)
-       const structureType = selectedTool; 
-       if (['wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap'].includes(structureType)) {
-          cell.type = structureType as any;
-          if (structureType === 'wall') { cell.item = null; cell.enemy = null; }
+       if ((BASIC_STRUCTURE_TYPES as readonly string[]).includes(selectedTool)) {
+          cell.type = selectedTool as CellData['type'];
+          
+          if (selectedTool === 'wall') { 
+            cell.item = null; 
+            cell.enemy = null; 
+          }
        }
-       else if (structureType === 'door') {
+       else if (selectedTool === 'door') {
           cell.type = cell.type === 'door' ? 'floor' : 'door';
        }
-       else if (structureType === 'secret') {
+       else if (selectedTool === 'secret') {
           cell.type = 'secret_door';
        }
     }

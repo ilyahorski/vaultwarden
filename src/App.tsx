@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -34,7 +34,7 @@ export default function DungeonApp() {
     selectClass,
     handleExport,
     handleImport,
-    useItem,
+    onConsumeItem,
     handleExportCampaign,
     parseCampaignFile,
     createNewLevel, // <-- НОВОЕ
@@ -132,7 +132,7 @@ export default function DungeonApp() {
     setCombatTarget,
     isMenuOpen, 
     setIsMenuOpen,
-    useItem
+    onConsumeItem
   });
 
   useFogOfWar({
@@ -172,14 +172,10 @@ export default function DungeonApp() {
         onExport={handleExport}
         onImport={handleImport}
         onExportCampaign={handleExportCampaign}
-        
-        // --- Новые пропсы для управления этажами ---
         onAddLevel={createNewLevel}
         onSwitchLevel={switchLevel}
         currentLevel={player.dungeonLevel}
-        totalLevels={maxLevel}
-        // -------------------------------------------
-        
+        totalLevels={maxLevel}        
         fileInputRef={fileInputRef}
         logs={logs}
         logsEndRef={logsEndRef}

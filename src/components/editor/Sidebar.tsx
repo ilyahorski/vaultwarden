@@ -3,7 +3,7 @@ import {
   Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
   ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
-  Plus, ChevronLeft, ChevronRight, Layers
+  Plus, ChevronLeft, ChevronRight, Layers, Upload
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
 import { ToolButton } from '../ui/ToolButton';
@@ -16,21 +16,24 @@ interface SidebarProps {
   onModeChange: (mode: GameMode) => void;
   onToolChange: (tool: string) => void;
   onReset: () => void;
+  onExport: () => void;
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onExportCampaign: (name: string, password?: string) => void;
-  // Новые пропсы для управления этажами
   onAddLevel: () => void;
   onSwitchLevel: (level: number) => void;
   currentLevel: number;
-  totalLevels: number; // Максимальный открытый уровень
-
+  totalLevels: number;
   logs: LogEntry[];
-  logsEndRef: React.RefObject<HTMLDivElement>;
+  logsEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  mode, selectedTool, onModeChange, onToolChange, onReset, onExportCampaign, 
+  mode, selectedTool, onModeChange, onToolChange, onReset, 
+  onExport, onImport, fileInputRef, // Не забудьте деструктуризировать новые пропсы
+  onExportCampaign, 
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
   logs, logsEndRef
 }) => {
@@ -51,6 +54,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="bg-slate-950 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 lg:w-96 lg:h-screen h-[50vh]">
       
+      {/* Скрытый инпут для импорта */}
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        onChange={onImport}
+        className="hidden" 
+        accept=".json"
+      />
+
       <div className="p-4 shrink-0 border-b border-slate-800/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -116,6 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {activeTab === 'enemies' && (
                 <div className="space-y-4">
+                  {/* ... (код врагов без изменений) ... */}
                   <div>
                     <h3 className="text-xs font-bold text-lime-600 uppercase tracking-widest mb-2 pl-1 border-b border-lime-900/30 pb-1">Животные</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -158,11 +171,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {activeTab === 'loot' && (
                 <div className="space-y-4">
+                  {/* ... (код лута без изменений) ... */}
                   <div className="mb-2">
                     <ToolButton active={selectedTool === 'item_chest'} onClick={() => onToolChange('item_chest')} icon={<Box size={16} className="text-yellow-500" />} label="Случайный сундук" />
                   </div>
-
-                  <div>
+                   {/* ... остальные кнопки лута ... */}
+                   <div>
                     <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest mb-2 pl-1">Здоровье (HP)</h3>
                     <div className="grid grid-cols-3 gap-2">
                       <ToolButton active={selectedTool === 'item_potion_weak'} onClick={() => onToolChange('item_potion_weak')} icon={<FlaskConical size={16} className="text-red-300" />} label="Мал." />
@@ -170,7 +184,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <ToolButton active={selectedTool === 'item_potion_strong'} onClick={() => onToolChange('item_potion_strong')} icon={<FlaskConical size={16} className="text-red-700" />} label="Бол." />
                     </div>
                   </div>
-
                   <div>
                     <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 pl-1">Мана (MP)</h3>
                     <div className="grid grid-cols-3 gap-2">
@@ -179,7 +192,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <ToolButton active={selectedTool === 'item_potion_mana_strong'} onClick={() => onToolChange('item_potion_mana_strong')} icon={<FlaskConical size={16} className="text-blue-700" />} label="Бол." />
                     </div>
                   </div>
-
                   <div>
                     <h3 className="text-xs font-bold text-amber-200 uppercase tracking-widest mb-2 pl-1">Оружие</h3>
                     <div className="grid grid-cols-1 gap-2">
@@ -197,7 +209,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ))}
                     </div>
                   </div>
-
                   <div>
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 pl-1">Броня</h3>
                     <div className="grid grid-cols-1 gap-2">
@@ -258,14 +269,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Инструменты</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Инструменты Карты</h3>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <ToolButton active={selectedTool === 'start'} onClick={() => onToolChange('start')} icon={<User size={16} />} label="Точка старта" />
                       <ToolButton active={selectedTool === 'clear'} onClick={() => onToolChange('clear')} icon={<Trash2 size={16} />} label="Ластик" />
                     </div>
+                    
+                    {/* Кнопки импорта/экспорта одной карты */}
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                       <button onClick={onExport} className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">
+                         <Download size={14} /> Экспорт (Этого этажа)
+                       </button>
+                       <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">
+                         <Upload size={14} /> Импорт (Этого этажа)
+                       </button>
+                    </div>
+
                     <div className="mt-2">
                       <button onClick={onReset} className="w-full flex items-center justify-center gap-2 p-3 rounded-md text-xs font-medium text-red-400 hover:bg-red-900/20 border border-slate-800 hover:border-red-900 transition-colors">
-                        <RefreshCw size={16} /> Сброс текущего
+                        <RefreshCw size={16} /> Сброс текущей карты
                       </button>
                     </div>
                   </div>
@@ -298,7 +320,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {mode === 'player' && <EventLog logs={logs} logsEndRef={logsEndRef} />}
+      {/* Передаем logsEndRef с приведением типа на случай, если EventLog строгий */}
+      {mode === 'player' && (
+        <EventLog 
+          logs={logs} 
+          logsEndRef={logsEndRef as React.RefObject<HTMLDivElement>} 
+        />
+      )}
     </div>
   );
 };

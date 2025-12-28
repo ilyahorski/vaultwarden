@@ -21,7 +21,10 @@ interface UseKeyboardControlsProps {
   
   isMenuOpen: boolean;
   setIsMenuOpen: (isOpen: boolean) => void;
-  useItem: (index: number) => void;
+  
+  // ИЗМЕНЕНИЕ 1: Переименовали useItem в onConsumeItem
+  // Это дает понять React, что это обычная функция-событие, а не хук
+  onConsumeItem: (index: number) => void;
 }
 
 export function useKeyboardControls({
@@ -42,7 +45,7 @@ export function useKeyboardControls({
   setCombatTarget,
   isMenuOpen,
   setIsMenuOpen,
-  useItem
+  onConsumeItem 
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
@@ -61,12 +64,11 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 3));
           if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 3 ? prev + 1 : 0));
           
-          // Вход в подменю по Enter или Стрелке Вправо
           if (e.key === 'Enter' || e.key === 'ArrowRight') {
-            if (mainMenuIndex === 0 && e.key === 'Enter') executeCombatAction(combatTarget, 'attack'); // Атака только по Enter
+            if (mainMenuIndex === 0 && e.key === 'Enter') executeCombatAction(combatTarget, 'attack');
             if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
             if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 3 && e.key === 'Enter') setCombatTarget(null); // Побег только по Enter
+            if (mainMenuIndex === 3 && e.key === 'Enter') setCombatTarget(null);
           }
         } 
         else if (activeMenu === 'skills') {
@@ -74,7 +76,6 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
           
-          // Выход назад по Escape или Стрелке Влево
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
           
           if (e.key === 'Enter' && skills.length > 0) {
@@ -93,7 +94,6 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
           
-          // Выход назад
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
           
           if (e.key === 'Enter') {
@@ -109,11 +109,10 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 2));
           if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 2 ? prev + 1 : 0));
           
-          // Вход в подменю по Enter или Стрелке Вправо
           if (e.key === 'Enter' || e.key === 'ArrowRight') {
             if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
             if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false); // Закрыть меню только по Enter
+            if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false);
           }
           
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setIsMenuOpen(false);
@@ -123,7 +122,6 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
           
-          // Назад
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
         } 
         else if (activeMenu === 'items') {
@@ -135,11 +133,11 @@ export function useKeyboardControls({
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
           
-          // Назад
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
           
           if (e.key === 'Enter') {
-            useItem(subMenuIndex);
+            // ИЗМЕНЕНИЕ 3: Вызываем переименованную функцию
+            onConsumeItem(subMenuIndex);
             setSubMenuIndex(prev => Math.max(0, Math.min(prev, items.length - 2)));
           }
         }
@@ -163,9 +161,9 @@ export function useKeyboardControls({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, 
-    subMenuIndex, player, activeRoll, rollActionDie, movePlayer, 
-    executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, useItem
-  ]);
+    
+    // ИЗМЕНЕНИЕ 4: Обновляем массив зависимостей
+  }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll, 
+    rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, 
+    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex]);
 }
