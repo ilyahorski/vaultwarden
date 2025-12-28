@@ -70,6 +70,8 @@ export interface ClassData {
   desc: string;
   icon: React.ReactNode;
   skills: Skill[];
+  startingWeapon?: WeaponType;
+  startingArmor?: ArmorType;
 }
 
 // --- Интерфейс ячейки ---
@@ -155,6 +157,13 @@ export interface CombatTarget {
   x: number;
   y: number;
   enemy: EnemyType;
+}
+
+// --- Интерфейс Кампании (для запароленных подземелий) ---
+export interface DungeonCampaign {
+  name: string;
+  password?: string;
+  levels: Record<number, CellData[][]>;
 }
 
 // --- Тип режима игры ---

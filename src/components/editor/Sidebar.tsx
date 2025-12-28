@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import {
   Map as MapIcon, Settings, User, RefreshCw, Download, Upload, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
-  ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug
+  ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug, Lock,
+  Plus, ChevronLeft, ChevronRight, Layers
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
 import { ToolButton } from '../ui/ToolButton';
-import { POTION_STATS, GEAR_STATS } from '../../constants';
+import { GEAR_STATS } from '../../constants';
 import { EventLog } from '../game/EventLog';
 
 interface SidebarProps {
@@ -17,6 +18,13 @@ interface SidebarProps {
   onReset: () => void;
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onExportCampaign: (name: string, password?: string) => void;
+  // Новые пропсы для управления этажами
+  onAddLevel: () => void;
+  onSwitchLevel: (level: number) => void;
+  currentLevel: number;
+  totalLevels: number; // Максимальный открытый уровень
+
   fileInputRef: React.RefObject<HTMLInputElement>;
   logs: LogEntry[];
   logsEndRef: React.RefObject<HTMLDivElement>;
@@ -25,7 +33,9 @@ interface SidebarProps {
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  mode, selectedTool, onModeChange, onToolChange, onReset, onExport, onImport, fileInputRef, logs, logsEndRef
+  mode, selectedTool, onModeChange, onToolChange, onReset, onExport, onImport, onExportCampaign, 
+  onAddLevel, onSwitchLevel, currentLevel, totalLevels,
+  fileInputRef, logs, logsEndRef
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('structure');
 
@@ -44,7 +54,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="bg-slate-950 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 lg:w-96 lg:h-screen h-[50vh]">
       
-      {/* Шапка */}
       <div className="p-4 shrink-0 border-b border-slate-800/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -68,7 +77,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {mode === 'dm' && (
         <div className="flex flex-col flex-1 min-h-0">
-          {/* Вкладки */}
           <div className="flex shrink-0 bg-slate-950 border-b border-slate-800">
             {renderTabButton('structure', <LayoutGrid size={18} />, 'Структура')}
             {renderTabButton('enemies', <Swords size={18} />, 'Враги')}
@@ -79,7 +87,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               
-              {/* --- СТРУКТУРА --- */}
               {activeTab === 'structure' && (
                 <div className="space-y-4">
                   <div>
@@ -110,11 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
 
-              {/* --- ВРАГИ --- */}
               {activeTab === 'enemies' && (
                 <div className="space-y-4">
-                  
-                  {/* Группа: Животные */}
                   <div>
                     <h3 className="text-xs font-bold text-lime-600 uppercase tracking-widest mb-2 pl-1 border-b border-lime-900/30 pb-1">Животные</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -123,7 +127,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Группа: Нежить */}
                   <div>
                     <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 pl-1 border-b border-purple-900/30 pb-1">Нежить</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -135,7 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Группа: Орда */}
                   <div>
                     <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2 pl-1 border-b border-red-900/30 pb-1">Орда</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -144,7 +146,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Группа: Боссы */}
                   <div>
                     <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-2 pl-1 border-b border-rose-900/30 pb-1">Эпические</h3>
                     <div className="grid grid-cols-1">
@@ -158,14 +159,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
 
-              {/* --- ЛУТ --- */}
               {activeTab === 'loot' && (
                 <div className="space-y-4">
                   <div className="mb-2">
                     <ToolButton active={selectedTool === 'item_chest'} onClick={() => onToolChange('item_chest')} icon={<Box size={16} className="text-yellow-500" />} label="Случайный сундук" />
                   </div>
 
-                  {/* Зелья Здоровья */}
                   <div>
                     <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest mb-2 pl-1">Здоровье (HP)</h3>
                     <div className="grid grid-cols-3 gap-2">
@@ -175,7 +174,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Зелья Маны */}
                   <div>
                     <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 pl-1">Мана (MP)</h3>
                     <div className="grid grid-cols-3 gap-2">
@@ -185,7 +183,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Оружие */}
                   <div>
                     <h3 className="text-xs font-bold text-amber-200 uppercase tracking-widest mb-2 pl-1">Оружие</h3>
                     <div className="grid grid-cols-1 gap-2">
@@ -204,7 +201,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Броня */}
                   <div>
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 pl-1">Броня</h3>
                     <div className="grid grid-cols-1 gap-2">
@@ -225,32 +221,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
 
-              {/* --- РАЗНОЕ --- */}
               {activeTab === 'utils' && (
                 <div className="space-y-4">
+                  {/* --- УПРАВЛЕНИЕ ЭТАЖАМИ --- */}
+                  <div className="pb-4 border-b border-slate-800">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1 flex items-center gap-2">
+                      <Layers size={12}/> Управление этажами
+                    </h3>
+                    
+                    <div className="flex items-center justify-between bg-slate-900 rounded p-2 mb-2 border border-slate-800">
+                        <button 
+                          disabled={currentLevel <= 1}
+                          onClick={() => onSwitchLevel(currentLevel - 1)}
+                          className="p-1 hover:bg-slate-700 rounded disabled:opacity-30 disabled:hover:bg-transparent text-slate-400 hover:text-white transition-colors"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        
+                        <div className="text-center">
+                            <span className="block text-xs text-slate-500 uppercase font-bold">Текущий этаж</span>
+                            <span className="text-lg font-bold text-amber-500">{currentLevel}</span>
+                        </div>
+
+                        <button 
+                          disabled={currentLevel >= totalLevels}
+                          onClick={() => onSwitchLevel(currentLevel + 1)}
+                          className="p-1 hover:bg-slate-700 rounded disabled:opacity-30 disabled:hover:bg-transparent text-slate-400 hover:text-white transition-colors"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                    </div>
+
+                    <button 
+                        onClick={onAddLevel}
+                        className="w-full flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+                    >
+                        <Plus size={14} /> Добавить новый этаж
+                    </button>
+                  </div>
+
                   <div>
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Управление</h3>
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Инструменты</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <ToolButton active={selectedTool === 'start'} onClick={() => onToolChange('start')} icon={<User size={16} />} label="Точка старта" />
                       <ToolButton active={selectedTool === 'clear'} onClick={() => onToolChange('clear')} icon={<Trash2 size={16} />} label="Ластик" />
                     </div>
                     <div className="mt-2">
                       <button onClick={onReset} className="w-full flex items-center justify-center gap-2 p-3 rounded-md text-xs font-medium text-red-400 hover:bg-red-900/20 border border-slate-800 hover:border-red-900 transition-colors">
-                        <RefreshCw size={16} /> Сброс карты
+                        <RefreshCw size={16} /> Сброс текущего
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Файл</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button onClick={onExport} className="flex items-center justify-center gap-2 p-3 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 transition-colors">
-                        <Download size={16} /> Экспорт
-                      </button>
-                      <label className="flex items-center justify-center gap-2 p-3 rounded-md text-xs font-medium bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 cursor-pointer transition-colors">
-                        <Upload size={16} /> Импорт
-                        <input type="file" className="hidden" accept=".json" onChange={onImport} ref={fileInputRef} />
-                      </label>
-                    </div>
+                  
+                  <div className="pt-4 border-t border-slate-800">
+                     <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-3 pl-1">Мастер Кампаний</h3>
+                     <div className="space-y-2">
+                         <input id="campName" type="text" placeholder="Название кампании" className="w-full bg-slate-900 border border-slate-700 p-2 text-xs rounded text-white outline-none focus:border-amber-500" />
+                         <input id="campPass" type="text" placeholder="Пароль (опционально)" className="w-full bg-slate-900 border border-slate-700 p-2 text-xs rounded text-white outline-none focus:border-amber-500" />
+                         <button 
+                             onClick={() => {
+                                 const name = (document.getElementById('campName') as HTMLInputElement).value || 'My Dungeon';
+                                 const pass = (document.getElementById('campPass') as HTMLInputElement).value;
+                                 onExportCampaign(name, pass); 
+                             }}
+                             className="w-full flex items-center justify-center gap-2 p-2 rounded bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold transition-colors"
+                         >
+                             <Download size={14}/> Сохранить Кампанию (Все этажи)
+                         </button>
+                         <p className="text-[10px] text-slate-500 leading-tight">
+                             Сохраняет ВСЕ посещенные/созданные уровни в один файл. После создания используйте "Импорт" в меню выбора класса.
+                         </p>
+                     </div>
                   </div>
                 </div>
               )}

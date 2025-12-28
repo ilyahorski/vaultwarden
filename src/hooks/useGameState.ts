@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, ActiveMenu, PotionType, WeaponType, ArmorType } from '../types';
-import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS } from '../constants';
+import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, ActiveMenu, PotionType, WeaponType, ArmorType, DungeonCampaign } from '../types';
+import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS, GRID_SIZE } from '../constants';
 import { createLogEntry } from '../utils';
 import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator';
 
@@ -18,15 +18,14 @@ export const useGameState = () => {
   const [activeMenu, setActiveMenu] = useState<ActiveMenu>('main');
   const [mainMenuIndex, setMainMenuIndex] = useState(0);
   const [subMenuIndex, setSubMenuIndex] = useState(0);
+  const [activeCampaign, setActiveCampaign] = useState<DungeonCampaign | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Добавление записи в лог
   const addLog = useCallback((text: string, type: LogEntry['type'] = 'info') => {
     setLogs(prev => [...prev, createLogEntry(text, type)].slice(-50));
   }, []);
 
-  // --- ЛОГИКА ИСПОЛЬЗОВАНИЯ ПРЕДМЕТОВ ---
   const useItem = useCallback((itemIndex: number) => {
     const item = player.inventory[itemIndex];
     if (!item) return;
@@ -35,7 +34,6 @@ export const useGameState = () => {
       const updates = { ...prev };
       const newInventory = [...prev.inventory];
 
-      // 1. ЗЕЛЬЯ
       if (item.startsWith('potion')) {
         const potion = POTION_STATS[item as PotionType];
         let used = false;
@@ -59,34 +57,29 @@ export const useGameState = () => {
           updates.inventory = newInventory;
         }
       } 
-      // 2. ОРУЖИЕ
       else if (item.startsWith('weapon')) {
         const newWeapon = item as WeaponType;
         const newStats = GEAR_STATS[newWeapon];
         
-        // Снимаем старое
         if (updates.equippedWeapon) {
           const oldWeapon = updates.equippedWeapon;
           const oldStats = GEAR_STATS[oldWeapon];
           updates.atk -= oldStats.val;
-          newInventory.push(oldWeapon); // Возвращаем в инвентарь
+          newInventory.push(oldWeapon);
           addLog(`Снято: ${oldStats.name}`, 'info');
         }
 
-        // Надеваем новое
         updates.atk += newStats.val;
         updates.equippedWeapon = newWeapon;
-        newInventory.splice(itemIndex, 1); // Убираем из инвентаря
+        newInventory.splice(itemIndex, 1);
         addLog(`Экипировано: ${newStats.name} (+${newStats.val} ATK)`, 'success');
         
         updates.inventory = newInventory;
       }
-      // 3. БРОНЯ
       else if (item.startsWith('armor')) {
         const newArmor = item as ArmorType;
         const newStats = GEAR_STATS[newArmor];
 
-        // Снимаем старое
         if (updates.equippedArmor) {
           const oldArmor = updates.equippedArmor;
           const oldStats = GEAR_STATS[oldArmor];
@@ -95,7 +88,6 @@ export const useGameState = () => {
           addLog(`Снято: ${oldStats.name}`, 'info');
         }
 
-        // Надеваем новое
         updates.def += newStats.val;
         updates.equippedArmor = newArmor;
         newInventory.splice(itemIndex, 1);
@@ -108,15 +100,12 @@ export const useGameState = () => {
     });
   }, [player, addLog]);
 
-
-  // Загрузка сохранения при старте
   useEffect(() => {
     const savedData = localStorage.getItem(SAVE_KEY);
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
         if (parsed.player && parsed.grid) {
-          // Миграция старых сейвов (если нет полей экипировки)
           const loadedPlayer = parsed.player;
           if (loadedPlayer.equippedWeapon === undefined) loadedPlayer.equippedWeapon = null;
           if (loadedPlayer.equippedArmor === undefined) loadedPlayer.equippedArmor = null;
@@ -134,7 +123,6 @@ export const useGameState = () => {
     }
   }, []);
 
-  // Автосохранение
   useEffect(() => {
     if (hasChosenClass) {
       const saveData = {
@@ -147,21 +135,39 @@ export const useGameState = () => {
     }
   }, [player, grid, levelHistory, hasChosenClass, logs]);
 
-  // Генерация подземелья
   const generateDungeon = useCallback((levelIndex: number = 1) => {
-    addLog(`--- ГЕНЕРАЦИЯ ЭТАЖА ${levelIndex} ---`, 'info');
+    addLog(`--- ЭТАЖ ${levelIndex} ---`, 'info');
     setCombatTarget(null);
     setMainMenuIndex(0);
     setSubMenuIndex(0);
     setActiveMenu('main');
 
-    const { grid: newGrid, rooms } = generateDungeonGrid(levelIndex);
-    const startPos = getStartPosition(rooms);
+    let newGrid: CellData[][];
+    let startPos = { x: 1, y: 1 };
 
-    if (levelIndex > 1) {
-      newGrid[startPos.y][startPos.x].type = 'stairs_up';
+    if (activeCampaign && activeCampaign.levels[levelIndex]) {
+       newGrid = JSON.parse(JSON.stringify(activeCampaign.levels[levelIndex]));
+       let foundStart = false;
+       for(let y=0; y<GRID_SIZE; y++){
+         for(let x=0; x<GRID_SIZE; x++){
+            if(newGrid[y][x].type === 'stairs_up') {
+                startPos = {x, y};
+                foundStart = true;
+            }
+         }
+       }
+       if(!foundStart) startPos = {x: 1, y: 1};
+       addLog(`Загружен уровень из кампании: ${activeCampaign.name}`, 'info');
     } else {
-      newGrid[startPos.y][startPos.x].type = 'floor';
+       const gen = generateDungeonGrid(levelIndex);
+       newGrid = gen.grid;
+       startPos = getStartPosition(gen.rooms);
+       
+       if (levelIndex > 1) {
+          newGrid[startPos.y][startPos.x].type = 'stairs_up';
+       } else {
+          newGrid[startPos.y][startPos.x].type = 'floor';
+       }
     }
 
     newGrid[startPos.y][startPos.x].enemy = null;
@@ -169,27 +175,37 @@ export const useGameState = () => {
 
     setPlayer(p => ({ ...p, x: startPos.x, y: startPos.y, dungeonLevel: levelIndex }));
     setGrid(newGrid);
-  }, [addLog]);
+  }, [addLog, activeCampaign]);
 
-  // Начальная генерация
   useEffect(() => {
     if (!localStorage.getItem(SAVE_KEY)) {
       generateDungeon(1);
     }
   }, [generateDungeon]);
 
-  // Выбор класса
-  const selectClass = useCallback((classType: ClassType) => {
+  const selectClass = useCallback((classType: ClassType, name: string, campaign?: DungeonCampaign) => {
     const stats = CLASSES[classType];
+    
+    let startAtk = stats.atk;
+    let startDef = stats.def;
+
+    if (stats.startingWeapon) {
+      startAtk += GEAR_STATS[stats.startingWeapon].val;
+    }
+    if (stats.startingArmor) {
+      startDef += GEAR_STATS[stats.startingArmor].val;
+    }
+
     setPlayer(prev => ({
       ...prev,
       class: classType,
+      name: name || stats.name,
       hp: stats.hp,
       maxHp: stats.maxHp,
       mp: stats.mp,
       maxMp: stats.maxMp,
-      atk: stats.atk,
-      def: stats.def,
+      atk: startAtk,
+      def: startDef,
       moves: stats.baseMoves,
       maxMoves: stats.baseMoves,
       xp: 0,
@@ -198,15 +214,23 @@ export const useGameState = () => {
       gold: 0,
       dungeonLevel: 1,
       inventory: [],
-      equippedWeapon: null,
-      equippedArmor: null
+      equippedWeapon: stats.startingWeapon || null,
+      equippedArmor: stats.startingArmor || null
     }));
+
+    if (campaign) {
+        setActiveCampaign(campaign);
+        addLog(`Начата кампания: ${campaign.name}`, 'info');
+    } else {
+        setActiveCampaign(null);
+    }
+
     setHasChosenClass(true);
-    addLog(`Выбран класс: ${stats.name}`, 'info');
-    generateDungeon(1);
+    addLog(`Герой ${name || stats.name} (${stats.name}) готов к приключениям!`, 'info');
+    
+    setTimeout(() => generateDungeon(1), 50);
   }, [addLog, generateDungeon]);
 
-  // Экспорт сохранения
   const handleExport = useCallback(() => {
     const data = {
       player,
@@ -224,7 +248,71 @@ export const useGameState = () => {
     addLog('Карта успешно экспортирована!', 'success');
   }, [player, grid, levelHistory, logs, addLog]);
 
-  // Импорт сохранения
+  // --- НОВОЕ: Управление этажами для DM ---
+  
+  // Сохранить текущий грид в историю (вызывается перед сменой этажа)
+  const saveCurrentLevelToHistory = useCallback(() => {
+     setLevelHistory(prev => ({
+         ...prev,
+         [player.dungeonLevel]: grid
+     }));
+  }, [player.dungeonLevel, grid]);
+
+  // Создать новый следующий этаж
+  const createNewLevel = useCallback(() => {
+      // Сначала сохраняем текущий
+      const currentLevel = player.dungeonLevel;
+      const historyUpdate = { ...levelHistory, [currentLevel]: grid };
+      setLevelHistory(historyUpdate);
+
+      // Определяем номер нового уровня (максимальный из существующих + 1)
+      const levels = Object.keys(historyUpdate).map(Number);
+      const nextLevel = levels.length > 0 ? Math.max(...levels) + 1 : 1;
+
+      // Генерируем
+      generateDungeon(nextLevel);
+  }, [grid, levelHistory, player.dungeonLevel, generateDungeon]);
+
+  // Переключиться на существующий этаж
+  const switchLevel = useCallback((targetLevel: number) => {
+      // Сохраняем текущий
+      const currentLevel = player.dungeonLevel;
+      const historyUpdate = { ...levelHistory, [currentLevel]: grid };
+      setLevelHistory(historyUpdate);
+
+      if (historyUpdate[targetLevel]) {
+          // Загружаем из истории
+          setGrid(historyUpdate[targetLevel]);
+          setPlayer(p => ({ ...p, dungeonLevel: targetLevel }));
+          addLog(`Редактор: Переход на этаж ${targetLevel}`, 'info');
+      } else {
+          addLog(`Ошибка: Этаж ${targetLevel} не найден`, 'fail');
+      }
+  }, [grid, levelHistory, player.dungeonLevel, addLog]);
+
+  // Экспорт кампании (ОБНОВЛЕНО: сохраняет текущий этаж перед экспортом)
+  const handleExportCampaign = useCallback((name: string, password?: string) => {
+     // Важно: берем актуальную версию истории + текущий грид
+     const finalHistory = { ...levelHistory, [player.dungeonLevel]: grid };
+     
+     const campaign: DungeonCampaign = {
+         name,
+         password: password || undefined,
+         levels: finalHistory
+     };
+     
+     const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: 'application/json' });
+     const url = URL.createObjectURL(blob);
+     const a = document.createElement('a');
+     a.href = url;
+     a.download = `${name.replace(/\s+/g, '_')}_campaign.json`;
+     a.click();
+     URL.revokeObjectURL(url);
+     addLog(`Кампания "${name}" сохранена! (Этажей: ${Object.keys(finalHistory).length})`, 'success');
+  }, [levelHistory, grid, player.dungeonLevel, addLog]);
+
+  // --- Конец новых функций ---
+
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -245,7 +333,20 @@ export const useGameState = () => {
     reader.readAsText(file);
   }, [addLog]);
 
-  // Сброс сохранения
+  const parseCampaignFile = (file: File): Promise<DungeonCampaign> => {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              try {
+                  const data = JSON.parse(e.target?.result as string);
+                  if (data.levels) resolve(data);
+                  else reject('Неверный формат кампании');
+              } catch (err) { reject(err); }
+          };
+          reader.readAsText(file);
+      });
+  };
+
   const clearSave = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
   }, []);
@@ -271,6 +372,11 @@ export const useGameState = () => {
     handleExport,
     handleImport,
     clearSave,
-    useItem // <-- Экспортируем функцию
+    useItem,
+    handleExportCampaign,
+    parseCampaignFile,
+    // Экспортируем новые функции управления этажами
+    createNewLevel,
+    switchLevel
   };
 };

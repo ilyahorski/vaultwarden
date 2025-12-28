@@ -99,7 +99,9 @@ export const CLASSES: Record<string, ClassData> = {
     skills: [
       { id: 'heavy_strike', name: 'Тяжелый удар', mpCost: 5, desc: 'Наносит 200% урона', dmgMult: 2 },
       { id: 'rage', name: 'Ярость', mpCost: 10, desc: 'Восстанавливает 20 HP и бьет врага', heal: 20, dmgMult: 1 }
-    ]
+    ],
+    startingWeapon: 'weapon_rusty',
+    startingArmor: 'armor_leather'
   },
   mage: {
     name: 'Маг',
@@ -112,7 +114,9 @@ export const CLASSES: Record<string, ClassData> = {
     skills: [
       { id: 'fireball', name: 'Огненный шар', mpCost: 15, desc: 'Мощный магический урон (300%)', dmgMult: 3 },
       { id: 'heal', name: 'Лечение', mpCost: 20, desc: 'Восстанавливает 40 HP', heal: 40 }
-    ]
+    ],
+    startingWeapon: 'weapon_dagger',
+    startingArmor: 'armor_cloth'
   },
   rogue: {
     name: 'Разбойник',
@@ -125,7 +129,9 @@ export const CLASSES: Record<string, ClassData> = {
     skills: [
       { id: 'backstab', name: 'Удар в спину', mpCost: 10, desc: 'Критический удар (250%)', dmgMult: 2.5 },
       { id: 'quick_heal', name: 'Перевязка', mpCost: 10, desc: 'Быстрое лечение (+25 HP)', heal: 25 }
-    ]
+    ],
+    startingWeapon: 'weapon_dagger',
+    startingArmor: 'armor_leather'
   }
 };
 

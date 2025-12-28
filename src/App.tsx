@@ -12,7 +12,6 @@ import { useFogOfWar } from './hooks/useFogOfWar';
 
 // Компоненты
 import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls } from './components/game';
-// Note: EventLog удален из импорта компонентов App, так как он теперь внутри Sidebar (или можно оставить импорт, если Sidebar его не экспортирует, но здесь он не нужен напрямую)
 import { PlayerMenu } from './components/game/PlayerMenu';
 import { Sidebar } from './components/editor';
 
@@ -23,11 +22,10 @@ export default function DungeonApp() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Основное состояние игры
   const {
     grid, setGrid,
     player, setPlayer,
-    logs, // Берем логи
+    logs, 
     mode, setMode,
     hasChosenClass,
     levelHistory, setLevelHistory,
@@ -36,10 +34,13 @@ export default function DungeonApp() {
     selectClass,
     handleExport,
     handleImport,
-    useItem
+    useItem,
+    handleExportCampaign,
+    parseCampaignFile,
+    createNewLevel, // <-- НОВОЕ
+    switchLevel     // <-- НОВОЕ
   } = useGameState();
 
-  // UI состояние
   const {
     combatTarget, setCombatTarget,
     activeMenu, setActiveMenu,
@@ -51,12 +52,10 @@ export default function DungeonApp() {
     isMenuOpen, setIsMenuOpen
   } = useUIState();
 
-  // Автоскролл логов
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // ИИ врагов
   const { processEnemyTurn } = useEnemyAI({
     mode,
     combatTarget,
@@ -68,8 +67,7 @@ export default function DungeonApp() {
     setCombatTarget
   });
 
-  // Движение игрока
-  const { movePlayer } = usePlayerMovement({
+  const { movePlayer, toggleDoor } = usePlayerMovement({
     grid, setGrid,
     player, setPlayer,
     activeRoll, setActiveRoll,
@@ -83,7 +81,6 @@ export default function DungeonApp() {
     logs
   });
 
-  // Боевая система
   const { executeCombatAction } = useCombat({
     grid, setGrid,
     player, setPlayer,
@@ -96,7 +93,6 @@ export default function DungeonApp() {
     setMode
   });
 
-  // Редактор карт
   const { handleCellClick } = useEditorHandlers({
     mode,
     selectedTool,
@@ -107,7 +103,6 @@ export default function DungeonApp() {
     setPlayer
   });
 
-  // Функция броска кубика
   const handleRollActionDie = () => {
     rollActionDie(
       player,
@@ -119,7 +114,6 @@ export default function DungeonApp() {
     );
   };
 
-  // Обработка клавиатуры
   useKeyboardControls({
     mode,
     hasChosenClass,
@@ -141,7 +135,6 @@ export default function DungeonApp() {
     useItem
   });
 
-  // Fog of War
   useFogOfWar({
     mode,
     player,
@@ -149,10 +142,27 @@ export default function DungeonApp() {
     setGrid
   });
 
+  const onGridClick = (x: number, y: number) => {
+    if (mode === 'dm') {
+      handleCellClick(x, y);
+    } else {
+      const cell = grid[y][x];
+      if (cell.type === 'door_open') {
+         toggleDoor(x, y);
+      }
+    }
+  };
+  
+  // Расчет максимального этажа для пагинации в сайдбаре
+  // Берем максимум из истории или текущего, если история еще не синхронизирована
+  const maxLevel = Math.max(
+      ...Object.keys(levelHistory).map(Number), 
+      player.dungeonLevel
+  );
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
       
-      {/* Sidebar - теперь с логами! */}
       <Sidebar 
         mode={mode}
         selectedTool={selectedTool}
@@ -161,29 +171,34 @@ export default function DungeonApp() {
         onReset={() => generateDungeon(player.dungeonLevel)}
         onExport={handleExport}
         onImport={handleImport}
+        onExportCampaign={handleExportCampaign}
+        
+        // --- Новые пропсы для управления этажами ---
+        onAddLevel={createNewLevel}
+        onSwitchLevel={switchLevel}
+        currentLevel={player.dungeonLevel}
+        totalLevels={maxLevel}
+        // -------------------------------------------
+        
         fileInputRef={fileInputRef}
-        logs={logs} // <-- Передаем логи
-        logsEndRef={logsEndRef} // <-- Передаем реф
+        logs={logs}
+        logsEndRef={logsEndRef}
       />
 
-      {/* Основная область */}
       <div className="flex-1 flex flex-col min-h-0 relative">
         
-        {/* Выбор класса */}
         {mode === 'player' && !hasChosenClass && (
-          <ClassSelection onSelectClass={selectClass} />
+          <ClassSelection onSelectClass={selectClass} onParseCampaign={parseCampaignFile} />
         )}
 
         {mode === 'player' && hasChosenClass && (
           <>
-            {/* Хедер игрока */}
             <PlayerHeader 
               player={player}
               activeRoll={activeRoll}
               onRollDice={handleRollActionDie}
             />
 
-            {/* Карта */}
             <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
               <div className="relative">
                 <GameGrid 
@@ -192,10 +207,9 @@ export default function DungeonApp() {
                   playerX={player.x}
                   playerY={player.y}
                   isMovingEnemy={isMovingEnemy}
-                  onCellClick={handleCellClick}
+                  onCellClick={onGridClick} 
                 />
 
-                {/* Меню игрока */}
                 {isMenuOpen && !combatTarget && (
                   <PlayerMenu 
                     player={player}
@@ -206,7 +220,6 @@ export default function DungeonApp() {
                   />
                 )}
 
-                {/* Меню боя */}
                 {combatTarget && (
                   <CombatMenu 
                     combatTarget={combatTarget}
@@ -224,17 +237,13 @@ export default function DungeonApp() {
                 )}
               </div>
 
-              {/* Мобильные контроллеры */}
               {!combatTarget && !isMenuOpen && (
                 <MobileControls onMove={movePlayer} />
               )}
             </div>
-            
-            {/* ИЗМЕНЕНИЕ: EventLog удален отсюда */}
           </>
         )}
 
-        {/* Режим мастера */}
         {mode === 'dm' && (
           <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
             <GameGrid 
@@ -243,7 +252,7 @@ export default function DungeonApp() {
               playerX={player.x}
               playerY={player.y}
               isMovingEnemy={isMovingEnemy}
-              onCellClick={handleCellClick}
+              onCellClick={onGridClick}
             />
           </div>
         )}

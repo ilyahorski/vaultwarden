@@ -82,7 +82,6 @@ export function usePlayerMovement({
 
     const r = { val: roll, type: 'info' };
 
-    // Переменная для хранения актуальной версии сетки в процессе хода
     let currentGrid = grid;
 
     // --- ЛОГИКА ЛЕСТНИЦ ---
@@ -148,7 +147,6 @@ export function usePlayerMovement({
       }
     }
 
-    // Обычное движение
     if (targetCell.type === 'wall') {
       if (!autoRolled) addLog(`Вы потратили подготовленный бросок ${r.val} в стену...`, 'info');
       processEnemyTurn(currentGrid, updates);
@@ -167,7 +165,7 @@ export function usePlayerMovement({
         const newGrid = [...currentGrid];
         newGrid[newY][newX].type = 'door_open';
         setGrid(newGrid);
-        currentGrid = newGrid; // Обновляем ссылку
+        currentGrid = newGrid;
 
         updates.moves -= 1;
         setPlayer(updates);
@@ -198,20 +196,28 @@ export function usePlayerMovement({
         }
       } else if (itemKey.includes('weapon')) {
         const weapon = GEAR_STATS[itemKey as WeaponType];
-        if (weapon.val > updates.atk) {
-          addLog(`Экипировано: ${weapon.name} (+${weapon.val} ATK).`, 'loot');
-          updates.atk = weapon.val;
+        const currentWeaponVal = player.equippedWeapon ? GEAR_STATS[player.equippedWeapon].val : 0;
+        
+        if (weapon.val > currentWeaponVal) {
+          const newAtk = (player.atk - currentWeaponVal) + weapon.val;
+          addLog(`Экипировано: ${weapon.name} (+${weapon.val} ATK). Было: +${currentWeaponVal}`, 'loot');
+          updates.atk = newAtk;
+          updates.equippedWeapon = itemKey as WeaponType;
         } else {
-          addLog(`${weapon.name} хуже вашего. Оставлено.`, 'info');
+          addLog(`${weapon.name} (+${weapon.val}) хуже текущего (+${currentWeaponVal}). Оставлено.`, 'info');
           consumed = false;
         }
       } else if (itemKey.includes('armor')) {
         const armor = GEAR_STATS[itemKey as ArmorType];
-        if (armor.val > updates.def) {
-          addLog(`Экипировано: ${armor.name} (+${armor.val} DEF).`, 'loot');
-          updates.def = armor.val;
+        const currentArmorVal = player.equippedArmor ? GEAR_STATS[player.equippedArmor].val : 0;
+
+        if (armor.val > currentArmorVal) {
+          const newDef = (player.def - currentArmorVal) + armor.val;
+          addLog(`Экипировано: ${armor.name} (+${armor.val} DEF). Было: +${currentArmorVal}`, 'loot');
+          updates.def = newDef;
+          updates.equippedArmor = itemKey as ArmorType;
         } else {
-          addLog(`${armor.name} хуже вашего. Оставлено.`, 'info');
+          addLog(`${armor.name} (+${armor.val}) хуже текущего (+${currentArmorVal}). Оставлено.`, 'info');
           consumed = false;
         }
       } else if (itemKey === 'chest') {
@@ -232,7 +238,7 @@ export function usePlayerMovement({
         const newGrid = [...currentGrid];
         newGrid[newY][newX].item = null;
         setGrid(newGrid);
-        currentGrid = newGrid; // Обновляем ссылку
+        currentGrid = newGrid;
       }
     }
 
@@ -242,7 +248,7 @@ export function usePlayerMovement({
         const newGrid = [...currentGrid];
         newGrid[newY][newX].type = 'floor';
         setGrid(newGrid);
-        currentGrid = newGrid; // Обновляем ссылку
+        currentGrid = newGrid;
       } else {
         let dmg = 15;
         if (r.val <= 5) {
@@ -271,12 +277,23 @@ export function usePlayerMovement({
       const newGrid = [...currentGrid];
       newGrid[newY][newX].type = 'door';
       setGrid(newGrid);
-      currentGrid = newGrid; // Обновляем ссылку
+      currentGrid = newGrid;
     }
 
-    // Передаем актуальную сетку
     processEnemyTurn(currentGrid, updates);
   };
 
-  return { movePlayer };
+  const toggleDoor = (x: number, y: number) => {
+    const target = grid[y][x];
+    if (target.type === 'door_open') {
+       const newGrid = [...grid];
+       newGrid[y][x].type = 'door';
+       setGrid(newGrid);
+       addLog('Вы захлопнули дверь перед носом врагов!', 'info');
+       return true;
+    }
+    return false;
+  };
+
+  return { movePlayer, toggleDoor };
 }
