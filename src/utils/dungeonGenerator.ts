@@ -69,12 +69,12 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
       let item: ItemType = 'potion_weak';
       const depthBonus = levelIndex * 2;
 
-      if (lootRoll + depthBonus > 95) item = 'weapon_strong';
-      else if (lootRoll + depthBonus > 85) item = 'armor_mid';
+      if (lootRoll + depthBonus > 95) item = 'weapon_greatsword';
+      else if (lootRoll + depthBonus > 85) item = 'armor_chain';
       else if (lootRoll > 75) item = 'potion_strong';
-      else if (lootRoll > 65) item = 'weapon_mid';
+      else if (lootRoll > 65) item = 'weapon_sword';
       else if (lootRoll > 50) item = 'potion_mid';
-      else if (lootRoll > 40) item = 'potion_mana';
+      else if (lootRoll > 40) item = 'potion_mana_weak';
       newGrid[cy][cx].item = item;
     }
 

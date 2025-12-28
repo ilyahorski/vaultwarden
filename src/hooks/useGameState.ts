@@ -249,14 +249,6 @@ export const useGameState = () => {
   }, [player, grid, levelHistory, logs, addLog]);
 
   // --- НОВОЕ: Управление этажами для DM ---
-  
-  // Сохранить текущий грид в историю (вызывается перед сменой этажа)
-  const saveCurrentLevelToHistory = useCallback(() => {
-     setLevelHistory(prev => ({
-         ...prev,
-         [player.dungeonLevel]: grid
-     }));
-  }, [player.dungeonLevel, grid]);
 
   // Создать новый следующий этаж
   const createNewLevel = useCallback(() => {

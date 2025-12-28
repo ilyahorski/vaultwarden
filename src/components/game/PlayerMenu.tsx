@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Zap, Backpack, X } from 'lucide-react';
 import type { Player, ActiveMenu } from '../../types';
 import { CLASSES, POTION_STATS, GEAR_STATS } from '../../constants';
@@ -26,7 +26,6 @@ export function PlayerMenu({
   ];
 
   // Рефы для автоскролла
-  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Эффект скролла
@@ -72,11 +71,11 @@ export function PlayerMenu({
           {activeMenu === 'skills' && (
             <div className="flex flex-col h-full">
               <h3 className="text-blue-400 text-sm font-bold mb-2 uppercase shrink-0">Навыки класса</h3>
-              <div ref={listRef} className="space-y-2 overflow-y-auto pr-2 flex-1">
+              <div className="space-y-2 overflow-y-auto pr-2 flex-1">
                 {CLASSES[player.class].skills.map((skill, idx) => (
                   <div
                     key={skill.id}
-                    ref={el => itemRefs.current[idx] = el}
+                    ref={el => { itemRefs.current[idx] = el; }}
                     className={`p-3 rounded border transition-colors ${
                       idx === subMenuIndex
                         ? 'bg-blue-900/30 border-blue-500 text-slate-100'
@@ -101,7 +100,7 @@ export function PlayerMenu({
           {activeMenu === 'items' && (
             <div className="flex flex-col h-full">
               <h3 className="text-emerald-400 text-sm font-bold mb-2 uppercase shrink-0">Рюкзак</h3>
-              <div ref={listRef} className="space-y-2 max-h-48 overflow-y-auto pr-2 flex-1">
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-2 flex-1">
                 {player.inventory.length === 0 ? (
                   <div className="text-center text-slate-500 py-4 italic">Пусто...</div>
                 ) : (
@@ -122,7 +121,7 @@ export function PlayerMenu({
                     return (
                       <div
                         key={idx}
-                        ref={el => itemRefs.current[idx] = el}
+                        ref={el => { itemRefs.current[idx] = el; }}
                         className={`p-3 rounded border transition-colors ${
                           idx === subMenuIndex
                             ? 'bg-emerald-900/30 border-emerald-500 text-slate-100'

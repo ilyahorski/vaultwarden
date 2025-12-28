@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Map as MapIcon, Settings, User, RefreshCw, Download, Upload, Box, Droplets, Flame,
+  Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
-  ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug, Lock,
+  ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
   Plus, ChevronLeft, ChevronRight, Layers
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
@@ -16,8 +16,6 @@ interface SidebarProps {
   onModeChange: (mode: GameMode) => void;
   onToolChange: (tool: string) => void;
   onReset: () => void;
-  onExport: () => void;
-  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExportCampaign: (name: string, password?: string) => void;
   // Новые пропсы для управления этажами
   onAddLevel: () => void;
@@ -25,7 +23,6 @@ interface SidebarProps {
   currentLevel: number;
   totalLevels: number; // Максимальный открытый уровень
 
-  fileInputRef: React.RefObject<HTMLInputElement>;
   logs: LogEntry[];
   logsEndRef: React.RefObject<HTMLDivElement>;
 }
@@ -33,9 +30,9 @@ interface SidebarProps {
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  mode, selectedTool, onModeChange, onToolChange, onReset, onExport, onImport, onExportCampaign, 
+  mode, selectedTool, onModeChange, onToolChange, onReset, onExportCampaign, 
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
-  fileInputRef, logs, logsEndRef
+  logs, logsEndRef
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('structure');
 
@@ -187,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <h3 className="text-xs font-bold text-amber-200 uppercase tracking-widest mb-2 pl-1">Оружие</h3>
                     <div className="grid grid-cols-1 gap-2">
                       {Object.entries(GEAR_STATS)
-                        .filter(([_, stat]) => stat.type === 'atk')
+                        .filter(([, stat]) => stat.type === 'atk')
                         .map(([key, stat]) => (
                           <div key={key} title={`${stat.name} (+${stat.val} ATK)`}>
                             <ToolButton 
@@ -205,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 pl-1">Броня</h3>
                     <div className="grid grid-cols-1 gap-2">
                       {Object.entries(GEAR_STATS)
-                        .filter(([_, stat]) => stat.type === 'def')
+                        .filter(([, stat]) => stat.type === 'def')
                         .map(([key, stat]) => (
                           <div key={key} title={`${stat.name} (+${stat.val} DEF)`}>
                             <ToolButton 
