@@ -1,5 +1,5 @@
 import type { CellData, Player, LogEntry, CombatTarget } from '../types';
-import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX_INVENTORY_SIZE, TORCH_RADIUS } from '../constants';
+import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX_INVENTORY_SIZE } from '../constants';
 import type { PotionType, WeaponType, ArmorType } from '../types';
 
 interface UsePlayerMovementProps {
@@ -153,43 +153,6 @@ export function usePlayerMovement({
       return;
     }
 
-    // --- ЛОГИКА ФАКЕЛОВ ---
-    if (targetCell.type === 'torch') {
-       addLog('Вы зажгли факел! Тьма отступает.', 'success');
-       
-       // Создаем глубокую копию для надежности
-       const newGrid = currentGrid.map(row => row.map(cell => ({ ...cell })));
-       newGrid[newY][newX].type = 'torch_lit';
-       
-       // Мгновенно обновляем видимость вокруг факела
-       const range = TORCH_RADIUS;
-       for (let ty = -range; ty <= range; ty++) {
-           for (let tx = -range; tx <= range; tx++) {
-               const gy = newY + ty;
-               const gx = newX + tx;
-               if (gy >= 0 && gy < GRID_SIZE && gx >= 0 && gx < GRID_SIZE) {
-                   if (Math.sqrt(tx*tx + ty*ty) <= range) {
-                       newGrid[gy][gx].isRevealed = true;
-                       newGrid[gy][gx].isVisible = true;
-                   }
-               }
-           }
-       }
-
-       setGrid(newGrid);
-       
-       updates.moves -= 1;
-       setPlayer(updates);
-       // Игрок остается на месте (не входит в факел)
-       processEnemyTurn(newGrid, updates);
-       return;
-    }
-
-    if (targetCell.type === 'torch_lit') {
-        if (!autoRolled) addLog('Это горящий факел. Осторожнее с огнем!', 'info');
-        return;
-    }
-
     if (targetCell.type === 'door') {
       if (r.val <= 5) {
         addLog(`[D20: ${r.val}] Дверь заклинило!`, 'fail');
@@ -200,7 +163,7 @@ export function usePlayerMovement({
       } else {
         addLog(`[D20: ${r.val}] Дверь открыта.`, 'info');
         const newGrid = [...currentGrid];
-        newGrid[newY][newX] = { ...newGrid[newY][newX], type: 'door_open' };
+        newGrid[newY][newX].type = 'door_open';
         setGrid(newGrid);
         currentGrid = newGrid;
 
@@ -273,7 +236,7 @@ export function usePlayerMovement({
 
       if (consumed) {
         const newGrid = [...currentGrid];
-        newGrid[newY][newX] = { ...newGrid[newY][newX], item: null };
+        newGrid[newY][newX].item = null;
         setGrid(newGrid);
         currentGrid = newGrid;
       }
@@ -283,7 +246,7 @@ export function usePlayerMovement({
       if (r.val >= 16) {
         addLog(`[D20: ${r.val}] Вы заметили ловушку и обезвредили её!`, 'success');
         const newGrid = [...currentGrid];
-        newGrid[newY][newX] = { ...newGrid[newY][newX], type: 'floor' };
+        newGrid[newY][newX].type = 'floor';
         setGrid(newGrid);
         currentGrid = newGrid;
       } else {
@@ -312,7 +275,7 @@ export function usePlayerMovement({
     if (targetCell.type === 'secret_door') {
       addLog('Внимательный взгляд заметил скрытый проход!', 'info');
       const newGrid = [...currentGrid];
-      newGrid[newY][newX] = { ...newGrid[newY][newX], type: 'door' };
+      newGrid[newY][newX].type = 'door';
       setGrid(newGrid);
       currentGrid = newGrid;
     }
@@ -324,7 +287,7 @@ export function usePlayerMovement({
     const target = grid[y][x];
     if (target.type === 'door_open') {
        const newGrid = [...grid];
-       newGrid[y][x] = { ...newGrid[y][x], type: 'door' };
+       newGrid[y][x].type = 'door';
        setGrid(newGrid);
        addLog('Вы захлопнули дверь перед носом врагов!', 'info');
        return true;

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import type { CellData, Player, LogEntry, CombatTarget } from '../types';
 import { GRID_SIZE, AGGRO_RADIUS, MONSTER_STATS } from '../constants';
 
 interface UseEnemyAIProps {
   mode: 'dm' | 'player';
   combatTarget: CombatTarget | null;
-  setGrid: (grid: CellData[][]) => void;
+  setGrid: (grid: CellData[][] | ((prev: CellData[][]) => CellData[][])) => void;
   player: Player;
   setPlayer: (player: Player | ((prev: Player) => Player)) => void;
   addLog: (text: string, type?: LogEntry['type']) => void;
@@ -24,12 +24,9 @@ export function useEnemyAI({
   setCombatTarget
 }: UseEnemyAIProps) {
   
-  // Оборачиваем в useCallback для стабильности
-  const processEnemyTurn = useCallback((currentGrid: CellData[][], currentPlayer: Player, ignoreEnemyPos?: { x: number; y: number }) => {
+  const processEnemyTurn = (currentGrid: CellData[][], currentPlayer: Player) => {
     let enemyMoved = false;
     let damageToPlayer = 0;
-    
-    // Создаем копию
     const newGrid = currentGrid.map(row => row.map(cell => ({ ...cell })));
     const enemies = [];
 
@@ -42,10 +39,6 @@ export function useEnemyAI({
     }
 
     for (const enemy of enemies) {
-      if (ignoreEnemyPos && enemy.x === ignoreEnemyPos.x && enemy.y === ignoreEnemyPos.y) {
-          continue;
-      }
-
       const dist = Math.sqrt(Math.pow(enemy.x - currentPlayer.x, 2) + Math.pow(enemy.y - currentPlayer.y, 2));
 
       if (dist <= AGGRO_RADIUS && dist > 0) {
@@ -76,6 +69,7 @@ export function useEnemyAI({
           }
 
           if (bestMove.x !== enemy.x || bestMove.y !== enemy.y) {
+            // Перемещаем врага вместе с его текущим HP
             const currentHp = newGrid[enemy.y][enemy.x].enemyHp;
 
             newGrid[bestMove.y][bestMove.x].enemy = enemy.type;
@@ -93,33 +87,32 @@ export function useEnemyAI({
     if (enemyMoved) setGrid(newGrid);
 
     if (damageToPlayer > 0) {
-      setPlayer(p => {
-         const newHp = p.hp - damageToPlayer;
-         if (newHp <= 0) {
-            // Используем таймаут чтобы не блокировать рендер
-            setTimeout(() => {
-                addLog('💀 ВЫ ПОГИБЛИ! Рестарт...', 'fail');
-                setMode('dm');
-                setCombatTarget(null);
-                localStorage.removeItem('dungeon_save_v1');
-            }, 0);
-         }
-         return { ...p, hp: newHp };
-      });
+      const newHp = currentPlayer.hp - damageToPlayer;
+      setPlayer(p => ({ ...p, hp: newHp }));
+      if (newHp <= 0) {
+        addLog('💀 ВЫ ПОГИБЛИ! Рестарт...', 'fail');
+        setMode('dm');
+        setCombatTarget(null);
+        localStorage.removeItem('dungeon_save_v1');
+      }
     }
-  }, [setGrid, setPlayer, addLog, setMode, setCombatTarget]);
+  };
 
+  // Реф для хранения актуального состояния игрока
   const playerRef = useRef(player);
   useEffect(() => {
     playerRef.current = player;
   }, [player]);
 
+  // Boss AI - случайное движение когда игрок далеко
   useEffect(() => {
     if (mode !== 'player' || combatTarget) return;
 
     const timer = setInterval(() => {
       setGrid((prevGrid: CellData[][]) => {
+        // Используем playerRef для получения координат без перезапуска таймера
         const currentPlayer = playerRef.current;
+        
         let bossPos = null;
         for (let y = 0; y < GRID_SIZE; y++) {
           for (let x = 0; x < GRID_SIZE; x++) {
@@ -144,11 +137,16 @@ export function useEnemyAI({
             const cell = prevGrid[ny][nx];
             if (cell.type !== 'wall' && !cell.enemy && cell.type !== 'door') {
               const newGrid = prevGrid.map(row => row.map(c => ({ ...c })));
+              
+              // Перемещаем босса с сохранением HP
               const currentHp = newGrid[bossPos.y][bossPos.x].enemyHp;
+              
               newGrid[ny][nx].enemy = 'boss';
               newGrid[ny][nx].enemyHp = currentHp;
+              
               newGrid[bossPos.y][bossPos.x].enemy = null;
               newGrid[bossPos.y][bossPos.x].enemyHp = undefined;
+              
               return newGrid;
             }
           }
@@ -158,7 +156,7 @@ export function useEnemyAI({
     }, 1500);
 
     return () => clearInterval(timer);
-  }, [mode, combatTarget, setGrid]);
+  }, [mode, combatTarget, setGrid]); // Убраны player.x, player.y из зависимостей
 
   return { processEnemyTurn };
 }

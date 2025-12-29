@@ -32,7 +32,7 @@ type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
   mode, selectedTool, onModeChange, onToolChange, onReset, 
-  onExport, onImport, fileInputRef,
+  onExport, onImport, fileInputRef, // Не забудьте деструктуризировать новые пропсы
   onExportCampaign, 
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
   logs, logsEndRef
@@ -109,12 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Ландшафт</h3>
-                    <div className="grid grid-cols-3 gap-2"> {/* Изменено на 3 колонки, чтобы вместить факел */}
-                      <ToolButton active={selectedTool === 'torch'} onClick={() => onToolChange('torch')} icon={<Flame size={16} className="text-orange-400" />} label="Факел" />
-                      <ToolButton active={selectedTool === 'trap'} onClick={() => onToolChange('trap')} icon={<Flame size={16} />} label="Ловушка" />
+                    <div className="grid grid-cols-2 gap-3">
                       <ToolButton active={selectedTool === 'water'} onClick={() => onToolChange('water')} icon={<Droplets size={16} className="text-blue-400" />} label="Вода" />
                       <ToolButton active={selectedTool === 'lava'} onClick={() => onToolChange('lava')} icon={<Flame size={16} className="text-red-500" />} label="Лава" />
                       <ToolButton active={selectedTool === 'grass'} onClick={() => onToolChange('grass')} icon={<Trees size={16} className="text-green-500" />} label="Лес" />
+                      <ToolButton active={selectedTool === 'trap'} onClick={() => onToolChange('trap')} icon={<Flame size={16} />} label="Ловушка" />
                     </div>
                   </div>
                   <div>

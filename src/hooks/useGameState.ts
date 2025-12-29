@@ -7,12 +7,14 @@ import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator
 export const useGameState = () => {
   // 1. ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ
   const [initialState] = useState(() => {
+    // А) Пытаемся загрузить сохранение
     const savedData = localStorage.getItem(SAVE_KEY);
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
         if (parsed.player && parsed.grid) {
           const loadedPlayer = parsed.player;
+          // Санитизация старых сохранений
           if (loadedPlayer.equippedWeapon === undefined) loadedPlayer.equippedWeapon = null;
           if (loadedPlayer.equippedArmor === undefined) loadedPlayer.equippedArmor = null;
 
@@ -30,10 +32,12 @@ export const useGameState = () => {
       }
     }
 
+    // Б) Если сохранения нет — генерируем новый уровень сразу
     const gen = generateDungeonGrid(1);
     const startPos = getStartPosition(gen.rooms);
     const newGrid = gen.grid;
     
+    // Для 1 уровня ставим пол, а не лестницу
     newGrid[startPos.y][startPos.x].type = 'floor';
     newGrid[startPos.y][startPos.x].enemy = null;
     newGrid[startPos.y][startPos.x].item = null;
@@ -54,7 +58,7 @@ export const useGameState = () => {
     };
   });
 
-  // 2. Инициализируем стейт
+  // 2. Инициализируем стейт значениями из initialState
   const [grid, setGrid] = useState<CellData[][]>(initialState.grid);
   const [mode, setMode] = useState<GameMode>('dm');
   const [hasChosenClass, setHasChosenClass] = useState(initialState.hasChosenClass);
@@ -62,6 +66,7 @@ export const useGameState = () => {
   const [player, setPlayer] = useState<Player>(initialState.player);
   const [logs, setLogs] = useState<LogEntry[]>(initialState.logs);
   
+  // Остальные стейты (UI) инициализируются стандартно
   const [selectedTool, setSelectedTool] = useState<string>('wall');
   const [isMovingEnemy, setIsMovingEnemy] = useState<{ x: number; y: number } | null>(null);
   const [activeRoll, setActiveRoll] = useState<number | null>(null);
@@ -151,11 +156,8 @@ export const useGameState = () => {
     });
   }, [player, addLog]);
 
-  // --- ОПТИМИЗИРОВАННОЕ СОХРАНЕНИЕ (DEBOUNCE) ---
   useEffect(() => {
-    if (!hasChosenClass) return;
-
-    const timer = setTimeout(() => {
+    if (hasChosenClass) {
       const saveData = {
         player,
         grid,
@@ -163,12 +165,10 @@ export const useGameState = () => {
         logs: logs.slice(-20)
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-      // console.log('Auto-saved'); // Можно раскомментировать для отладки
-    }, 1000); // Сохраняем не чаще раза в секунду
-
-    return () => clearTimeout(timer);
+    }
   }, [player, grid, levelHistory, hasChosenClass, logs]);
 
+  // Функция генерации уровня
   const generateDungeon = useCallback((levelIndex: number = 1, campaignOverride?: DungeonCampaign) => {
     addLog(`--- ЭТАЖ ${levelIndex} ---`, 'info');
     setCombatTarget(null);
@@ -184,6 +184,8 @@ export const useGameState = () => {
     if (currentCampaign && currentCampaign.levels[levelIndex]) {
        newGrid = JSON.parse(JSON.stringify(currentCampaign.levels[levelIndex]));
        let foundStart = false;
+       
+       // 1. Приоритет: Лестница вверх (стандарт для входа)
        for(let y=0; y<GRID_SIZE; y++){
          for(let x=0; x<GRID_SIZE; x++){
             if(newGrid[y][x].type === 'stairs_up') {
@@ -194,6 +196,8 @@ export const useGameState = () => {
          }
          if(foundStart) break;
        }
+
+       // 2. Приоритет: Открытая дверь (часто старт кастомных карт)
        if (!foundStart) {
          for(let y=0; y<GRID_SIZE; y++){
             for(let x=0; x<GRID_SIZE; x++){
@@ -206,6 +210,8 @@ export const useGameState = () => {
             if(foundStart) break;
          }
        }
+
+       // 3. Приоритет: Любая безопасная клетка (пол или трава)
        if (!foundStart) {
          for(let y=0; y<GRID_SIZE; y++){
             for(let x=0; x<GRID_SIZE; x++){
@@ -219,6 +225,8 @@ export const useGameState = () => {
             if(foundStart) break;
          }
        }
+
+       // 4. Фолбек (если карта пустая или одни стены)
        if(!foundStart) startPos = {x: 1, y: 1};
 
        addLog(`Загружен уровень из кампании: ${currentCampaign.name}`, 'info');
@@ -349,11 +357,13 @@ export const useGameState = () => {
 
   const handleExportCampaign = useCallback((name: string, password?: string) => {
      const finalHistory = { ...levelHistory, [player.dungeonLevel]: grid };
+     
      const campaign: DungeonCampaign = {
          name,
          password: password || undefined,
          levels: finalHistory
      };
+     
      const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: 'application/json' });
      const url = URL.createObjectURL(blob);
      const a = document.createElement('a');
@@ -361,7 +371,7 @@ export const useGameState = () => {
      a.download = `${name.replace(/\s+/g, '_')}_campaign.json`;
      a.click();
      URL.revokeObjectURL(url);
-     addLog(`Кампания "${name}" сохранена!`, 'success');
+     addLog(`Кампания "${name}" сохранена! (Этажей: ${Object.keys(finalHistory).length})`, 'success');
   }, [levelHistory, grid, player.dungeonLevel, addLog]);
 
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

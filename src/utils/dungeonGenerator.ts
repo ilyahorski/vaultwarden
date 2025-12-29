@@ -61,40 +61,28 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
       return;
     }
 
-    // Генерация факелов (шанс 15%)
-    if (rand(0, 100) > 85) {
-      const cx = rand(room.x, room.x + room.w - 1);
-      const cy = rand(room.y, room.y + room.h - 1);
-      if (newGrid[cy][cx].type === 'floor' && !newGrid[cy][cx].item && !newGrid[cy][cx].enemy) {
-         newGrid[cy][cx].type = 'torch';
-      }
-    }
-
     // Размещение лута
     if (rand(0, 100) > 40) {
       const cx = rand(room.x, room.x + room.w - 1);
       const cy = rand(room.y, room.y + room.h - 1);
-      // Не ставим лут там, где уже стоит что-то важное (лестница, факел)
-      if (newGrid[cy][cx].type === 'floor') {
-          const lootRoll = rand(0, 100);
-          let item: ItemType = 'potion_weak';
-          const depthBonus = levelIndex * 2;
+      const lootRoll = rand(0, 100);
+      let item: ItemType = 'potion_weak';
+      const depthBonus = levelIndex * 2;
 
-          if (lootRoll + depthBonus > 95) item = 'weapon_greatsword';
-          else if (lootRoll + depthBonus > 85) item = 'armor_chain';
-          else if (lootRoll > 75) item = 'potion_strong';
-          else if (lootRoll > 65) item = 'weapon_sword';
-          else if (lootRoll > 50) item = 'potion_mid';
-          else if (lootRoll > 40) item = 'potion_mana_weak';
-          newGrid[cy][cx].item = item;
-      }
+      if (lootRoll + depthBonus > 95) item = 'weapon_greatsword';
+      else if (lootRoll + depthBonus > 85) item = 'armor_chain';
+      else if (lootRoll > 75) item = 'potion_strong';
+      else if (lootRoll > 65) item = 'weapon_sword';
+      else if (lootRoll > 50) item = 'potion_mid';
+      else if (lootRoll > 40) item = 'potion_mana_weak';
+      newGrid[cy][cx].item = item;
     }
 
     // Размещение врагов
     if (rand(0, 100) > (30 - levelIndex)) {
       const ex = rand(room.x, room.x + room.w - 1);
       const ey = rand(room.y, room.y + room.h - 1);
-      if (!newGrid[ey][ex].item && newGrid[ey][ex].type === 'floor') {
+      if (!newGrid[ey][ex].item) {
         const enemyRoll = rand(0, 100);
         let enemyType: EnemyType = 'goblin';
         
