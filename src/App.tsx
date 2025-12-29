@@ -68,7 +68,7 @@ export default function DungeonApp() {
     setCombatTarget
   });
 
-  const { movePlayer, toggleDoor } = usePlayerMovement({
+  const { movePlayer, toggleDoor, lightTorch } = usePlayerMovement({
     grid, setGrid,
     player, setPlayer,
     activeRoll, setActiveRoll,
@@ -131,12 +131,38 @@ export default function DungeonApp() {
     return null;
   };
 
+  // Проверка на наличие потухшего факела рядом
+  const getAdjacentTorch = () => {
+    if (!grid || !grid.length) return null;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dx, dy] of dirs) {
+        const nx = player.x + dx;
+        const ny = player.y + dy;
+        if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length) {
+            if (grid[ny][nx].type === 'torch') {
+                return { x: nx, y: ny };
+            }
+        }
+    }
+    return null;
+  };
+
   const adjacentDoor = getAdjacentDoor();
   const canCloseDoor = !!adjacentDoor;
+
+  const adjacentTorch = getAdjacentTorch();
+  const canLightTorch = !!adjacentTorch;
 
   const handleCloseDoor = () => {
       if (adjacentDoor) {
           toggleDoor(adjacentDoor.x, adjacentDoor.y);
+          setIsMenuOpen(false);
+      }
+  };
+
+  const handleLightTorch = () => {
+      if (adjacentTorch) {
+          lightTorch(adjacentTorch.x, adjacentTorch.y);
           setIsMenuOpen(false);
       }
   };
@@ -157,11 +183,13 @@ export default function DungeonApp() {
     movePlayer,
     executeCombatAction,
     setCombatTarget,
-    isMenuOpen, 
+    isMenuOpen,
     setIsMenuOpen,
     onConsumeItem,
     canCloseDoor,
-    onCloseDoor: handleCloseDoor
+    onCloseDoor: handleCloseDoor,
+    canLightTorch,
+    onLightTorch: handleLightTorch
   });
 
   useFogOfWar({
@@ -235,7 +263,7 @@ export default function DungeonApp() {
                 />
 
                 {isMenuOpen && !combatTarget && (
-                  <PlayerMenu 
+                  <PlayerMenu
                     player={player}
                     activeMenu={activeMenu}
                     mainMenuIndex={mainMenuIndex}
@@ -243,6 +271,8 @@ export default function DungeonApp() {
                     onClose={() => setIsMenuOpen(false)}
                     canCloseDoor={canCloseDoor}
                     onCloseDoor={handleCloseDoor}
+                    canLightTorch={canLightTorch}
+                    onLightTorch={handleLightTorch}
                   />
                 )}
 

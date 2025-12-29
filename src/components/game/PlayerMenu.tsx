@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Zap, Backpack, X, DoorClosed } from 'lucide-react';
+import { Zap, Backpack, X, DoorClosed, Flame } from 'lucide-react';
 import type { Player, ActiveMenu } from '../../types';
 import { CLASSES, POTION_STATS, GEAR_STATS } from '../../constants';
 
@@ -11,6 +11,8 @@ interface PlayerMenuProps {
   onClose: () => void;
   canCloseDoor: boolean;
   onCloseDoor: () => void;
+  canLightTorch: boolean;
+  onLightTorch: () => void;
 }
 
 export function PlayerMenu({
@@ -20,13 +22,19 @@ export function PlayerMenu({
   subMenuIndex,
   onClose,
   canCloseDoor,
-  onCloseDoor
+  onCloseDoor,
+  canLightTorch,
+  onLightTorch
 }: PlayerMenuProps) {
-  
+
   const menuOptions = [];
 
   if (canCloseDoor) {
     menuOptions.push({ label: 'Закрыть дверь', icon: <DoorClosed size={18} /> });
+  }
+
+  if (canLightTorch) {
+    menuOptions.push({ label: 'Зажечь факел', icon: <Flame size={18} className="text-orange-400" /> });
   }
 
   menuOptions.push(
@@ -70,6 +78,7 @@ export function PlayerMenu({
                   onClick={() => {
                     if (opt.label === 'Закрыть') onClose();
                     if (opt.label === 'Закрыть дверь') onCloseDoor();
+                    if (opt.label === 'Зажечь факел') onLightTorch();
                   }}
                 >
                   {opt.icon}

@@ -7,6 +7,7 @@ export const GRID_SIZE = 50;
 export const CELL_SIZE = 15;
 export const VISIBILITY_RADIUS = 3;
 export const AGGRO_RADIUS = 6;
+export const TORCH_LIGHT_RADIUS = 7;
 export const MAX_INVENTORY_SIZE = 100;
 export const SAVE_KEY = 'dungeon_save_v1';
 

@@ -26,6 +26,8 @@ interface UseKeyboardControlsProps {
   // Новые пропсы
   canCloseDoor: boolean;
   onCloseDoor: () => void;
+  canLightTorch: boolean;
+  onLightTorch: () => void;
 }
 
 export function useKeyboardControls({
@@ -48,7 +50,9 @@ export function useKeyboardControls({
   setIsMenuOpen,
   onConsumeItem,
   canCloseDoor,
-  onCloseDoor
+  onCloseDoor,
+  canLightTorch,
+  onLightTorch
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
@@ -109,26 +113,26 @@ export function useKeyboardControls({
       // 3. Логика Меню Игрока (вне боя)
       if (isMenuOpen) {
         if (activeMenu === 'main') {
-          const menuSize = canCloseDoor ? 4 : 3;
-          
+          // Строим массив опций в том же порядке, что и в PlayerMenu
+          const menuOptions: string[] = [];
+          if (canCloseDoor) menuOptions.push('door');
+          if (canLightTorch) menuOptions.push('torch');
+          menuOptions.push('skills', 'items', 'close');
+
+          const menuSize = menuOptions.length;
+
           if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : menuSize - 1));
           if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < menuSize - 1 ? prev + 1 : 0));
-          
+
           if (e.key === 'Enter' || e.key === 'ArrowRight') {
-            if (canCloseDoor) {
-                // Если опция доступна, сдвигаем индексы
-                if (mainMenuIndex === 0 && e.key === 'Enter') { onCloseDoor(); }
-                if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
-                if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
-                if (mainMenuIndex === 3 && e.key === 'Enter') setIsMenuOpen(false);
-            } else {
-                // Стандартное поведение
-                if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
-                if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
-                if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false);
-            }
+            const currentOption = menuOptions[mainMenuIndex];
+            if (currentOption === 'door' && e.key === 'Enter') { onCloseDoor(); }
+            else if (currentOption === 'torch' && e.key === 'Enter') { onLightTorch(); }
+            else if (currentOption === 'skills') { setActiveMenu('skills'); setSubMenuIndex(0); }
+            else if (currentOption === 'items') { setActiveMenu('items'); setSubMenuIndex(0); }
+            else if (currentOption === 'close' && e.key === 'Enter') setIsMenuOpen(false);
           }
-          
+
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setIsMenuOpen(false);
         } 
         else if (activeMenu === 'skills') {
@@ -175,7 +179,8 @@ export function useKeyboardControls({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     
-  }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll, 
-    rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, 
-    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor]);
+  }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll,
+    rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen,
+    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor,
+    canLightTorch, onLightTorch]);
 }

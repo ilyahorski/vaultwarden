@@ -114,6 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <ToolButton active={selectedTool === 'lava'} onClick={() => onToolChange('lava')} icon={<Flame size={16} className="text-red-500" />} label="Лава" />
                       <ToolButton active={selectedTool === 'grass'} onClick={() => onToolChange('grass')} icon={<Trees size={16} className="text-green-500" />} label="Лес" />
                       <ToolButton active={selectedTool === 'trap'} onClick={() => onToolChange('trap')} icon={<Flame size={16} />} label="Ловушка" />
+                      <ToolButton active={selectedTool === 'torch'} onClick={() => onToolChange('torch')} icon={<Flame size={16} className="text-orange-400" />} label="Факел" />
                     </div>
                   </div>
                   <div>

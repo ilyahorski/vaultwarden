@@ -147,7 +147,7 @@ export function usePlayerMovement({
       }
     }
 
-    if (targetCell.type === 'wall') {
+    if (targetCell.type === 'wall' || targetCell.type === 'torch' || targetCell.type === 'torch_lit') {
       if (!autoRolled) addLog(`Вы потратили подготовленный бросок ${r.val} в стену...`, 'info');
       processEnemyTurn(currentGrid, updates);
       return;
@@ -295,5 +295,17 @@ export function usePlayerMovement({
     return false;
   };
 
-  return { movePlayer, toggleDoor };
+  const lightTorch = (x: number, y: number) => {
+    const target = grid[y][x];
+    if (target.type === 'torch') {
+       const newGrid = [...grid];
+       newGrid[y][x].type = 'torch_lit';
+       setGrid(newGrid);
+       addLog('Вы зажгли факел! Область вокруг освещена.', 'success');
+       return true;
+    }
+    return false;
+  };
+
+  return { movePlayer, toggleDoor, lightTorch };
 }

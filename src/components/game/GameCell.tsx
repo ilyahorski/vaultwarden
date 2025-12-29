@@ -114,11 +114,21 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
      ${cell.type === 'door_open' ? 'bg-amber-900/30 cursor-pointer hover:bg-amber-900/50' : ''}
      ${cell.type === 'trap' ? 'bg-orange-900/30' : ''}
      ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
+     ${cell.type === 'torch' ? 'bg-zinc-600/50' : ''}
+     ${cell.type === 'torch_lit' ? 'bg-amber-900/40' : ''}
      ${mode === 'dm' && isMovingEnemy?.x === cell.x && isMovingEnemy?.y === cell.y ? 'ring-2 ring-blue-500 z-20' : ''}
   `;
 
   if (cell.type === 'door_open' && !tooltip) {
     tooltip = 'Кликните, чтобы закрыть';
+  }
+
+  if (cell.type === 'torch' && !tooltip) {
+    tooltip = 'Потухший факел';
+  }
+
+  if (cell.type === 'torch_lit' && !tooltip) {
+    tooltip = 'Горящий факел';
   }
 
   return (
@@ -150,6 +160,14 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
       )}
 
       {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && <Flame size={12} className="absolute text-orange-500 opacity-70" />}
+
+      {cell.type === 'torch' && !content && (
+        <Flame size={12} className="absolute text-slate-500 opacity-60" />
+      )}
+      {cell.type === 'torch_lit' && !content && (
+        <Flame size={14} className="absolute text-orange-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
+      )}
+
       {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-zinc-300/10 z-10" />}
     </div>
   );
