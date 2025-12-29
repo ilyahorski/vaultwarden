@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Skull, Ghost, Crown, Sword, Shield, Box, User, Lock, EyeOff,
   DoorOpen, Flame, Droplets, Trees, ArrowDownCircle, ArrowUpCircle,
@@ -17,9 +17,68 @@ interface GameCellProps {
   onClick: (x: number, y: number) => void;
 }
 
+// Кастомный компаратор для React.memo - сравниваем только нужные поля
+function arePropsEqual(prevProps: GameCellProps, nextProps: GameCellProps): boolean {
+  const prevCell = prevProps.cell;
+  const nextCell = nextProps.cell;
+
+  // В режиме DM проверяем изменение ячейки и обработчика клика
+  if (nextProps.mode === 'dm') {
+    // ВАЖНО: проверяем onClick - он меняется при смене инструмента редактирования
+    if (prevProps.onClick !== nextProps.onClick) return false;
+
+    if (prevCell.type !== nextCell.type) return false;
+    if (prevCell.enemy !== nextCell.enemy) return false;
+    if (prevCell.item !== nextCell.item) return false;
+
+    // isMovingEnemy - проверяем только для этой ячейки
+    const wasMoving = prevProps.isMovingEnemy?.x === prevCell.x && prevProps.isMovingEnemy?.y === prevCell.y;
+    const isMoving = nextProps.isMovingEnemy?.x === nextCell.x && nextProps.isMovingEnemy?.y === nextCell.y;
+    if (wasMoving !== isMoving) return false;
+
+    if (prevProps.mode !== nextProps.mode) return false;
+
+    return true;
+  }
+
+  // Режим player - более агрессивная оптимизация
+  if (prevProps.mode !== nextProps.mode) return false;
+
+  // Сравниваем данные ячейки
+  if (prevCell.type !== nextCell.type) return false;
+  if (prevCell.enemy !== nextCell.enemy) return false;
+  if (prevCell.enemyHp !== nextCell.enemyHp) return false;
+  if (prevCell.item !== nextCell.item) return false;
+  if (prevCell.isVisible !== nextCell.isVisible) return false;
+  if (prevCell.isRevealed !== nextCell.isRevealed) return false;
+
+  // Проверяем позицию игрока
+  if (prevProps.playerX !== nextProps.playerX || prevProps.playerY !== nextProps.playerY) {
+    const wasPlayerHere = prevProps.playerX === prevCell.x && prevProps.playerY === prevCell.y;
+    const isPlayerHere = nextProps.playerX === nextCell.x && nextProps.playerY === nextCell.y;
+    if (wasPlayerHere || isPlayerHere) return false;
+
+    // Проверяем aggro радиус если есть враг
+    if (nextCell.enemy) {
+      const prevDist = calculateDistance(prevCell.x, prevCell.y, prevProps.playerX, prevProps.playerY);
+      const nextDist = calculateDistance(nextCell.x, nextCell.y, nextProps.playerX, nextProps.playerY);
+      const wasAggro = prevDist <= AGGRO_RADIUS;
+      const isAggro = nextDist <= AGGRO_RADIUS;
+      if (wasAggro !== isAggro) return false;
+    }
+  }
+
+  return true;
+}
+
 export const GameCell: React.FC<GameCellProps> = React.memo(({
   cell, mode, playerX, playerY, isMovingEnemy, onClick
 }) => {
+  // Мемоизируем обработчик клика
+  const handleClick = useCallback(() => {
+    onClick(cell.x, cell.y);
+  }, [onClick, cell.x, cell.y]);
+
   if (mode === 'player' && !cell.isRevealed) {
     return <div className="w-full h-full bg-black" style={{ width: CELL_SIZE, height: CELL_SIZE }} />;
   }
@@ -30,13 +89,12 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
   // --- ЛОГИКА ВРАГОВ ---
   if (cell.enemy) {
     const info = MONSTER_STATS[cell.enemy];
-    // Проверка на случай старых сохранений или ошибок генерации
     if (info) {
       tooltip = `${info.name} (HP: ${cell.enemyHp ?? info.hp}, ATK: ${info.atk})`;
-      
+
       const dist = mode === 'player' ? calculateDistance(cell.x, cell.y, playerX, playerY) : 999;
       const isAggro = dist <= AGGRO_RADIUS && mode === 'player';
-      
+
       let EnemyIcon = Ghost;
       if (info.iconType === 'skull') EnemyIcon = Skull;
       if (info.iconType === 'crown') EnemyIcon = Crown;
@@ -46,9 +104,9 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
 
       content = (
         <div className="relative">
-          <EnemyIcon 
-            size={CELL_SIZE * 0.8} 
-            className={`${colorClass} ${cell.enemy === 'boss' || cell.enemy === 'lich' ? 'animate-pulse drop-shadow-md' : ''}`} 
+          <EnemyIcon
+            size={CELL_SIZE * 0.8}
+            className={`${colorClass} ${cell.enemy === 'boss' || cell.enemy === 'lich' ? 'animate-pulse drop-shadow-md' : ''}`}
             fill="currentColor"
             fillOpacity={0.2}
           />
@@ -60,7 +118,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
         </div>
       );
     }
-  } 
+  }
   // --- ЛОГИКА ПРЕДМЕТОВ ---
   else if (cell.item) {
     if (cell.item.includes('potion')) {
@@ -68,12 +126,12 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
       if (stats) {
         tooltip = `${stats.name} (${stats.type === 'hp' ? 'HP' : 'MP'} +${stats.type === 'hp' ? stats.heal : stats.mana})`;
         const colorClass = `text-${stats.color}`;
-        
+
         content = (
-          <FlaskConical 
-            size={CELL_SIZE * 0.7} 
-            className={`${colorClass} drop-shadow-sm`} 
-            fill="currentColor" 
+          <FlaskConical
+            size={CELL_SIZE * 0.7}
+            className={`${colorClass} drop-shadow-sm`}
+            fill="currentColor"
             fillOpacity={0.6}
           />
         );
@@ -99,10 +157,13 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
     }
   }
 
-  if (playerX === cell.x && playerY === cell.y) {
+  const isPlayerHere = playerX === cell.x && playerY === cell.y;
+  if (isPlayerHere) {
     content = <User size={CELL_SIZE * 0.8} className="text-white drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="currentColor" />;
     tooltip = 'Это вы';
   }
+
+  const isMovingThis = mode === 'dm' && isMovingEnemy?.x === cell.x && isMovingEnemy?.y === cell.y;
 
   const baseClass = `w-full h-full flex items-center justify-center border-slate-800/20 relative select-none
      ${cell.type === 'wall' ? 'bg-zinc-600' : ''}
@@ -116,7 +177,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
      ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
      ${cell.type === 'torch' ? 'bg-zinc-600/50' : ''}
      ${cell.type === 'torch_lit' ? 'bg-amber-900/40' : ''}
-     ${mode === 'dm' && isMovingEnemy?.x === cell.x && isMovingEnemy?.y === cell.y ? 'ring-2 ring-blue-500 z-20' : ''}
+     ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
   `;
 
   if (cell.type === 'door_open' && !tooltip) {
@@ -133,7 +194,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
 
   return (
     <div
-      onClick={() => onClick(cell.x, cell.y)}
+      onClick={handleClick}
       className={baseClass}
       style={{ width: CELL_SIZE, height: CELL_SIZE }}
       title={tooltip}
@@ -171,4 +232,4 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
       {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-zinc-300/10 z-10" />}
     </div>
   );
-});
+}, arePropsEqual);

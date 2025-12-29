@@ -123,11 +123,13 @@ export function useCombat({
         isVictory = true;
       } else {
         // Обновляем HP врага на карте
-        const newGrid = [...currentGrid];
-        newGrid[combatTarget.y][combatTarget.x] = {
-          ...newGrid[combatTarget.y][combatTarget.x],
-          enemyHp: newEnemyHp
-        };
+        const newGrid = currentGrid.map((row, ry) =>
+          row.map((cell, rx) =>
+            rx === combatTarget.x && ry === combatTarget.y
+              ? { ...cell, enemyHp: newEnemyHp }
+              : cell
+          )
+        );
         setGrid(newGrid);
         currentGrid = newGrid; // Обновляем ссылку
         addLog(`${enemyStats.name} ранен (${newEnemyHp}/${scaledEnemyHp} HP)`, 'info');
@@ -138,9 +140,13 @@ export function useCombat({
       addLog(`⚔️ Победили ${enemyStats.name}!`, 'combat');
       addLog(`Награда: +${enemyStats.xp} XP, +${scaledEnemyGold} Золота`, 'loot');
 
-      const newGrid = [...currentGrid];
-      newGrid[combatTarget.y][combatTarget.x].enemy = null;
-      newGrid[combatTarget.y][combatTarget.x].enemyHp = undefined; // Сбрасываем HP
+      const newGrid = currentGrid.map((row, ry) =>
+        row.map((cell, rx) =>
+          rx === combatTarget.x && ry === combatTarget.y
+            ? { ...cell, enemy: null, enemyHp: undefined }
+            : cell
+        )
+      );
       setGrid(newGrid);
       currentGrid = newGrid; // Обновляем ссылку
 

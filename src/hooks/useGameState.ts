@@ -156,8 +156,19 @@ export const useGameState = () => {
     });
   }, [player, addLog]);
 
+  // Debounced сохранение в localStorage для оптимизации памяти
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (hasChosenClass) {
+    if (!hasChosenClass) return;
+
+    // Очищаем предыдущий таймер
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Сохраняем с задержкой 500ms
+    saveTimeoutRef.current = setTimeout(() => {
       const saveData = {
         player,
         grid,
@@ -165,7 +176,13 @@ export const useGameState = () => {
         logs: logs.slice(-20)
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-    }
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [player, grid, levelHistory, hasChosenClass, logs]);
 
   // Функция генерации уровня

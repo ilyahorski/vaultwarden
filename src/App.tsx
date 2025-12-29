@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -64,8 +64,7 @@ export default function DungeonApp() {
     player,
     setPlayer,
     addLog,
-    setMode,
-    setCombatTarget
+    resetGame
   });
 
   const { movePlayer, toggleDoor, lightTorch } = usePlayerMovement({
@@ -199,16 +198,22 @@ export default function DungeonApp() {
     setGrid
   });
 
-  const onGridClick = (x: number, y: number) => {
+  // Используем ref для grid чтобы callback не пересоздавался на каждое изменение grid
+  const gridRef = useRef(grid);
+  useEffect(() => {
+    gridRef.current = grid;
+  }, [grid]);
+
+  const onGridClick = useCallback((x: number, y: number) => {
     if (mode === 'dm') {
       handleCellClick(x, y);
     } else {
-      const cell = grid[y][x];
+      const cell = gridRef.current[y][x];
       if (cell.type === 'door_open') {
          toggleDoor(x, y);
       }
     }
-  };
+  }, [mode, handleCellClick, toggleDoor]);
   
   // Расчет максимального этажа для пагинации в сайдбаре
   const maxLevel = Math.max(

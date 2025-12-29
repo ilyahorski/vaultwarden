@@ -25,24 +25,30 @@ export function useEditorHandlers({
   setGrid,
   setPlayer
 }: UseEditorHandlersProps) {
-  
+
   const handleCellClick = useCallback((x: number, y: number) => {
     if (mode !== 'dm') return;
-    
+
     // 1. Движение врага
     if (selectedTool === 'move_enemy') {
       if (isMovingEnemy) {
         const sourceCell = grid[isMovingEnemy.y][isMovingEnemy.x];
         const targetCell = grid[y][x];
         if (targetCell.type !== 'wall' && !targetCell.enemy) {
-          const newGrid = [...grid];
-          // Переносим тип и HP
-          newGrid[y][x].enemy = sourceCell.enemy;
-          newGrid[y][x].enemyHp = sourceCell.enemyHp;
-          
-          newGrid[isMovingEnemy.y][isMovingEnemy.x].enemy = null;
-          newGrid[isMovingEnemy.y][isMovingEnemy.x].enemyHp = undefined;
-          
+          // Создаём новый grid с новыми объектами ячеек
+          const newGrid = grid.map((row, ry) =>
+            row.map((cell, rx) => {
+              if (rx === x && ry === y) {
+                // Целевая ячейка - получает врага
+                return { ...cell, enemy: sourceCell.enemy, enemyHp: sourceCell.enemyHp };
+              }
+              if (rx === isMovingEnemy.x && ry === isMovingEnemy.y) {
+                // Исходная ячейка - теряет врага
+                return { ...cell, enemy: null, enemyHp: undefined };
+              }
+              return cell;
+            })
+          );
           setGrid(newGrid);
           setIsMovingEnemy(null);
         } else setIsMovingEnemy(null);
@@ -51,59 +57,71 @@ export function useEditorHandlers({
       }
       return;
     }
-    
-    const newGrid = [...grid];
-    const cell = newGrid[y][x];
-    
-    // 2. Инструменты
-    if (selectedTool === 'start') {
-      setPlayer(p => ({ ...p, x, y }));
-      cell.type = 'floor';
-    } 
-    else if (selectedTool === 'clear') {
-      cell.item = null;
-      cell.enemy = null;
-      cell.type = 'floor';
-    }
-    // Враги
-    else if (selectedTool.startsWith('enemy_')) {
-      cell.enemy = selectedTool.replace('enemy_', '') as EnemyType;
-      cell.type = 'floor';
-      cell.item = null;
-    }
-    // Зелья (HP/MP)
-    else if (selectedTool.startsWith('item_potion')) {
-       cell.item = selectedTool.replace('item_', '') as PotionType;
-       cell.type = 'floor';
-    }
-    // Оружие и Броня
-    else if (selectedTool.startsWith('item_weapon_') || selectedTool.startsWith('item_armor_')) {
-       cell.item = selectedTool.replace('item_', '') as WeaponType | ArmorType;
-       cell.type = 'floor';
-    }
-    // Сундук
-    else if (selectedTool === 'item_chest') {
-       cell.item = 'chest';
-       cell.type = 'floor';
-    }
-    // Структура (стены, пол и т.д.)
-    else {
-       if ((BASIC_STRUCTURE_TYPES as readonly string[]).includes(selectedTool)) {
-          cell.type = selectedTool as CellData['type'];
-          
-          if (selectedTool === 'wall') { 
-            cell.item = null; 
-            cell.enemy = null; 
+
+    // Создаём новый grid с новым объектом для изменяемой ячейки
+    const newGrid = grid.map((row, ry) =>
+      row.map((cell, rx) => {
+        if (rx !== x || ry !== y) return cell;
+
+        // Создаём копию ячейки для изменения
+        const newCell = { ...cell };
+
+        // 2. Инструменты
+        if (selectedTool === 'start') {
+          setPlayer(p => ({ ...p, x, y }));
+          newCell.type = 'floor';
+        }
+        else if (selectedTool === 'clear') {
+          newCell.item = null;
+          newCell.enemy = null;
+          newCell.enemyHp = undefined;
+          newCell.type = 'floor';
+        }
+        // Враги
+        else if (selectedTool.startsWith('enemy_')) {
+          newCell.enemy = selectedTool.replace('enemy_', '') as EnemyType;
+          newCell.enemyHp = undefined; // Сбрасываем HP
+          newCell.type = 'floor';
+          newCell.item = null;
+        }
+        // Зелья (HP/MP)
+        else if (selectedTool.startsWith('item_potion')) {
+          newCell.item = selectedTool.replace('item_', '') as PotionType;
+          newCell.type = 'floor';
+        }
+        // Оружие и Броня
+        else if (selectedTool.startsWith('item_weapon_') || selectedTool.startsWith('item_armor_')) {
+          newCell.item = selectedTool.replace('item_', '') as WeaponType | ArmorType;
+          newCell.type = 'floor';
+        }
+        // Сундук
+        else if (selectedTool === 'item_chest') {
+          newCell.item = 'chest';
+          newCell.type = 'floor';
+        }
+        // Структура (стены, пол и т.д.)
+        else {
+          if ((BASIC_STRUCTURE_TYPES as readonly string[]).includes(selectedTool)) {
+            newCell.type = selectedTool as CellData['type'];
+
+            if (selectedTool === 'wall') {
+              newCell.item = null;
+              newCell.enemy = null;
+              newCell.enemyHp = undefined;
+            }
           }
-       }
-       else if (selectedTool === 'door') {
-          cell.type = cell.type === 'door' ? 'floor' : 'door';
-       }
-       else if (selectedTool === 'secret') {
-          cell.type = 'secret_door';
-       }
-    }
-    
+          else if (selectedTool === 'door') {
+            newCell.type = newCell.type === 'door' ? 'floor' : 'door';
+          }
+          else if (selectedTool === 'secret') {
+            newCell.type = 'secret_door';
+          }
+        }
+
+        return newCell;
+      })
+    );
+
     setGrid(newGrid);
   }, [mode, selectedTool, isMovingEnemy, grid, setGrid, setPlayer, setIsMovingEnemy]);
 
