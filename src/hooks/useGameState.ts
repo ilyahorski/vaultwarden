@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, ActiveMenu, PotionType, WeaponType, ArmorType, DungeonCampaign } from '../types';
 import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS, GRID_SIZE } from '../constants';
-import { createLogEntry } from '../utils';
+import { createLogEntry, createEmptyGrid } from '../utils';
 import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator';
 
 export const useGameState = () => {
   // 1. ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ
-  // Мы вычисляем начальное состояние ОДИН РАЗ при монтировании.
-  // Это заменяет useEffect для загрузки и useEffect для генерации первой карты.
   const [initialState] = useState(() => {
     // А) Пытаемся загрузить сохранение
     const savedData = localStorage.getItem(SAVE_KEY);
@@ -170,8 +168,8 @@ export const useGameState = () => {
     }
   }, [player, grid, levelHistory, hasChosenClass, logs]);
 
-  // Функция для РУЧНОЙ генерации (при переходе на этаж или ресете)
-  const generateDungeon = useCallback((levelIndex: number = 1) => {
+  // Функция генерации уровня
+  const generateDungeon = useCallback((levelIndex: number = 1, campaignOverride?: DungeonCampaign) => {
     addLog(`--- ЭТАЖ ${levelIndex} ---`, 'info');
     setCombatTarget(null);
     setMainMenuIndex(0);
@@ -181,19 +179,57 @@ export const useGameState = () => {
     let newGrid: CellData[][];
     let startPos = { x: 1, y: 1 };
 
-    if (activeCampaign && activeCampaign.levels[levelIndex]) {
-       newGrid = JSON.parse(JSON.stringify(activeCampaign.levels[levelIndex]));
+    const currentCampaign = campaignOverride || activeCampaign;
+
+    if (currentCampaign && currentCampaign.levels[levelIndex]) {
+       newGrid = JSON.parse(JSON.stringify(currentCampaign.levels[levelIndex]));
        let foundStart = false;
+       
+       // 1. Приоритет: Лестница вверх (стандарт для входа)
        for(let y=0; y<GRID_SIZE; y++){
          for(let x=0; x<GRID_SIZE; x++){
             if(newGrid[y][x].type === 'stairs_up') {
                 startPos = {x, y};
                 foundStart = true;
+                break;
             }
          }
+         if(foundStart) break;
        }
+
+       // 2. Приоритет: Открытая дверь (часто старт кастомных карт)
+       if (!foundStart) {
+         for(let y=0; y<GRID_SIZE; y++){
+            for(let x=0; x<GRID_SIZE; x++){
+               if(newGrid[y][x].type === 'door_open') {
+                   startPos = {x, y};
+                   foundStart = true;
+                   break;
+               }
+            }
+            if(foundStart) break;
+         }
+       }
+
+       // 3. Приоритет: Любая безопасная клетка (пол или трава)
+       if (!foundStart) {
+         for(let y=0; y<GRID_SIZE; y++){
+            for(let x=0; x<GRID_SIZE; x++){
+               const t = newGrid[y][x].type;
+               if(t === 'floor' || t === 'grass') {
+                   startPos = {x, y};
+                   foundStart = true;
+                   break;
+               }
+            }
+            if(foundStart) break;
+         }
+       }
+
+       // 4. Фолбек (если карта пустая или одни стены)
        if(!foundStart) startPos = {x: 1, y: 1};
-       addLog(`Загружен уровень из кампании: ${activeCampaign.name}`, 'info');
+
+       addLog(`Загружен уровень из кампании: ${currentCampaign.name}`, 'info');
     } else {
        const gen = generateDungeonGrid(levelIndex);
        newGrid = gen.grid;
@@ -212,6 +248,22 @@ export const useGameState = () => {
     setPlayer(p => ({ ...p, x: startPos.x, y: startPos.y, dungeonLevel: levelIndex }));
     setGrid(newGrid);
   }, [addLog, activeCampaign]);
+
+  const resetGame = useCallback(() => {
+    localStorage.removeItem(SAVE_KEY);
+    
+    setHasChosenClass(false);
+    setMode('player');
+    setLevelHistory({});
+    setLogs([]);
+    setCombatTarget(null);
+    setActiveCampaign(null);
+    
+    setPlayer({ ...(INITIAL_PLAYER as Player), x: 1, y: 1, dungeonLevel: 1 });
+    setGrid(createEmptyGrid());
+    
+    addLog('Игра полностью сброшена.', 'info');
+  }, [addLog]);
 
   const selectClass = useCallback((classType: ClassType, name: string, campaign?: DungeonCampaign) => {
     const stats = CLASSES[classType];
@@ -258,7 +310,7 @@ export const useGameState = () => {
     setHasChosenClass(true);
     addLog(`Герой ${name || stats.name} (${stats.name}) готов к приключениям!`, 'info');
     
-    setTimeout(() => generateDungeon(1), 50);
+    setTimeout(() => generateDungeon(1, campaign), 50);
   }, [addLog, generateDungeon]);
 
   const handleExport = useCallback(() => {
@@ -277,8 +329,6 @@ export const useGameState = () => {
     URL.revokeObjectURL(url);
     addLog('Карта успешно экспортирована!', 'success');
   }, [player, grid, levelHistory, logs, addLog]);
-
-  // --- Управление этажами для DM ---
 
   const createNewLevel = useCallback(() => {
       const currentLevel = player.dungeonLevel;
@@ -379,6 +429,7 @@ export const useGameState = () => {
     fileInputRef,
     addLog,
     generateDungeon,
+    resetGame,
     selectClass,
     handleExport,
     handleImport,

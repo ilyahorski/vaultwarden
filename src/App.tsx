@@ -37,8 +37,9 @@ export default function DungeonApp() {
     onConsumeItem,
     handleExportCampaign,
     parseCampaignFile,
-    createNewLevel, // <-- НОВОЕ
-    switchLevel     // <-- НОВОЕ
+    createNewLevel,
+    switchLevel,
+    resetGame 
   } = useGameState();
 
   const {
@@ -90,7 +91,7 @@ export default function DungeonApp() {
     setActiveMenu,
     setMainMenuIndex,
     processEnemyTurn,
-    setMode
+    resetGame
   });
 
   const { handleCellClick } = useEditorHandlers({
@@ -168,7 +169,7 @@ export default function DungeonApp() {
         selectedTool={selectedTool}
         onModeChange={setMode}
         onToolChange={setSelectedTool}
-        onReset={() => generateDungeon(player.dungeonLevel)}
+        onReset={resetGame} // <-- Используем resetGame вместо generateDungeon
         onExport={handleExport}
         onImport={handleImport}
         onExportCampaign={handleExportCampaign}
@@ -195,7 +196,7 @@ export default function DungeonApp() {
               onRollDice={handleRollActionDie}
             />
 
-            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
+            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
               <div className="relative">
                 <GameGrid 
                   grid={grid}
@@ -241,7 +242,7 @@ export default function DungeonApp() {
         )}
 
         {mode === 'dm' && (
-          <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
+          <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
             <GameGrid 
               grid={grid}
               mode={mode}

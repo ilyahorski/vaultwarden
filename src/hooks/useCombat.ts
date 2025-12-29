@@ -14,7 +14,7 @@ interface UseCombatProps {
   setActiveMenu: (menu: 'main' | 'skills' | 'items') => void;
   setMainMenuIndex: (index: number) => void;
   processEnemyTurn: (grid: CellData[][], player: Player) => void;
-  setMode: (mode: 'dm' | 'player') => void;
+  resetGame: () => void;
 }
 
 export function useCombat({
@@ -29,7 +29,7 @@ export function useCombat({
   setActiveMenu,
   setMainMenuIndex,
   processEnemyTurn,
-  setMode
+  resetGame
 }: UseCombatProps) {
   
   const executeCombatAction = (
@@ -170,12 +170,9 @@ export function useCombat({
     }
 
     if (updates.hp <= 0) {
-      addLog('💀 ВЫ ПОГИБЛИ! Рестарт...', 'fail');
-      setMode('dm');
-      setCombatTarget(null);
-      setMainMenuIndex(0);
-      setPlayer(updates);
-      localStorage.removeItem('dungeon_save_v1');
+      // --- ИЗМЕНЕННАЯ ЛОГИКА СМЕРТИ ---
+      resetGame(); // Полный сброс вместо режима DM
+      alert('ВЫ ПОГИБЛИ! Игра будет перезапущена.');
       return;
     }
 
