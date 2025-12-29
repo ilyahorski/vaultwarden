@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { GameMode, CombatTarget, ActiveMenu, Player } from '../types';
 import { CLASSES } from '../constants';
 
@@ -23,36 +23,28 @@ interface UseKeyboardControlsProps {
   setIsMenuOpen: (isOpen: boolean) => void;
   onConsumeItem: (index: number) => void;
 
-  // Новые пропсы
   canCloseDoor: boolean;
   onCloseDoor: () => void;
 }
 
-export function useKeyboardControls({
-  mode,
-  hasChosenClass,
-  combatTarget,
-  activeMenu,
-  mainMenuIndex,
-  setMainMenuIndex,
-  subMenuIndex,
-  setSubMenuIndex,
-  setActiveMenu,
-  player,
-  activeRoll,
-  rollActionDie,
-  movePlayer,
-  executeCombatAction,
-  setCombatTarget,
-  isMenuOpen,
-  setIsMenuOpen,
-  onConsumeItem,
-  canCloseDoor,
-  onCloseDoor
-}: UseKeyboardControlsProps) {
+export function useKeyboardControls(props: UseKeyboardControlsProps) {
+  // Используем ref для хранения всех пропсов, чтобы не пересоздавать слушатель событий
+  const propsRef = useRef(props);
+
+  useEffect(() => {
+    propsRef.current = props;
+  });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Извлекаем актуальные значения из ref
+      const {
+        mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex,
+        setMainMenuIndex, setSubMenuIndex, setActiveMenu, player, activeRoll,
+        rollActionDie, movePlayer, executeCombatAction, setCombatTarget,
+        isMenuOpen, setIsMenuOpen, onConsumeItem, canCloseDoor, onCloseDoor
+      } = propsRef.current;
+
       // 1. Бросок кубика / Отдых (Shift)
       if (e.key === 'Shift') {
         if (activeRoll === null && mode === 'player') {
@@ -116,13 +108,11 @@ export function useKeyboardControls({
           
           if (e.key === 'Enter' || e.key === 'ArrowRight') {
             if (canCloseDoor) {
-                // Если опция доступна, сдвигаем индексы
                 if (mainMenuIndex === 0 && e.key === 'Enter') { onCloseDoor(); }
                 if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
                 if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
                 if (mainMenuIndex === 3 && e.key === 'Enter') setIsMenuOpen(false);
             } else {
-                // Стандартное поведение
                 if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
                 if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
                 if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false);
@@ -175,7 +165,5 @@ export function useKeyboardControls({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     
-  }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll, 
-    rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, 
-    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor]);
+  }, []); // Пустой массив зависимостей - слушатель создается 1 раз!
 }

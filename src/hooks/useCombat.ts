@@ -13,7 +13,7 @@ interface UseCombatProps {
   setCombatTarget: (target: CombatTarget | null) => void;
   setActiveMenu: (menu: 'main' | 'skills' | 'items') => void;
   setMainMenuIndex: (index: number) => void;
-  processEnemyTurn: (grid: CellData[][], player: Player) => void;
+  processEnemyTurn: (grid: CellData[][], player: Player, ignoreEnemyPos?: { x: number; y: number }) => void;
   resetGame: () => void;
 }
 
@@ -40,9 +40,7 @@ export function useCombat({
   ) => {
     if (!combatTarget || !combatTarget.enemy) return;
 
-    // Локальная ссылка на актуальную сетку
     let currentGrid = grid;
-
     const enemyStats = MONSTER_STATS[combatTarget.enemy];
     const levelMultiplier = 1 + (player.dungeonLevel - 1) * 0.1;
     const scaledEnemyHp = Math.floor(enemyStats.hp * levelMultiplier);
@@ -111,25 +109,26 @@ export function useCombat({
 
     let isVictory = false;
     
-    // Новая логика расчета урона
     if (playerDmg > 0) {
       addLog(`${prefix} ${actionName} по ${enemyStats.name}: ${playerDmg} ур.`, 'combat');
       
-      // Берем текущее HP врага из currentGrid
-      const currentEnemyHp = currentGrid[combatTarget.y][combatTarget.x].enemyHp ?? scaledEnemyHp;
+      const currentCell = currentGrid[combatTarget.y][combatTarget.x];
+      // Корректно получаем текущее HP. Если undefined - берем макс.
+      const currentEnemyHp = currentCell.enemyHp !== undefined ? currentCell.enemyHp : scaledEnemyHp;
       const newEnemyHp = currentEnemyHp - playerDmg;
 
       if (newEnemyHp <= 0) {
         isVictory = true;
       } else {
-        // Обновляем HP врага на карте
-        const newGrid = [...currentGrid];
+        // Создаем копию сетки с обновленным HP
+        const newGrid = currentGrid.map(row => [...row]);
         newGrid[combatTarget.y][combatTarget.x] = {
           ...newGrid[combatTarget.y][combatTarget.x],
           enemyHp: newEnemyHp
         };
+        
         setGrid(newGrid);
-        currentGrid = newGrid; // Обновляем ссылку
+        currentGrid = newGrid;
         addLog(`${enemyStats.name} ранен (${newEnemyHp}/${scaledEnemyHp} HP)`, 'info');
       }
     }
@@ -138,25 +137,28 @@ export function useCombat({
       addLog(`⚔️ Победили ${enemyStats.name}!`, 'combat');
       addLog(`Награда: +${enemyStats.xp} XP, +${scaledEnemyGold} Золота`, 'loot');
 
-      const newGrid = [...currentGrid];
-      newGrid[combatTarget.y][combatTarget.x].enemy = null;
-      newGrid[combatTarget.y][combatTarget.x].enemyHp = undefined; // Сбрасываем HP
+      const newGrid = currentGrid.map(row => [...row]);
+      newGrid[combatTarget.y][combatTarget.x] = {
+          ...newGrid[combatTarget.y][combatTarget.x],
+          enemy: null,
+          enemyHp: undefined
+      };
       setGrid(newGrid);
-      currentGrid = newGrid; // Обновляем ссылку
+      currentGrid = newGrid;
 
       updates.gold += scaledEnemyGold;
       applyLevelUp(updates, enemyStats.xp, addLog);
 
       setPlayer(updates);
-      setCombatTarget(null);
+      setCombatTarget(null); // Выход из боя только при победе
       setActiveMenu('main');
       setMainMenuIndex(0);
 
-      // Передаем обновленную сетку
       processEnemyTurn(currentGrid, updates);
       return;
     }
 
+    // Если враг жив — он контратакует
     let enemyDmg = Math.max(0, scaledEnemyAtk - updates.def);
     if (isSuccess) enemyDmg = Math.floor(enemyDmg * 0.5);
     if (isFail) enemyDmg = Math.floor(enemyDmg * 1.5);
@@ -170,19 +172,16 @@ export function useCombat({
     }
 
     if (updates.hp <= 0) {
-      // --- ИЗМЕНЕННАЯ ЛОГИКА СМЕРТИ ---
-      resetGame(); // Полный сброс вместо режима DM
+      resetGame();
       alert('ВЫ ПОГИБЛИ! Игра будет перезапущена.');
       return;
     }
 
     setPlayer(updates);
-    setCombatTarget(null);
-    setActiveMenu('main');
-    setMainMenuIndex(0);
-
-    // Передаем обновленную сетку
-    processEnemyTurn(currentGrid, updates);
+    
+    // НЕ закрываем меню боя, чтобы игрок мог продолжить серию ударов или сбежать вручную.
+    // Передаем координаты врага в processEnemyTurn, чтобы он не атаковал второй раз за ход.
+    processEnemyTurn(currentGrid, updates, { x: combatTarget.x, y: combatTarget.y });
   };
 
   return { executeCombatAction };

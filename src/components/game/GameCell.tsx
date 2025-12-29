@@ -104,6 +104,16 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
     tooltip = 'Это вы';
   }
 
+  // --- ЛОГИКА ЛАНДШАФТА (Факелы) ---
+  if (cell.type === 'torch') {
+     content = <Flame size={CELL_SIZE * 0.8} className="text-stone-600 opacity-60" />;
+     tooltip = 'Старый факел (Подойдите, чтобы зажечь)';
+  }
+  if (cell.type === 'torch_lit') {
+     content = <Flame size={CELL_SIZE * 0.8} className="text-orange-500 animate-pulse drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]" fill="currentColor" fillOpacity={0.5} />;
+     tooltip = 'Горящий факел';
+  }
+
   const baseClass = `w-full h-full flex items-center justify-center border-slate-800/20 relative select-none
      ${cell.type === 'wall' ? 'bg-zinc-600' : ''}
      ${cell.type === 'floor' ? 'bg-zinc-600/50' : ''}
@@ -114,6 +124,8 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
      ${cell.type === 'door_open' ? 'bg-amber-900/30 cursor-pointer hover:bg-amber-900/50' : ''}
      ${cell.type === 'trap' ? 'bg-orange-900/30' : ''}
      ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
+     ${cell.type === 'torch' ? 'bg-stone-800' : ''}
+     ${cell.type === 'torch_lit' ? 'bg-stone-800/80' : ''}
      ${mode === 'dm' && isMovingEnemy?.x === cell.x && isMovingEnemy?.y === cell.y ? 'ring-2 ring-blue-500 z-20' : ''}
   `;
 
