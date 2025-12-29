@@ -21,10 +21,11 @@ interface UseKeyboardControlsProps {
   
   isMenuOpen: boolean;
   setIsMenuOpen: (isOpen: boolean) => void;
-  
-  // ИЗМЕНЕНИЕ 1: Переименовали useItem в onConsumeItem
-  // Это дает понять React, что это обычная функция-событие, а не хук
   onConsumeItem: (index: number) => void;
+
+  // Новые пропсы
+  canCloseDoor: boolean;
+  onCloseDoor: () => void;
 }
 
 export function useKeyboardControls({
@@ -45,7 +46,9 @@ export function useKeyboardControls({
   setCombatTarget,
   isMenuOpen,
   setIsMenuOpen,
-  onConsumeItem 
+  onConsumeItem,
+  canCloseDoor,
+  onCloseDoor
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
@@ -106,13 +109,24 @@ export function useKeyboardControls({
       // 3. Логика Меню Игрока (вне боя)
       if (isMenuOpen) {
         if (activeMenu === 'main') {
-          if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : 2));
-          if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < 2 ? prev + 1 : 0));
+          const menuSize = canCloseDoor ? 4 : 3;
+          
+          if (e.key === 'ArrowUp') setMainMenuIndex(prev => (prev > 0 ? prev - 1 : menuSize - 1));
+          if (e.key === 'ArrowDown') setMainMenuIndex(prev => (prev < menuSize - 1 ? prev + 1 : 0));
           
           if (e.key === 'Enter' || e.key === 'ArrowRight') {
-            if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
-            if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false);
+            if (canCloseDoor) {
+                // Если опция доступна, сдвигаем индексы
+                if (mainMenuIndex === 0 && e.key === 'Enter') { onCloseDoor(); }
+                if (mainMenuIndex === 1) { setActiveMenu('skills'); setSubMenuIndex(0); }
+                if (mainMenuIndex === 2) { setActiveMenu('items'); setSubMenuIndex(0); }
+                if (mainMenuIndex === 3 && e.key === 'Enter') setIsMenuOpen(false);
+            } else {
+                // Стандартное поведение
+                if (mainMenuIndex === 0) { setActiveMenu('skills'); setSubMenuIndex(0); }
+                if (mainMenuIndex === 1) { setActiveMenu('items'); setSubMenuIndex(0); }
+                if (mainMenuIndex === 2 && e.key === 'Enter') setIsMenuOpen(false);
+            }
           }
           
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setIsMenuOpen(false);
@@ -136,7 +150,6 @@ export function useKeyboardControls({
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
           
           if (e.key === 'Enter') {
-            // ИЗМЕНЕНИЕ 3: Вызываем переименованную функцию
             onConsumeItem(subMenuIndex);
             setSubMenuIndex(prev => Math.max(0, Math.min(prev, items.length - 2)));
           }
@@ -162,8 +175,7 @@ export function useKeyboardControls({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     
-    // ИЗМЕНЕНИЕ 4: Обновляем массив зависимостей
   }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll, 
     rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen, 
-    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex]);
+    onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor]);
 }

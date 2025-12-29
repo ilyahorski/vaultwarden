@@ -115,6 +115,32 @@ export default function DungeonApp() {
     );
   };
 
+  // Проверка на наличие открытой двери рядом
+  const getAdjacentDoor = () => {
+    if (!grid || !grid.length) return null;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dx, dy] of dirs) {
+        const nx = player.x + dx;
+        const ny = player.y + dy;
+        if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length) {
+            if (grid[ny][nx].type === 'door_open') {
+                return { x: nx, y: ny };
+            }
+        }
+    }
+    return null;
+  };
+
+  const adjacentDoor = getAdjacentDoor();
+  const canCloseDoor = !!adjacentDoor;
+
+  const handleCloseDoor = () => {
+      if (adjacentDoor) {
+          toggleDoor(adjacentDoor.x, adjacentDoor.y);
+          setIsMenuOpen(false);
+      }
+  };
+
   useKeyboardControls({
     mode,
     hasChosenClass,
@@ -133,7 +159,9 @@ export default function DungeonApp() {
     setCombatTarget,
     isMenuOpen, 
     setIsMenuOpen,
-    onConsumeItem
+    onConsumeItem,
+    canCloseDoor,
+    onCloseDoor: handleCloseDoor
   });
 
   useFogOfWar({
@@ -155,7 +183,6 @@ export default function DungeonApp() {
   };
   
   // Расчет максимального этажа для пагинации в сайдбаре
-  // Берем максимум из истории или текущего, если история еще не синхронизирована
   const maxLevel = Math.max(
       ...Object.keys(levelHistory).map(Number), 
       player.dungeonLevel
@@ -169,7 +196,7 @@ export default function DungeonApp() {
         selectedTool={selectedTool}
         onModeChange={setMode}
         onToolChange={setSelectedTool}
-        onReset={resetGame} // <-- Используем resetGame вместо generateDungeon
+        onReset={resetGame} 
         onExport={handleExport}
         onImport={handleImport}
         onExportCampaign={handleExportCampaign}
@@ -214,6 +241,8 @@ export default function DungeonApp() {
                     mainMenuIndex={mainMenuIndex}
                     subMenuIndex={subMenuIndex}
                     onClose={() => setIsMenuOpen(false)}
+                    canCloseDoor={canCloseDoor}
+                    onCloseDoor={handleCloseDoor}
                   />
                 )}
 

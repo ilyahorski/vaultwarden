@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Zap, Backpack, X } from 'lucide-react';
+import { Zap, Backpack, X, DoorClosed } from 'lucide-react';
 import type { Player, ActiveMenu } from '../../types';
 import { CLASSES, POTION_STATS, GEAR_STATS } from '../../constants';
 
@@ -9,6 +9,8 @@ interface PlayerMenuProps {
   mainMenuIndex: number;
   subMenuIndex: number;
   onClose: () => void;
+  canCloseDoor: boolean;
+  onCloseDoor: () => void;
 }
 
 export function PlayerMenu({
@@ -16,14 +18,22 @@ export function PlayerMenu({
   activeMenu,
   mainMenuIndex,
   subMenuIndex,
-  onClose
+  onClose,
+  canCloseDoor,
+  onCloseDoor
 }: PlayerMenuProps) {
   
-  const menuOptions = [
+  const menuOptions = [];
+
+  if (canCloseDoor) {
+    menuOptions.push({ label: 'Закрыть дверь', icon: <DoorClosed size={18} /> });
+  }
+
+  menuOptions.push(
     { label: 'Навыки', icon: <Zap size={18} /> },
     { label: 'Инвентарь', icon: <Backpack size={18} /> },
-    { label: 'Закрыть', icon: <X size={18} /> },
-  ];
+    { label: 'Закрыть', icon: <X size={18} /> }
+  );
 
   // Рефы для автоскролла
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -57,7 +67,10 @@ export function PlayerMenu({
                       ? 'bg-blue-900/50 text-blue-100 ring-1 ring-blue-500' 
                       : 'bg-slate-800 text-slate-400'
                   }`}
-                  onClick={opt.label === 'Закрыть' ? onClose : undefined}
+                  onClick={() => {
+                    if (opt.label === 'Закрыть') onClose();
+                    if (opt.label === 'Закрыть дверь') onCloseDoor();
+                  }}
                 >
                   {opt.icon}
                   <span>{opt.label}</span>
