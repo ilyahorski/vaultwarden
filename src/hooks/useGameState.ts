@@ -23,6 +23,7 @@ export const useGameState = () => {
             player: loadedPlayer,
             grid: parsed.grid,
             levelHistory: parsed.levelHistory || {},
+            playerPositions: parsed.playerPositions || {},
             logs: parsed.logs || [],
             hasChosenClass: true
           };
@@ -53,6 +54,7 @@ export const useGameState = () => {
       player: newPlayer,
       grid: newGrid,
       levelHistory: {},
+      playerPositions: {},
       logs: [],
       hasChosenClass: false
     };
@@ -63,6 +65,7 @@ export const useGameState = () => {
   const [mode, setMode] = useState<GameMode>('dm');
   const [hasChosenClass, setHasChosenClass] = useState(initialState.hasChosenClass);
   const [levelHistory, setLevelHistory] = useState<Record<number, CellData[][]>>(initialState.levelHistory);
+  const [playerPositions, setPlayerPositions] = useState<Record<number, { x: number; y: number }>>(initialState.playerPositions || {});
   const [player, setPlayer] = useState<Player>(initialState.player);
   const [logs, setLogs] = useState<LogEntry[]>(initialState.logs);
   
@@ -173,6 +176,7 @@ export const useGameState = () => {
         player,
         grid,
         levelHistory,
+        playerPositions,
         logs: logs.slice(-20)
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
@@ -183,7 +187,7 @@ export const useGameState = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [player, grid, levelHistory, hasChosenClass, logs]);
+  }, [player, grid, levelHistory, playerPositions, hasChosenClass, logs]);
 
   // Функция генерации уровня
   const generateDungeon = useCallback((levelIndex: number = 1, campaignOverride?: DungeonCampaign) => {
@@ -268,17 +272,18 @@ export const useGameState = () => {
 
   const resetGame = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
-    
+
     setHasChosenClass(false);
     setMode('player');
     setLevelHistory({});
+    setPlayerPositions({});
     setLogs([]);
     setCombatTarget(null);
     setActiveCampaign(null);
-    
+
     setPlayer({ ...(INITIAL_PLAYER as Player), x: 1, y: 1, dungeonLevel: 1 });
     setGrid(createEmptyGrid());
-    
+
     addLog('Игра полностью сброшена.', 'info');
   }, [addLog]);
 
@@ -349,28 +354,45 @@ export const useGameState = () => {
 
   const createNewLevel = useCallback(() => {
       const currentLevel = player.dungeonLevel;
+
+      // Сохраняем текущую карту и позицию игрока
       const historyUpdate = { ...levelHistory, [currentLevel]: grid };
       setLevelHistory(historyUpdate);
+
+      setPlayerPositions(prev => ({ ...prev, [currentLevel]: { x: player.x, y: player.y } }));
 
       const levels = Object.keys(historyUpdate).map(Number);
       const nextLevel = levels.length > 0 ? Math.max(...levels) + 1 : 1;
 
       generateDungeon(nextLevel);
-  }, [grid, levelHistory, player.dungeonLevel, generateDungeon]);
+  }, [grid, levelHistory, player.dungeonLevel, player.x, player.y, generateDungeon]);
 
   const switchLevel = useCallback((targetLevel: number) => {
       const currentLevel = player.dungeonLevel;
+
+      // Сохраняем текущую карту и позицию игрока
       const historyUpdate = { ...levelHistory, [currentLevel]: grid };
       setLevelHistory(historyUpdate);
 
+      const positionsUpdate = { ...playerPositions, [currentLevel]: { x: player.x, y: player.y } };
+      setPlayerPositions(positionsUpdate);
+
       if (historyUpdate[targetLevel]) {
           setGrid(historyUpdate[targetLevel]);
-          setPlayer(p => ({ ...p, dungeonLevel: targetLevel }));
+
+          // Восстанавливаем позицию игрока для целевого уровня
+          const savedPos = positionsUpdate[targetLevel];
+          if (savedPos) {
+              setPlayer(p => ({ ...p, dungeonLevel: targetLevel, x: savedPos.x, y: savedPos.y }));
+          } else {
+              setPlayer(p => ({ ...p, dungeonLevel: targetLevel }));
+          }
+
           addLog(`Редактор: Переход на этаж ${targetLevel}`, 'info');
       } else {
           addLog(`Ошибка: Этаж ${targetLevel} не найден`, 'fail');
       }
-  }, [grid, levelHistory, player.dungeonLevel, addLog]);
+  }, [grid, levelHistory, playerPositions, player.dungeonLevel, player.x, player.y, addLog]);
 
   const handleExportCampaign = useCallback((name: string, password?: string) => {
      const finalHistory = { ...levelHistory, [player.dungeonLevel]: grid };

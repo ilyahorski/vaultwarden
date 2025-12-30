@@ -175,7 +175,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
      ${cell.type === 'door_open' ? 'bg-amber-900/30 cursor-pointer hover:bg-amber-900/50' : ''}
      ${cell.type === 'trap' ? 'bg-orange-900/30' : ''}
      ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
-     ${cell.type === 'torch' ? 'bg-zinc-600/50' : ''}
+     ${cell.type === 'torch' ? 'bg-amber-600/50' : ''}
      ${cell.type === 'torch_lit' ? 'bg-amber-900/40' : ''}
      ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
   `;

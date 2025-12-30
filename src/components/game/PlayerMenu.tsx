@@ -13,6 +13,7 @@ interface PlayerMenuProps {
   onCloseDoor: () => void;
   canLightTorch: boolean;
   onLightTorch: () => void;
+  onUseSkill: (skillId: string) => void;
 }
 
 export function PlayerMenu({
@@ -24,7 +25,8 @@ export function PlayerMenu({
   canCloseDoor,
   onCloseDoor,
   canLightTorch,
-  onLightTorch
+  onLightTorch,
+  onUseSkill
 }: PlayerMenuProps) {
 
   const menuOptions = [];
@@ -94,23 +96,43 @@ export function PlayerMenu({
             <div className="flex flex-col h-full">
               <h3 className="text-blue-400 text-sm font-bold mb-2 uppercase shrink-0">Навыки класса</h3>
               <div className="space-y-2 overflow-y-auto pr-2 flex-1">
-                {CLASSES[player.class].skills.map((skill, idx) => (
-                  <div
-                    key={skill.id}
-                    ref={el => { itemRefs.current[idx] = el; }}
-                    className={`p-3 rounded border transition-colors ${
-                      idx === subMenuIndex
-                        ? 'bg-blue-900/30 border-blue-500 text-slate-100'
-                        : 'bg-slate-800 border-slate-700 text-slate-400'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold">{skill.name}</span>
-                      <span className="text-xs text-blue-300">{skill.mpCost} MP</span>
+                {CLASSES[player.class].skills.map((skill, idx) => {
+                  const canUse = player.mp >= skill.mpCost;
+                  const isHealSkill = !!skill.heal && !skill.dmgMult;
+                  const needsTarget = !!skill.dmgMult;
+
+                  return (
+                    <div
+                      key={skill.id}
+                      ref={el => { itemRefs.current[idx] = el; }}
+                      onClick={() => {
+                        if (canUse && isHealSkill) {
+                          onUseSkill(skill.id);
+                        }
+                      }}
+                      className={`p-3 rounded border transition-colors ${
+                        idx === subMenuIndex
+                          ? 'bg-blue-900/30 border-blue-500 text-slate-100'
+                          : 'bg-slate-800 border-slate-700 text-slate-400'
+                      } ${canUse && isHealSkill ? 'cursor-pointer hover:bg-blue-900/50' : ''}`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold">{skill.name}</span>
+                        <span className={`text-xs ${canUse ? 'text-blue-300' : 'text-red-400'}`}>
+                          {skill.mpCost} MP
+                        </span>
+                      </div>
+                      <div className="text-xs opacity-70">{skill.desc}</div>
+                      {idx === subMenuIndex && (
+                        <div className="text-xs mt-2">
+                          {!canUse && <span className="text-red-400">Недостаточно маны</span>}
+                          {canUse && needsTarget && <span className="text-yellow-400">Требуется цель (только в бою)</span>}
+                          {canUse && isHealSkill && <span className="text-green-400">[Enter] Использовать</span>}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs opacity-70">{skill.desc}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="mt-4 text-xs text-center text-slate-500 shrink-0">
                 [ESC] Назад

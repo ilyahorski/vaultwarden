@@ -3,7 +3,7 @@ import {
   Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
   ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
-  Plus, ChevronLeft, ChevronRight, Layers, Upload
+  Plus, ChevronLeft, ChevronRight, Layers, Upload, Info
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
 import { ToolButton } from '../ui/ToolButton';
@@ -26,16 +26,17 @@ interface SidebarProps {
   totalLevels: number;
   logs: LogEntry[];
   logsEndRef: React.RefObject<HTMLDivElement | null>;
+  onShowTutorial: () => void;
 }
 
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  mode, selectedTool, onModeChange, onToolChange, onReset, 
-  onExport, onImport, fileInputRef, // Не забудьте деструктуризировать новые пропсы
-  onExportCampaign, 
+  mode, selectedTool, onModeChange, onToolChange, onReset,
+  onExport, onImport, fileInputRef,
+  onExportCampaign,
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
-  logs, logsEndRef
+  logs, logsEndRef, onShowTutorial
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('structure');
 
@@ -72,6 +73,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-xs text-slate-500">{mode === 'dm' ? 'Map Editor' : 'RPG Mode'}</span>
             </div>
           </div>
+          <button
+            onClick={onShowTutorial}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-amber-500"
+            title="Как играть"
+          >
+            <Info size={20} />
+          </button>
         </div>
 
         <div className="flex gap-2">
@@ -101,6 +109,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div>
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Базовые</h3>
                     <div className="grid grid-cols-2 gap-3">
+                      <ToolButton active={selectedTool === 'start'} onClick={() => onToolChange('start')} icon={<User size={16} />} label="Точка старта" />
+                      <ToolButton active={selectedTool === 'clear'} onClick={() => onToolChange('clear')} icon={<Trash2 size={16} />} label="Ластик" />
                       <ToolButton active={selectedTool === 'wall'} onClick={() => onToolChange('wall')} icon={<Box size={16} />} label="Стена" />
                       <ToolButton active={selectedTool === 'floor'} onClick={() => onToolChange('floor')} icon={<MapIcon size={16} />} label="Пол" />
                       <ToolButton active={selectedTool === 'door'} onClick={() => onToolChange('door')} icon={<DoorClosed size={16} />} label="Дверь" />
@@ -271,11 +281,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   <div>
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Инструменты Карты</h3>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <ToolButton active={selectedTool === 'start'} onClick={() => onToolChange('start')} icon={<User size={16} />} label="Точка старта" />
-                      <ToolButton active={selectedTool === 'clear'} onClick={() => onToolChange('clear')} icon={<Trash2 size={16} />} label="Ластик" />
-                    </div>
-                    
                     {/* Кнопки импорта/экспорта одной карты */}
                     <div className="grid grid-cols-2 gap-3 mb-2">
                        <button onClick={onExport} className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">

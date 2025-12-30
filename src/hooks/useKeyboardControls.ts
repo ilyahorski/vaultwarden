@@ -28,6 +28,7 @@ interface UseKeyboardControlsProps {
   onCloseDoor: () => void;
   canLightTorch: boolean;
   onLightTorch: () => void;
+  onUseSkill: (skillId: string) => void;
 }
 
 export function useKeyboardControls({
@@ -52,7 +53,8 @@ export function useKeyboardControls({
   canCloseDoor,
   onCloseDoor,
   canLightTorch,
-  onLightTorch
+  onLightTorch,
+  onUseSkill
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
@@ -139,8 +141,17 @@ export function useKeyboardControls({
           const skills = CLASSES[player.class].skills;
           if (e.key === 'ArrowUp') setSubMenuIndex(prev => (prev > 0 ? prev - 1 : skills.length - 1));
           if (e.key === 'ArrowDown') setSubMenuIndex(prev => (prev < skills.length - 1 ? prev + 1 : 0));
-          
+
           if (e.key === 'Escape' || e.key === 'ArrowLeft') setActiveMenu('main');
+
+          // Использование навыка вне боя (только лечащие навыки)
+          if (e.key === 'Enter' && skills.length > 0) {
+            const skill = skills[subMenuIndex];
+            const isHealSkill = !!skill.heal && !skill.dmgMult;
+            if (player.mp >= skill.mpCost && isHealSkill) {
+              onUseSkill(skill.id);
+            }
+          }
         } 
         else if (activeMenu === 'items') {
           const items = player.inventory;
@@ -182,5 +193,5 @@ export function useKeyboardControls({
   }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll,
     rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen,
     onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor,
-    canLightTorch, onLightTorch]);
+    canLightTorch, onLightTorch, onUseSkill]);
 }

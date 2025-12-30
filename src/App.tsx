@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -11,16 +11,18 @@ import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useFogOfWar } from './hooks/useFogOfWar';
 
 // Компоненты
-import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls } from './components/game';
+import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls, TutorialPopup } from './components/game';
 import { PlayerMenu } from './components/game/PlayerMenu';
 import { Sidebar } from './components/editor';
 
 // Утилиты
 import { rollActionDie } from './utils';
+import { CLASSES } from './constants';
 
 export default function DungeonApp() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const {
     grid, setGrid,
@@ -166,6 +168,44 @@ export default function DungeonApp() {
       }
   };
 
+  // Использование навыка вне боя (только лечащие навыки)
+  const handleUseSkill = useCallback((skillId: string) => {
+    const skill = CLASSES[player.class].skills.find(s => s.id === skillId);
+    if (!skill) return;
+
+    // Проверяем, что это лечащий навык без урона
+    const isHealSkill = !!skill.heal && !skill.dmgMult;
+    if (!isHealSkill) {
+      addLog(`${skill.name} можно использовать только в бою!`, 'info');
+      return;
+    }
+
+    // Проверяем ману
+    if (player.mp < skill.mpCost) {
+      addLog(`Недостаточно маны для ${skill.name}!`, 'fail');
+      return;
+    }
+
+    // Применяем эффект
+    setPlayer(prev => {
+      const newHp = Math.min(prev.maxHp, prev.hp + skill.heal!);
+      const healedAmount = newHp - prev.hp;
+
+      if (healedAmount > 0) {
+        addLog(`${skill.name}: +${healedAmount} HP (${skill.mpCost} MP)`, 'success');
+      } else {
+        addLog(`Здоровье уже полное!`, 'info');
+        return prev; // Не тратим ману если HP полное
+      }
+
+      return {
+        ...prev,
+        hp: newHp,
+        mp: prev.mp - skill.mpCost
+      };
+    });
+  }, [player.class, player.mp, addLog, setPlayer]);
+
   useKeyboardControls({
     mode,
     hasChosenClass,
@@ -188,7 +228,8 @@ export default function DungeonApp() {
     canCloseDoor,
     onCloseDoor: handleCloseDoor,
     canLightTorch,
-    onLightTorch: handleLightTorch
+    onLightTorch: handleLightTorch,
+    onUseSkill: handleUseSkill
   });
 
   useFogOfWar({
@@ -224,23 +265,28 @@ export default function DungeonApp() {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
       
-      <Sidebar 
+      <Sidebar
         mode={mode}
         selectedTool={selectedTool}
         onModeChange={setMode}
         onToolChange={setSelectedTool}
-        onReset={resetGame} 
+        onReset={resetGame}
         onExport={handleExport}
         onImport={handleImport}
         onExportCampaign={handleExportCampaign}
         onAddLevel={createNewLevel}
         onSwitchLevel={switchLevel}
         currentLevel={player.dungeonLevel}
-        totalLevels={maxLevel}        
+        totalLevels={maxLevel}
         fileInputRef={fileInputRef}
         logs={logs}
         logsEndRef={logsEndRef}
+        onShowTutorial={() => setShowTutorial(true)}
       />
+
+      {showTutorial && (
+        <TutorialPopup onClose={() => setShowTutorial(false)} />
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 relative">
         
@@ -278,6 +324,7 @@ export default function DungeonApp() {
                     onCloseDoor={handleCloseDoor}
                     canLightTorch={canLightTorch}
                     onLightTorch={handleLightTorch}
+                    onUseSkill={handleUseSkill}
                   />
                 )}
 

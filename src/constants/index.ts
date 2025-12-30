@@ -3,11 +3,11 @@ import { Sword, Shield, Zap } from 'lucide-react';
 import type { ClassData, MonsterStats, PotionStats, GearStats, Artifact } from '../types';
 
 // --- Конфигурация карты ---
-export const GRID_SIZE = 50;
+export const GRID_SIZE = 45;
 export const CELL_SIZE = 15;
-export const VISIBILITY_RADIUS = 3;
-export const AGGRO_RADIUS = 6;
-export const TORCH_LIGHT_RADIUS = 7;
+export const VISIBILITY_RADIUS = 5;
+export const AGGRO_RADIUS = 4;
+export const TORCH_LIGHT_RADIUS = 8;
 export const MAX_INVENTORY_SIZE = 100;
 export const SAVE_KEY = 'dungeon_save_v1';
 
@@ -75,16 +75,16 @@ export const MONSTER_STATS: Record<string, MonsterStats> = {
   goblin:    { hp: 30,  atk: 8,  xp: 20,  gold: 5,  name: 'Гоблин',       color: 'text-green-500', iconType: 'ghost' },
   
   // Нежить
-  skeleton:  { hp: 45,  atk: 12, xp: 35,  gold: 8,  name: 'Скелет',       color: 'text-slate-300', iconType: 'skull' },
-  zombie:    { hp: 80,  atk: 10, xp: 45,  gold: 12, name: 'Зомби',        color: 'text-emerald-700', iconType: 'ghost' },
-  lich:      { hp: 200, atk: 40, xp: 500, gold: 200, name: 'Лич',          color: 'text-purple-400', iconType: 'crown' },
+  skeleton:  { hp: 45,  atk: 10, xp: 35,  gold: 8,  name: 'Скелет',       color: 'text-slate-300', iconType: 'skull' },
+  zombie:    { hp: 80,  atk: 15, xp: 45,  gold: 12, name: 'Зомби',        color: 'text-emerald-700', iconType: 'ghost' },
+  lich:      { hp: 200, atk: 30, xp: 500, gold: 200, name: 'Лич',          color: 'text-purple-400', iconType: 'crown' },
   
   // Орда
   orc:       { hp: 60,  atk: 15, xp: 50,  gold: 15, name: 'Орк',          color: 'text-green-700', iconType: 'skull' },
   orc_chief: { hp: 140, atk: 25, xp: 150, gold: 60, name: 'Вождь Орков',  color: 'text-red-600',   iconType: 'crown' },
   
   // Боссы
-  boss:      { hp: 300, atk: 35, xp: 1000,gold: 500, name: 'Тёмный Рыцарь',color: 'text-rose-900',  iconType: 'crown' },
+  boss:      { hp: 300, atk: 45, xp: 1000,gold: 500, name: 'Тёмный Рыцарь',color: 'text-rose-900',  iconType: 'crown' },
 };
 
 // --- Классы ---
