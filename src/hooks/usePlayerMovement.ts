@@ -246,7 +246,7 @@ export function usePlayerMovement({
     }
 
     if (targetCell.type === 'trap') {
-      if (r.val >= 16) {
+      if (r.val >= 12) {
         addLog(`[D20: ${r.val}] Вы заметили ловушку и обезвредили её!`, 'success');
         const newGrid = currentGrid.map((row, ry) =>
           row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'floor' as const } : cell)

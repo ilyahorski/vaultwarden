@@ -120,7 +120,7 @@ export const rollActionDie = (
       newMoves = Math.max(1, player.maxMoves - 2);
       type = 'fail';
       msg = `Тяжелый отдых (D20: ${roll}). Восстановлено только ${newMoves} шагов.`;
-    } else if (roll >= 16) {
+    } else if (roll >= 12) {
       newMoves = player.maxMoves + 2;
       type = 'success';
       msg = `Отличный привал (D20: ${roll})! Вы полны сил: ${newMoves} шагов.`;
@@ -138,7 +138,7 @@ export const rollActionDie = (
   
   let type: LogEntry['type'] = 'roll';
   if (roll <= 5) type = 'fail';
-  if (roll >= 16) type = 'success';
+  if (roll >= 12) type = 'success';
   
   addLog(`🎲 Подготовка действия: ${roll}`, type);
   return roll;

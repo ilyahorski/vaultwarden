@@ -287,6 +287,42 @@ export const useGameState = () => {
     addLog('Игра полностью сброшена.', 'info');
   }, [addLog]);
 
+  // Сброс только текущего этажа (очистка карты)
+  const resetCurrentLevel = useCallback(() => {
+    const emptyGrid = createEmptyGrid();
+    setGrid(emptyGrid);
+
+    // Удаляем текущий уровень из истории
+    setLevelHistory(prev => {
+      const newHistory = { ...prev };
+      delete newHistory[player.dungeonLevel];
+      return newHistory;
+    });
+
+    addLog(`Этаж ${player.dungeonLevel} очищен.`, 'info');
+  }, [addLog, player.dungeonLevel]);
+
+  // Генерация случайного подземелья для текущего этажа
+  const generateRandomLevel = useCallback(() => {
+    const { grid: newGrid, rooms } = generateDungeonGrid(player.dungeonLevel);
+    const startPos = getStartPosition(rooms);
+
+    // Очищаем стартовую позицию от врагов/предметов
+    newGrid[startPos.y][startPos.x].enemy = null;
+    newGrid[startPos.y][startPos.x].item = null;
+
+    setGrid(newGrid);
+    setPlayer(p => ({ ...p, x: startPos.x, y: startPos.y }));
+
+    // Обновляем историю уровней
+    setLevelHistory(prev => ({
+      ...prev,
+      [player.dungeonLevel]: newGrid
+    }));
+
+    addLog(`Сгенерировано новое подземелье для этажа ${player.dungeonLevel}.`, 'info');
+  }, [addLog, player.dungeonLevel]);
+
   const selectClass = useCallback((classType: ClassType, name: string, campaign?: DungeonCampaign) => {
     const stats = CLASSES[classType];
     
@@ -469,6 +505,8 @@ export const useGameState = () => {
     addLog,
     generateDungeon,
     resetGame,
+    resetCurrentLevel,
+    generateRandomLevel,
     selectClass,
     handleExport,
     handleImport,

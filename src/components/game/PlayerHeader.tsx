@@ -27,7 +27,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
               ? 'bg-indigo-600 hover:bg-indigo-500 border-indigo-400 text-white animate-pulse'
               : activeRoll <= 5
                 ? 'bg-red-900/50 border-red-500 text-red-200'
-                : activeRoll >= 16
+                : activeRoll >= 12
                   ? 'bg-yellow-900/50 border-yellow-500 text-yellow-200'
                   : 'bg-slate-800 border-slate-600 text-slate-300'
           }

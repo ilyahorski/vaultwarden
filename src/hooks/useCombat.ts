@@ -58,7 +58,7 @@ export function useCombat({
     setActiveRoll(null);
 
     const prefix = `[D20: ${roll}]`;
-    const isSuccess = roll >= 16;
+    const isSuccess = roll >= 12;
     const isFail = roll <= 5;
 
     let playerDmg = 0;

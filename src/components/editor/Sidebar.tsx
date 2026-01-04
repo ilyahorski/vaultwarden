@@ -3,7 +3,7 @@ import {
   Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
   ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
-  Plus, ChevronLeft, ChevronRight, Layers, Upload, Info
+  Plus, ChevronLeft, ChevronRight, Layers, Upload, Info, Dices, RotateCcw
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
 import { ToolButton } from '../ui/ToolButton';
@@ -15,7 +15,9 @@ interface SidebarProps {
   selectedTool: string;
   onModeChange: (mode: GameMode) => void;
   onToolChange: (tool: string) => void;
-  onReset: () => void;
+  onResetGame: () => void;
+  onResetCurrentLevel: () => void;
+  onGenerateRandomLevel: () => void;
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -32,7 +34,7 @@ interface SidebarProps {
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  mode, selectedTool, onModeChange, onToolChange, onReset,
+  mode, selectedTool, onModeChange, onToolChange, onResetGame, onResetCurrentLevel, onGenerateRandomLevel,
   onExport, onImport, fileInputRef,
   onExportCampaign,
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
@@ -282,20 +284,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div>
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Инструменты Карты</h3>
                     {/* Кнопки импорта/экспорта одной карты */}
-                    <div className="grid grid-cols-2 gap-3 mb-2">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                        <button onClick={onExport} className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">
-                         <Download size={14} /> Экспорт (Этого этажа)
+                         <Download size={14} /> Экспорт этажа
                        </button>
                        <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">
-                         <Upload size={14} /> Импорт (Этого этажа)
+                         <Upload size={14} /> Импорт этажа
                        </button>
                     </div>
 
-                    <div className="mt-2">
-                      <button onClick={onReset} className="w-full flex items-center justify-center gap-2 p-3 rounded-md text-xs font-medium text-red-400 hover:bg-red-900/20 border border-slate-800 hover:border-red-900 transition-colors">
-                        <RefreshCw size={16} /> Сброс текущей карты
-                      </button>
-                    </div>
+                    {/* Генерация случайного этажа */}
+                    <button onClick={onGenerateRandomLevel} className="w-full flex items-center justify-center gap-2 p-2 mb-2 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 text-xs font-bold border border-emerald-700 transition-colors">
+                      <Dices size={14} /> Сгенерировать случайный этаж
+                    </button>
+
+                    {/* Очистка текущего этажа */}
+                    <button onClick={onResetCurrentLevel} className="w-full flex items-center justify-center gap-2 p-2 mb-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold border border-slate-700 transition-colors">
+                      <RotateCcw size={14} /> Очистить текущий этаж
+                    </button>
+
+                    {/* Полный сброс игры */}
+                    <button onClick={onResetGame} className="w-full flex items-center justify-center gap-2 p-2 rounded-md text-xs font-medium text-red-400 hover:bg-red-900/20 border border-slate-800 hover:border-red-900 transition-colors">
+                      <RefreshCw size={14} /> Сбросить всю игру
+                    </button>
                   </div>
                   
                   <div className="pt-4 border-t border-slate-800">

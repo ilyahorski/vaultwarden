@@ -41,7 +41,9 @@ export default function DungeonApp() {
     parseCampaignFile,
     createNewLevel,
     switchLevel,
-    resetGame 
+    resetGame,
+    resetCurrentLevel,
+    generateRandomLevel
   } = useGameState();
 
   const {
@@ -270,7 +272,9 @@ export default function DungeonApp() {
         selectedTool={selectedTool}
         onModeChange={setMode}
         onToolChange={setSelectedTool}
-        onReset={resetGame}
+        onResetGame={resetGame}
+        onResetCurrentLevel={resetCurrentLevel}
+        onGenerateRandomLevel={generateRandomLevel}
         onExport={handleExport}
         onImport={handleImport}
         onExportCampaign={handleExportCampaign}
