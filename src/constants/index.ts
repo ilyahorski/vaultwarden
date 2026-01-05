@@ -144,3 +144,74 @@ export const RARE_ARTIFACTS: Artifact[] = [
   { name: 'Сапфировый Ключ', val: 300 },
   { name: 'Кольцо Власти', val: 500 }
 ];
+
+// --- Цены предметов (покупка/продажа) ---
+export const ITEM_PRICES: Record<string, { buy: number; sell: number }> = {
+  // Зелья HP
+  potion_weak:   { buy: 25,  sell: 10 },
+  potion_mid:    { buy: 60,  sell: 25 },
+  potion_strong: { buy: 120, sell: 50 },
+  // Зелья MP
+  potion_mana_weak:   { buy: 30,  sell: 12 },
+  potion_mana_mid:    { buy: 75,  sell: 30 },
+  potion_mana_strong: { buy: 150, sell: 60 },
+  // Оружие
+  weapon_rusty:      { buy: 20,   sell: 5 },
+  weapon_dagger:     { buy: 50,   sell: 15 },
+  weapon_mace:       { buy: 100,  sell: 35 },
+  weapon_sword:      { buy: 180,  sell: 60 },
+  weapon_axe:        { buy: 300,  sell: 100 },
+  weapon_greatsword: { buy: 500,  sell: 180 },
+  weapon_legend:     { buy: 1500, sell: 600 },
+  // Броня
+  armor_cloth:       { buy: 15,   sell: 5 },
+  armor_leather:     { buy: 40,   sell: 15 },
+  armor_studded:     { buy: 80,   sell: 30 },
+  armor_chain:       { buy: 150,  sell: 55 },
+  armor_plate_light: { buy: 280,  sell: 100 },
+  armor_plate_heavy: { buy: 500,  sell: 180 },
+  armor_legend:      { buy: 1500, sell: 600 },
+};
+
+// --- Генерация ассортимента торговца по уровню подземелья ---
+export const generateMerchantStock = (dungeonLevel: number): Array<{ itemType: string; price: number }> => {
+  const stock: Array<{ itemType: string; price: number }> = [];
+
+  // Всегда есть зелья
+  stock.push({ itemType: 'potion_weak', price: ITEM_PRICES.potion_weak.buy });
+  stock.push({ itemType: 'potion_mana_weak', price: ITEM_PRICES.potion_mana_weak.buy });
+
+  if (dungeonLevel >= 2) {
+    stock.push({ itemType: 'potion_mid', price: ITEM_PRICES.potion_mid.buy });
+    stock.push({ itemType: 'potion_mana_mid', price: ITEM_PRICES.potion_mana_mid.buy });
+  }
+
+  if (dungeonLevel >= 4) {
+    stock.push({ itemType: 'potion_strong', price: ITEM_PRICES.potion_strong.buy });
+    stock.push({ itemType: 'potion_mana_strong', price: ITEM_PRICES.potion_mana_strong.buy });
+  }
+
+  // Оружие по уровню
+  if (dungeonLevel >= 1) stock.push({ itemType: 'weapon_dagger', price: ITEM_PRICES.weapon_dagger.buy });
+  if (dungeonLevel >= 2) stock.push({ itemType: 'weapon_mace', price: ITEM_PRICES.weapon_mace.buy });
+  if (dungeonLevel >= 3) stock.push({ itemType: 'weapon_sword', price: ITEM_PRICES.weapon_sword.buy });
+  if (dungeonLevel >= 4) stock.push({ itemType: 'weapon_axe', price: ITEM_PRICES.weapon_axe.buy });
+  if (dungeonLevel >= 6) stock.push({ itemType: 'weapon_greatsword', price: ITEM_PRICES.weapon_greatsword.buy });
+
+  // Броня по уровню
+  if (dungeonLevel >= 1) stock.push({ itemType: 'armor_leather', price: ITEM_PRICES.armor_leather.buy });
+  if (dungeonLevel >= 2) stock.push({ itemType: 'armor_studded', price: ITEM_PRICES.armor_studded.buy });
+  if (dungeonLevel >= 3) stock.push({ itemType: 'armor_chain', price: ITEM_PRICES.armor_chain.buy });
+  if (dungeonLevel >= 4) stock.push({ itemType: 'armor_plate_light', price: ITEM_PRICES.armor_plate_light.buy });
+  if (dungeonLevel >= 6) stock.push({ itemType: 'armor_plate_heavy', price: ITEM_PRICES.armor_plate_heavy.buy });
+
+  return stock;
+};
+
+// --- Имена и приветствия торговцев ---
+export const MERCHANT_NAMES = [
+  { name: 'Григорий разбойник', greeting: 'Добро пожаловать, путник! У меня лучшие товары в подземелье!' },
+  { name: 'Эльфийка Лирия', greeting: 'Приветствую, герой. Взгляни на мои редкости...' },
+  { name: 'Гном Тигурн', greeting: 'Хо-хо! Лучшие клинки и броня гномьей работы!' },
+  { name: 'Таинственный странник', greeting: '...Тебе понадобится помощь. Я могу её продать.' },
+];

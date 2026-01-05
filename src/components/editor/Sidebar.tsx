@@ -3,12 +3,13 @@ import {
   Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
   Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
   ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
-  Plus, ChevronLeft, ChevronRight, Layers, Upload, Info, Dices, RotateCcw
+  Plus, ChevronLeft, ChevronRight, Layers, Upload, Info, Dices, RotateCcw, Store
 } from 'lucide-react';
 import type { GameMode, LogEntry } from '../../types';
 import { ToolButton } from '../ui/ToolButton';
 import { GEAR_STATS } from '../../constants';
 import { EventLog } from '../game/EventLog';
+import { MusicPlayer } from '../ui/MusicPlayer';
 
 interface SidebarProps {
   mode: GameMode;
@@ -29,6 +30,7 @@ interface SidebarProps {
   logs: LogEntry[];
   logsEndRef: React.RefObject<HTMLDivElement | null>;
   onShowTutorial: () => void;
+  isEditorRoute: boolean;
 }
 
 type TabType = 'structure' | 'enemies' | 'loot' | 'utils';
@@ -38,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExport, onImport, fileInputRef,
   onExportCampaign,
   onAddLevel, onSwitchLevel, currentLevel, totalLevels,
-  logs, logsEndRef, onShowTutorial
+  logs, logsEndRef, onShowTutorial, isEditorRoute
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('structure');
 
@@ -84,13 +86,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={() => onModeChange('dm')} className={`flex-1 p-2 rounded flex items-center justify-center gap-2 text-sm transition-colors ${mode === 'dm' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-900 border border-transparent hover:border-slate-800'}`}>
-            <Settings size={18} /><span>Мастер</span>
-          </button>
-          <button onClick={() => onModeChange('player')} className={`flex-1 p-2 rounded flex items-center justify-center gap-2 text-sm transition-colors ${mode === 'player' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-900 border border-transparent hover:border-slate-800'}`}>
-            <User size={18} /><span>Игрок</span>
-          </button>
+        {/* Кнопки режимов — только в /editor */}
+        {isEditorRoute && (
+          <div className="flex gap-2">
+            <button onClick={() => onModeChange('dm')} className={`flex-1 p-2 rounded flex items-center justify-center gap-2 text-sm transition-colors ${mode === 'dm' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-900 border border-transparent hover:border-slate-800'}`}>
+              <Settings size={18} /><span>Мастер</span>
+            </button>
+            <button onClick={() => onModeChange('player')} className={`flex-1 p-2 rounded flex items-center justify-center gap-2 text-sm transition-colors ${mode === 'player' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-900 border border-transparent hover:border-slate-800'}`}>
+              <User size={18} /><span>Игрок</span>
+            </button>
+          </div>
+        )}
+
+        {/* Музыкальный плеер */}
+        <div className="mt-2">
+          <MusicPlayer />
         </div>
       </div>
 
@@ -134,6 +144,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                       <ToolButton active={selectedTool === 'stairs_down'} onClick={() => onToolChange('stairs_down')} icon={<ArrowDownCircle size={16} className="text-blue-400" />} label="Вниз" />
                       <ToolButton active={selectedTool === 'stairs_up'} onClick={() => onToolChange('stairs_up')} icon={<ArrowUpCircle size={16} className="text-blue-400" />} label="Вверх" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-3 pl-1">NPC</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <ToolButton active={selectedTool === 'merchant'} onClick={() => onToolChange('merchant')} icon={<Store size={16} className="text-amber-400" />} label="Торговец" />
                     </div>
                   </div>
                 </div>

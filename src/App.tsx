@@ -13,16 +13,24 @@ import { useFogOfWar } from './hooks/useFogOfWar';
 // Компоненты
 import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls, TutorialPopup } from './components/game';
 import { PlayerMenu } from './components/game/PlayerMenu';
+import { ShopMenu } from './components/game/ShopMenu';
 import { Sidebar } from './components/editor';
+
+// Константы
 
 // Утилиты
 import { rollActionDie } from './utils';
 import { CLASSES } from './constants';
 
-export default function DungeonApp() {
+interface DungeonAppProps {
+  initialMode?: 'player' | 'dm';
+}
+
+export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
 
   const {
     grid, setGrid,
@@ -44,7 +52,7 @@ export default function DungeonApp() {
     resetGame,
     resetCurrentLevel,
     generateRandomLevel
-  } = useGameState();
+  } = useGameState({ initialMode });
 
   const {
     combatTarget, setCombatTarget,
@@ -156,6 +164,62 @@ export default function DungeonApp() {
   const adjacentTorch = getAdjacentTorch();
   const canLightTorch = !!adjacentTorch;
 
+  // Проверка на наличие торговца рядом
+  const getAdjacentMerchant = () => {
+    if (!grid || !grid.length) return null;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dx, dy] of dirs) {
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+      if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length) {
+        if (grid[ny][nx].type === 'merchant') {
+          return { x: nx, y: ny };
+        }
+      }
+    }
+    return null;
+  };
+
+  const adjacentMerchant = getAdjacentMerchant();
+  const canOpenShop = !!adjacentMerchant;
+
+  const handleOpenShop = useCallback(() => {
+    if (adjacentMerchant) {
+      setShopOpen(adjacentMerchant);
+      setIsMenuOpen(false);
+    }
+  }, [adjacentMerchant, setIsMenuOpen]);
+
+  // Функции покупки и продажи
+  const handleBuyItem = useCallback((itemType: string, price: number) => {
+    if (player.gold < price) {
+      addLog('Недостаточно золота!', 'fail');
+      return;
+    }
+
+    setPlayer(prev => ({
+      ...prev,
+      gold: prev.gold - price,
+      inventory: [...prev.inventory, itemType as typeof prev.inventory[0]]
+    }));
+
+    const itemName = itemType.includes('potion') ? 'зелье' : itemType.includes('weapon') ? 'оружие' : 'броню';
+    addLog(`Куплено ${itemName} за ${price} золота`, 'loot');
+  }, [player.gold, addLog, setPlayer]);
+
+  const handleSellItem = useCallback((inventoryIndex: number, price: number) => {
+    setPlayer(prev => {
+      const newInventory = [...prev.inventory];
+      newInventory.splice(inventoryIndex, 1);
+      addLog(`Продано за ${price} золота`, 'loot');
+      return {
+        ...prev,
+        gold: prev.gold + price,
+        inventory: newInventory
+      };
+    });
+  }, [addLog, setPlayer]);
+
   const handleCloseDoor = () => {
       if (adjacentDoor) {
           toggleDoor(adjacentDoor.x, adjacentDoor.y);
@@ -231,7 +295,10 @@ export default function DungeonApp() {
     onCloseDoor: handleCloseDoor,
     canLightTorch,
     onLightTorch: handleLightTorch,
-    onUseSkill: handleUseSkill
+    canOpenShop,
+    onOpenShop: handleOpenShop,
+    onUseSkill: handleUseSkill,
+    isShopOpen: !!shopOpen
   });
 
   useFogOfWar({
@@ -286,6 +353,7 @@ export default function DungeonApp() {
         logs={logs}
         logsEndRef={logsEndRef}
         onShowTutorial={() => setShowTutorial(true)}
+        isEditorRoute={initialMode === 'dm'}
       />
 
       {showTutorial && (
@@ -328,12 +396,14 @@ export default function DungeonApp() {
                     onCloseDoor={handleCloseDoor}
                     canLightTorch={canLightTorch}
                     onLightTorch={handleLightTorch}
+                    canOpenShop={canOpenShop}
+                    onOpenShop={handleOpenShop}
                     onUseSkill={handleUseSkill}
                   />
                 )}
 
                 {combatTarget && (
-                  <CombatMenu 
+                  <CombatMenu
                     combatTarget={combatTarget}
                     player={player}
                     activeMenu={activeMenu}
@@ -345,6 +415,16 @@ export default function DungeonApp() {
                     onFlee={() => setCombatTarget(null)}
                     onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
                     onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
+                  />
+                )}
+
+                {shopOpen && (
+                  <ShopMenu
+                    player={player}
+                    merchantPosition={shopOpen}
+                    onBuy={handleBuyItem}
+                    onSell={handleSellItem}
+                    onClose={() => setShopOpen(null)}
                   />
                 )}
               </div>

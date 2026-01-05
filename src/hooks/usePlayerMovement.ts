@@ -199,14 +199,20 @@ export function usePlayerMovement({
       } else if (itemKey.includes('weapon')) {
         const weapon = GEAR_STATS[itemKey as WeaponType];
         const currentWeaponVal = player.equippedWeapon ? GEAR_STATS[player.equippedWeapon].val : 0;
-        
+
         if (weapon.val > currentWeaponVal) {
+          // Новое оружие лучше — экипируем
           const newAtk = (player.atk - currentWeaponVal) + weapon.val;
           addLog(`Экипировано: ${weapon.name} (+${weapon.val} ATK). Было: +${currentWeaponVal}`, 'loot');
           updates.atk = newAtk;
           updates.equippedWeapon = itemKey as WeaponType;
+        } else if (updates.inventory.length < MAX_INVENTORY_SIZE) {
+          // Хуже текущего, но есть место в рюкзаке — кладём туда
+          updates.inventory = [...updates.inventory, itemKey as WeaponType];
+          addLog(`${weapon.name} (+${weapon.val}) слабее текущего (+${currentWeaponVal}). В рюкзак.`, 'loot');
         } else {
-          addLog(`${weapon.name} (+${weapon.val}) хуже текущего (+${currentWeaponVal}). Оставлено.`, 'info');
+          // Хуже и нет места — оставляем
+          addLog(`${weapon.name} (+${weapon.val}) хуже текущего (+${currentWeaponVal}). Рюкзак полон!`, 'info');
           consumed = false;
         }
       } else if (itemKey.includes('armor')) {
@@ -214,12 +220,18 @@ export function usePlayerMovement({
         const currentArmorVal = player.equippedArmor ? GEAR_STATS[player.equippedArmor].val : 0;
 
         if (armor.val > currentArmorVal) {
+          // Новая броня лучше — экипируем
           const newDef = (player.def - currentArmorVal) + armor.val;
           addLog(`Экипировано: ${armor.name} (+${armor.val} DEF). Было: +${currentArmorVal}`, 'loot');
           updates.def = newDef;
           updates.equippedArmor = itemKey as ArmorType;
+        } else if (updates.inventory.length < MAX_INVENTORY_SIZE) {
+          // Хуже текущего, но есть место в рюкзаке — кладём туда
+          updates.inventory = [...updates.inventory, itemKey as ArmorType];
+          addLog(`${armor.name} (+${armor.val}) слабее текущей (+${currentArmorVal}). В рюкзак.`, 'loot');
         } else {
-          addLog(`${armor.name} (+${armor.val}) хуже текущего (+${currentArmorVal}). Оставлено.`, 'info');
+          // Хуже и нет места — оставляем
+          addLog(`${armor.name} (+${armor.val}) хуже текущей (+${currentArmorVal}). Рюкзак полон!`, 'info');
           consumed = false;
         }
       } else if (itemKey === 'chest') {

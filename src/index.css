@@ -3,3 +3,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Кастомные тонкие закругленные скроллбары */
+@layer base {
+  /* Для Webkit браузеров (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.6);
+  }
+
+  /* Для Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) rgba(0, 0, 0, 0.2);
+  }
+}

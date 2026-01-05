@@ -17,6 +17,20 @@ const ROOM_MAX_SIZE = 12;  // Увеличено с 9
 const ROOM_PADDING = 2;    // Минимальный отступ между комнатами
 const MAX_ROOM_ATTEMPTS = 150; // Увеличено для больших комнат
 
+// --- Типы клеток, на которых нельзя размещать предметы ---
+const BLOCKING_TILE_TYPES: Set<CellData['type']> = new Set([
+  'torch', 'torch_lit', 'stairs_up', 'stairs_down',
+  'water', 'lava', 'wall', 'trap', 'door', 'secret_door', 'merchant'
+]);
+
+// --- Проверка, можно ли разместить предмет на клетке ---
+const canPlaceItem = (cell: CellData): boolean => {
+  return cell.type === 'floor' &&
+         !cell.item &&
+         !cell.enemy &&
+         !BLOCKING_TILE_TYPES.has(cell.type);
+};
+
 // --- Темы уровней ---
 type DungeonTheme = 'crypt' | 'cave' | 'dungeon' | 'ruins' | 'inferno';
 
@@ -394,19 +408,24 @@ const createSecretRoom = (grid: CellData[][], existingRooms: Room[], depth: numb
     }
   }
 
-  // Добавляем ценный лут в секретную комнату
-  const lootX = room.centerX;
-  const lootY = room.centerY;
-  if (grid[lootY][lootX].type === 'floor') {
-    // Гарантированно хороший лут
-    const goodLoot: ItemType[] = [
-      'chest', 'weapon_greatsword', 'armor_plate_heavy',
-      'potion_strong', 'weapon_axe', 'armor_chain'
-    ];
-    if (depth >= 4) {
-      goodLoot.push('weapon_legend', 'armor_legend');
+  // Добавляем ценный лут в секретную комнату (с проверкой на блокирующие клетки)
+  const goodLoot: ItemType[] = [
+    'chest', 'weapon_greatsword', 'armor_plate_heavy',
+    'potion_strong', 'weapon_axe', 'armor_chain'
+  ];
+  if (depth >= 4) {
+    goodLoot.push('weapon_legend', 'armor_legend');
+  }
+
+  // Пытаемся разместить лут в центре или рядом
+  let lootPlaced = false;
+  for (let attempts = 0; attempts < 15 && !lootPlaced; attempts++) {
+    const lootX = attempts === 0 ? room.centerX : rand(room.x, room.x + room.w - 1);
+    const lootY = attempts === 0 ? room.centerY : rand(room.y, room.y + room.h - 1);
+    if (canPlaceItem(grid[lootY][lootX])) {
+      grid[lootY][lootX].item = goodLoot[rand(0, goodLoot.length - 1)];
+      lootPlaced = true;
     }
-    grid[lootY][lootX].item = goodLoot[rand(0, goodLoot.length - 1)];
   }
 
   return room;
@@ -588,6 +607,25 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
     }
   }
 
+  // Размещаем торговца каждые 3 уровня (начиная со 2-го)
+  if (levelIndex >= 2 && levelIndex % 3 === 2) {
+    // Выбираем комнату для торговца (не первую и не последнюю)
+    const merchantRoomIndex = rand(1, Math.max(1, rooms.length - 2));
+    const merchantRoom = rooms[merchantRoomIndex];
+
+    // Размещаем торговца в центре комнаты
+    if (newGrid[merchantRoom.centerY][merchantRoom.centerX].type === 'floor') {
+      newGrid[merchantRoom.centerY][merchantRoom.centerX].type = 'merchant';
+      // Убираем врагов и предметы из комнаты торговца (безопасная зона)
+      for (let y = merchantRoom.y; y < merchantRoom.y + merchantRoom.h; y++) {
+        for (let x = merchantRoom.x; x < merchantRoom.x + merchantRoom.w; x++) {
+          newGrid[y][x].enemy = null;
+          newGrid[y][x].enemyHp = undefined;
+        }
+      }
+    }
+  }
+
   // Размещение объектов с учетом уровня сложности
   rooms.forEach((room, index) => {
     // Первая комната - Старт (только декорации)
@@ -606,12 +644,17 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
     // Декорируем комнату
     decorateRoom(newGrid, room, levelIndex, theme);
 
-    // Размещение лута
+    // Размещение лута (с проверкой на блокирующие клетки)
     if (rand(0, 100) > 35) {
-      const cx = rand(room.x, room.x + room.w - 1);
-      const cy = rand(room.y, room.y + room.h - 1);
-      const item = rollLoot(levelIndex);
-      newGrid[cy][cx].item = item;
+      let placed = false;
+      for (let attempts = 0; attempts < 10 && !placed; attempts++) {
+        const cx = rand(room.x, room.x + room.w - 1);
+        const cy = rand(room.y, room.y + room.h - 1);
+        if (canPlaceItem(newGrid[cy][cx])) {
+          newGrid[cy][cx].item = rollLoot(levelIndex);
+          placed = true;
+        }
+      }
     }
 
     // Размещение врагов

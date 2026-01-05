@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Zap, Backpack, X, DoorClosed, Flame } from 'lucide-react';
+import { Zap, Backpack, X, DoorClosed, Flame, Store } from 'lucide-react';
 import type { Player, ActiveMenu } from '../../types';
 import { CLASSES, POTION_STATS, GEAR_STATS } from '../../constants';
 
@@ -13,6 +13,8 @@ interface PlayerMenuProps {
   onCloseDoor: () => void;
   canLightTorch: boolean;
   onLightTorch: () => void;
+  canOpenShop: boolean;
+  onOpenShop: () => void;
   onUseSkill: (skillId: string) => void;
 }
 
@@ -26,6 +28,8 @@ export function PlayerMenu({
   onCloseDoor,
   canLightTorch,
   onLightTorch,
+  canOpenShop,
+  onOpenShop,
   onUseSkill
 }: PlayerMenuProps) {
 
@@ -37,6 +41,10 @@ export function PlayerMenu({
 
   if (canLightTorch) {
     menuOptions.push({ label: 'Зажечь факел', icon: <Flame size={18} className="text-orange-400" /> });
+  }
+
+  if (canOpenShop) {
+    menuOptions.push({ label: 'Торговля', icon: <Store size={18} className="text-amber-400" /> });
   }
 
   menuOptions.push(
@@ -81,6 +89,7 @@ export function PlayerMenu({
                     if (opt.label === 'Закрыть') onClose();
                     if (opt.label === 'Закрыть дверь') onCloseDoor();
                     if (opt.label === 'Зажечь факел') onLightTorch();
+                    if (opt.label === 'Торговля') onOpenShop();
                   }}
                 >
                   {opt.icon}
@@ -152,14 +161,31 @@ export function PlayerMenu({
                     let stats;
                     let typeLabel = '';
                     let actionLabel = 'Использовать';
+                    let comparisonLabel = '';
 
                     if (item.startsWith('potion')) {
                       stats = POTION_STATS[item];
                       typeLabel = stats.type === 'hp' ? `Лечение: +${stats.heal}` : `Мана: +${stats.mana}`;
                     } else {
                       stats = GEAR_STATS[item];
-                      typeLabel = stats.type === 'atk' ? `Урон: +${stats.val}` : `Защита: +${stats.val}`;
+                      const isWeapon = stats.type === 'atk';
+                      typeLabel = isWeapon ? `Урон: +${stats.val}` : `Защита: +${stats.val}`;
                       actionLabel = 'Экипировать';
+
+                      // Сравнение с текущей экипировкой
+                      if (isWeapon) {
+                        const currentVal = player.equippedWeapon ? GEAR_STATS[player.equippedWeapon].val : 0;
+                        const diff = stats.val - currentVal;
+                        if (diff > 0) comparisonLabel = `↑ +${diff} ATK`;
+                        else if (diff < 0) comparisonLabel = `↓ ${diff} ATK`;
+                        else comparisonLabel = '= равно';
+                      } else {
+                        const currentVal = player.equippedArmor ? GEAR_STATS[player.equippedArmor].val : 0;
+                        const diff = stats.val - currentVal;
+                        if (diff > 0) comparisonLabel = `↑ +${diff} DEF`;
+                        else if (diff < 0) comparisonLabel = `↓ ${diff} DEF`;
+                        else comparisonLabel = '= равно';
+                      }
                     }
 
                     return (
@@ -177,6 +203,15 @@ export function PlayerMenu({
                              {item.startsWith('potion') && <span className={`w-2 h-2 rounded-full bg-${stats.color}-500`}></span>}
                              {stats.name}
                           </span>
+                          {comparisonLabel && (
+                            <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${
+                              comparisonLabel.startsWith('↑') ? 'bg-green-900/50 text-green-400' :
+                              comparisonLabel.startsWith('↓') ? 'bg-red-900/50 text-red-400' :
+                              'bg-slate-700 text-slate-400'
+                            }`}>
+                              {comparisonLabel}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs opacity-70 mt-1 flex justify-between">
                           <span>{typeLabel}</span>

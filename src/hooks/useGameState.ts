@@ -3,8 +3,36 @@ import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, Act
 import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS, GRID_SIZE } from '../constants';
 import { createLogEntry, createEmptyGrid } from '../utils';
 import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator';
+import { compressLevel, decompressLevel, type CompressedLevel } from '../utils/levelCompression';
 
-export const useGameState = () => {
+// Вспомогательная функция для распаковки истории уровней
+const decompressLevelHistory = (history: Record<number, CellData[][] | CompressedLevel>): Record<number, CellData[][]> => {
+  const result: Record<number, CellData[][]> = {};
+  for (const [level, data] of Object.entries(history)) {
+    // Проверяем, сжатый это формат или обычный
+    if (data && 'v' in data && 'c' in data) {
+      result[Number(level)] = decompressLevel(data as CompressedLevel);
+    } else {
+      result[Number(level)] = data as CellData[][];
+    }
+  }
+  return result;
+};
+
+// Вспомогательная функция для сжатия истории уровней
+const compressLevelHistory = (history: Record<number, CellData[][]>): Record<number, CompressedLevel> => {
+  const result: Record<number, CompressedLevel> = {};
+  for (const [level, grid] of Object.entries(history)) {
+    result[Number(level)] = compressLevel(grid);
+  }
+  return result;
+};
+
+interface UseGameStateProps {
+  initialMode?: GameMode;
+}
+
+export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {}) => {
   // 1. ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ
   const [initialState] = useState(() => {
     // А) Пытаемся загрузить сохранение
@@ -18,11 +46,16 @@ export const useGameState = () => {
           if (loadedPlayer.equippedWeapon === undefined) loadedPlayer.equippedWeapon = null;
           if (loadedPlayer.equippedArmor === undefined) loadedPlayer.equippedArmor = null;
 
+          // Распаковываем историю уровней (поддержка обоих форматов)
+          const levelHistory = parsed.levelHistory
+            ? decompressLevelHistory(parsed.levelHistory)
+            : {};
+
           console.log('Game loaded from local storage');
           return {
             player: loadedPlayer,
             grid: parsed.grid,
-            levelHistory: parsed.levelHistory || {},
+            levelHistory,
             playerPositions: parsed.playerPositions || {},
             logs: parsed.logs || [],
             hasChosenClass: true
@@ -37,17 +70,17 @@ export const useGameState = () => {
     const gen = generateDungeonGrid(1);
     const startPos = getStartPosition(gen.rooms);
     const newGrid = gen.grid;
-    
+
     // Для 1 уровня ставим пол, а не лестницу
     newGrid[startPos.y][startPos.x].type = 'floor';
     newGrid[startPos.y][startPos.x].enemy = null;
     newGrid[startPos.y][startPos.x].item = null;
 
-    const newPlayer = { 
-      ...(INITIAL_PLAYER as Player), 
-      x: startPos.x, 
-      y: startPos.y, 
-      dungeonLevel: 1 
+    const newPlayer = {
+      ...(INITIAL_PLAYER as Player),
+      x: startPos.x,
+      y: startPos.y,
+      dungeonLevel: 1
     };
 
     return {
@@ -62,7 +95,7 @@ export const useGameState = () => {
 
   // 2. Инициализируем стейт значениями из initialState
   const [grid, setGrid] = useState<CellData[][]>(initialState.grid);
-  const [mode, setMode] = useState<GameMode>('dm');
+  const [mode, setMode] = useState<GameMode>(initialMode);
   const [hasChosenClass, setHasChosenClass] = useState(initialState.hasChosenClass);
   const [levelHistory, setLevelHistory] = useState<Record<number, CellData[][]>>(initialState.levelHistory);
   const [playerPositions, setPlayerPositions] = useState<Record<number, { x: number; y: number }>>(initialState.playerPositions || {});
@@ -81,7 +114,18 @@ export const useGameState = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Ref для предотвращения дублирования логов в StrictMode
+  const lastLogRef = useRef<{ text: string; timestamp: number } | null>(null);
+
   const addLog = useCallback((text: string, type: LogEntry['type'] = 'info') => {
+    const now = Date.now();
+    // Пропускаем дубликаты в пределах 100ms (защита от StrictMode double-invoke)
+    if (lastLogRef.current &&
+        lastLogRef.current.text === text &&
+        now - lastLogRef.current.timestamp < 100) {
+      return;
+    }
+    lastLogRef.current = { text, timestamp: now };
     setLogs(prev => [...prev, createLogEntry(text, type)].slice(-50));
   }, []);
 
@@ -115,11 +159,11 @@ export const useGameState = () => {
           newInventory.splice(itemIndex, 1);
           updates.inventory = newInventory;
         }
-      } 
+      }
       else if (item.startsWith('weapon')) {
         const newWeapon = item as WeaponType;
         const newStats = GEAR_STATS[newWeapon];
-        
+
         if (updates.equippedWeapon) {
           const oldWeapon = updates.equippedWeapon;
           const oldStats = GEAR_STATS[oldWeapon];
@@ -132,7 +176,7 @@ export const useGameState = () => {
         updates.equippedWeapon = newWeapon;
         newInventory.splice(itemIndex, 1);
         addLog(`Экипировано: ${newStats.name} (+${newStats.val} ATK)`, 'success');
-        
+
         updates.inventory = newInventory;
       }
       else if (item.startsWith('armor')) {
@@ -151,7 +195,7 @@ export const useGameState = () => {
         updates.equippedArmor = newArmor;
         newInventory.splice(itemIndex, 1);
         addLog(`Экипировано: ${newStats.name} (+${newStats.val} DEF)`, 'success');
-        
+
         updates.inventory = newInventory;
       }
 
@@ -170,12 +214,12 @@ export const useGameState = () => {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Сохраняем с задержкой 500ms
+    // Сохраняем с задержкой 500ms (со сжатием истории уровней)
     saveTimeoutRef.current = setTimeout(() => {
       const saveData = {
         player,
         grid,
-        levelHistory,
+        levelHistory: compressLevelHistory(levelHistory), // Сжимаем для экономии места
         playerPositions,
         logs: logs.slice(-20)
       };

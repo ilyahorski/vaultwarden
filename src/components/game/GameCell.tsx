@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import {
   Skull, Ghost, Crown, Sword, Shield, Box, User, Lock, EyeOff,
   DoorOpen, Flame, Droplets, Trees, ArrowDownCircle, ArrowUpCircle,
-  AlertCircle, FlaskConical, Bug
+  AlertCircle, FlaskConical, Bug, Store, Radiation
 } from 'lucide-react';
 import type { CellData, GameMode, PotionType, WeaponType, ArmorType } from '../../types';
 import { CELL_SIZE, MONSTER_STATS, POTION_STATS, AGGRO_RADIUS, GEAR_STATS } from '../../constants';
@@ -171,12 +171,13 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
      ${cell.type === 'water' ? 'bg-blue-800/80' : ''}
      ${cell.type === 'lava' ? 'bg-red-800/80' : ''}
      ${cell.type === 'grass' ? 'bg-green-900/50' : ''}
-     ${cell.type === 'door' ? 'bg-amber-900' : ''}
+     ${cell.type === 'door' ? 'bg-zinc-600/50' : ''}
      ${cell.type === 'door_open' ? 'bg-amber-900/30 cursor-pointer hover:bg-amber-900/50' : ''}
-     ${cell.type === 'trap' ? 'bg-orange-900/30' : ''}
+     ${cell.type === 'trap' ? 'bg-zinc-600/50' : ''}
      ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
-     ${cell.type === 'torch' ? 'bg-amber-600/50' : ''}
-     ${cell.type === 'torch_lit' ? 'bg-amber-900/40' : ''}
+     ${cell.type === 'torch' ? 'bg-amber-900/50 cursor-pointer hover:bg-amber-600/50' : ''}
+     ${cell.type === 'torch_lit' ? 'bg-zinc-600/50' : ''}
+     ${cell.type === 'merchant' ? 'bg-amber-800/60' : ''}
      ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
   `;
 
@@ -190,6 +191,10 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
 
   if (cell.type === 'torch_lit' && !tooltip) {
     tooltip = 'Горящий факел';
+  }
+
+  if (cell.type === 'merchant' && !tooltip) {
+    tooltip = 'Торговец — подойдите для торговли';
   }
 
   return (
@@ -220,13 +225,17 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
         </div>
       )}
 
-      {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && <Flame size={12} className="absolute text-orange-500 opacity-70" />}
+      {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && <Radiation size={10} className="absolute text-red-500" />}
 
       {cell.type === 'torch' && !content && (
         <Flame size={12} className="absolute text-slate-500 opacity-60" />
       )}
       {cell.type === 'torch_lit' && !content && (
         <Flame size={14} className="absolute text-orange-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
+      )}
+
+      {cell.type === 'merchant' && !content && (
+        <Store size={14} className="absolute text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
       )}
 
       {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-zinc-300/10 z-10" />}

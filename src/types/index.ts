@@ -1,7 +1,7 @@
 import React from 'react';
 
 // --- Типы ячеек ---
-export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit';
+export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit' | 'merchant';
 
 // --- Типы предметов ---
 // HP Зелья
@@ -170,4 +170,19 @@ export interface DungeonCampaign {
 export type GameMode = 'dm' | 'player';
 
 // --- Тип активного меню ---
-export type ActiveMenu = 'main' | 'skills' | 'items';
+export type ActiveMenu = 'main' | 'skills' | 'items' | 'shop';
+
+// --- Интерфейс товара в магазине ---
+export interface ShopItem {
+  id: string;
+  itemType: PotionType | WeaponType | ArmorType;
+  price: number;
+  stock: number; // -1 = бесконечно
+}
+
+// --- Интерфейс торговца ---
+export interface MerchantData {
+  name: string;
+  greeting: string;
+  items: ShopItem[];
+}

@@ -28,7 +28,10 @@ interface UseKeyboardControlsProps {
   onCloseDoor: () => void;
   canLightTorch: boolean;
   onLightTorch: () => void;
+  canOpenShop: boolean;
+  onOpenShop: () => void;
   onUseSkill: (skillId: string) => void;
+  isShopOpen: boolean;
 }
 
 export function useKeyboardControls({
@@ -54,11 +57,19 @@ export function useKeyboardControls({
   onCloseDoor,
   canLightTorch,
   onLightTorch,
-  onUseSkill
+  canOpenShop,
+  onOpenShop,
+  onUseSkill,
+  isShopOpen
 }: UseKeyboardControlsProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 0. Если открыто меню магазина — блокируем все действия (ShopMenu сам обрабатывает клавиши)
+      if (isShopOpen) {
+        return;
+      }
+
       // 1. Бросок кубика / Отдых (Shift)
       if (e.key === 'Shift') {
         if (activeRoll === null && mode === 'player') {
@@ -119,6 +130,7 @@ export function useKeyboardControls({
           const menuOptions: string[] = [];
           if (canCloseDoor) menuOptions.push('door');
           if (canLightTorch) menuOptions.push('torch');
+          if (canOpenShop) menuOptions.push('shop');
           menuOptions.push('skills', 'items', 'close');
 
           const menuSize = menuOptions.length;
@@ -130,6 +142,7 @@ export function useKeyboardControls({
             const currentOption = menuOptions[mainMenuIndex];
             if (currentOption === 'door' && e.key === 'Enter') { onCloseDoor(); }
             else if (currentOption === 'torch' && e.key === 'Enter') { onLightTorch(); }
+            else if (currentOption === 'shop' && e.key === 'Enter') { onOpenShop(); }
             else if (currentOption === 'skills') { setActiveMenu('skills'); setSubMenuIndex(0); }
             else if (currentOption === 'items') { setActiveMenu('items'); setSubMenuIndex(0); }
             else if (currentOption === 'close' && e.key === 'Enter') setIsMenuOpen(false);
@@ -193,5 +206,5 @@ export function useKeyboardControls({
   }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll,
     rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen,
     onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor,
-    canLightTorch, onLightTorch, onUseSkill]);
+    canLightTorch, onLightTorch, canOpenShop, onOpenShop, onUseSkill, isShopOpen]);
 }

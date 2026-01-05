@@ -13,7 +13,7 @@ interface UseEditorHandlersProps {
 
 // Выносим список простых структурных типов в константу (readonly tuple)
 const BASIC_STRUCTURE_TYPES = [
-  'wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap', 'torch'
+  'wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap', 'torch', 'merchant'
 ] as const;
 
 export function useEditorHandlers({
