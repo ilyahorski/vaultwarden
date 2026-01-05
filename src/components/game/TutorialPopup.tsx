@@ -6,7 +6,7 @@ interface TutorialPopupProps {
 
 export function TutorialPopup({ onClose }: TutorialPopupProps) {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
       <div className="bg-slate-900 border-2 border-slate-700 rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Заголовок */}
         <div className="p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
