@@ -1,4 +1,4 @@
-import type { CellData, Player, LogEntry, CombatTarget } from '../types';
+import type { CellData, Player, LogEntry, CombatTarget, Direction } from '../types';
 import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX_INVENTORY_SIZE } from '../constants';
 import type { PotionType, WeaponType, ArmorType } from '../types';
 import { updateVisibility } from './useFogOfWar';
@@ -47,6 +47,13 @@ export function usePlayerMovement({
       }
       return;
     }
+
+    // Определяем направление движения
+    let direction: Direction = player.facing || 'down';
+    if (dx < 0) direction = 'left';
+    else if (dx > 0) direction = 'right';
+    else if (dy < 0) direction = 'up';
+    else if (dy > 0) direction = 'down';
 
     const newX = player.x + dx;
     const newY = player.y + dy;
@@ -234,6 +241,11 @@ export function usePlayerMovement({
           addLog(`${armor.name} (+${armor.val}) хуже текущей (+${currentArmorVal}). Рюкзак полон!`, 'info');
           consumed = false;
         }
+      } else if (itemKey === 'gold') {
+        // Подбор золотой монеты (фиксированная сумма)
+        const goldAmount = 10 + Math.floor(Math.random() * 15); // 10-24 золота
+        updates.gold += goldAmount;
+        addLog(`Найдено ${goldAmount} золота!`, 'loot');
       } else if (itemKey === 'chest') {
         const isArtifact = r.val >= 15;
         if (isArtifact) {
@@ -285,6 +297,7 @@ export function usePlayerMovement({
     updates.x = newX;
     updates.y = newY;
     updates.moves -= moveCost;
+    updates.facing = direction; // Сохраняем направление движения
 
     setPlayer(updates);
 
@@ -293,6 +306,43 @@ export function usePlayerMovement({
       const newGrid = currentGrid.map((row, ry) =>
         row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'door' as const } : cell)
       );
+      setGrid(newGrid);
+      currentGrid = newGrid;
+    }
+
+    // Обработка секретных кнопок
+    if (targetCell.type === 'secret_button') {
+      const isTrigger = targetCell.isSecretTrigger === true;
+
+      // Активируем кнопку (меняем спрайт)
+      let newGrid = currentGrid.map((row, ry) =>
+        row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'secret_button_activated' as const } : cell)
+      );
+
+      if (isTrigger) {
+        // Правильная кнопка - открываем скрытую комнату
+        addLog('⚡ СЕКРЕТ АКТИВИРОВАН! Скрытая комната открыта!', 'success');
+
+        // Восстанавливаем все клетки скрытой комнаты к их оригинальному состоянию
+        newGrid = newGrid.map(row =>
+          row.map(cell => {
+            if (cell.isHiddenRoom && cell.originalType) {
+              return {
+                ...cell,
+                type: cell.originalType,
+                isHiddenRoom: false,
+                originalType: undefined
+              };
+            }
+            return cell;
+          })
+        );
+
+      } else {
+        // Ложная кнопка
+        addLog('🔸 Секрет не принёс результата...', 'info');
+      }
+
       setGrid(newGrid);
       currentGrid = newGrid;
     }

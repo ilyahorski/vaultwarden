@@ -1,64 +1,192 @@
 import React, { useCallback } from 'react';
-import {
-  Skull, Ghost, Crown, Sword, Shield, Box, User, Lock, EyeOff,
-  DoorOpen, Flame, Droplets, Trees, ArrowDownCircle, ArrowUpCircle,
-  AlertCircle, FlaskConical, Bug, Store, Radiation
-} from 'lucide-react';
-import type { CellData, GameMode, PotionType, WeaponType, ArmorType } from '../../types';
+import { AlertCircle } from 'lucide-react';
+import type { CellData, GameMode, PotionType, WeaponType, ArmorType, ClassType, Direction } from '../../types';
 import { CELL_SIZE, MONSTER_STATS, POTION_STATS, AGGRO_RADIUS, GEAR_STATS } from '../../constants';
 import { calculateDistance } from '../../utils';
+import {
+  SPRITE_SIZE,
+  SPRITE_SHEETS,
+  TILE_SPRITES,
+  ITEM_SPRITES,
+  VOID_SPRITE,
+  FLOOR_SPRITES,
+  getSpritePosition,
+  getWallSprite,
+  getFloorSprite,
+  getAnimatedEnemySprite,
+  getAnimatedPlayerSprite,
+  getDirectionalPlayerSprite,
+  getAnimatedTorchSprite,
+  getAnimatedTrapSprite,
+  getAnimatedChestSprite,
+  getAnimatedLavaSprite,
+  getAnimatedWaterSprite,
+  type SpritePosition,
+  type NeighborInfo
+} from '../../sprites';
 
 interface GameCellProps {
   cell: CellData;
+  grid: CellData[][];
   mode: GameMode;
   playerX: number;
   playerY: number;
+  playerClass?: ClassType;
+  playerDirection?: Direction;
   isMovingEnemy: { x: number; y: number } | null;
   onClick: (x: number, y: number) => void;
+  animationFrame?: number;  // Текущий кадр анимации (0-3)
 }
 
-// Кастомный компаратор для React.memo - сравниваем только нужные поля
+// Компонент спрайта - переиспользуемый
+const Sprite: React.FC<{
+  sprite: SpritePosition;
+  className?: string;
+  style?: React.CSSProperties;
+}> = ({ sprite, className = '', style = {} }) => {
+  // Маппинг sheet -> CSS класс
+  const sheetClassMap: Record<string, string> = {
+    tileset: 'sprite-tile',
+    tileset_new: 'sprite-tileset_new',
+    characters: 'sprite-character',
+    items: 'sprite-item',
+    items_rpg: 'sprite-items-rpg',
+    items_sheet: 'sprite-items_sheet',
+    // Анимированные
+    torch_lit: 'sprite-torch_lit',
+    torch_off: 'sprite-torch_off',
+    trap: 'sprite-trap',
+    chest: 'sprite-chest',
+    lava: 'sprite-lava',
+    water: 'sprite-water',
+    grass: 'sprite-grass',
+    // Персонажи
+    skeleton1: 'sprite-skeleton1',
+    skeleton2: 'sprite-skeleton2',
+    skull: 'sprite-skull',
+    vampire: 'sprite-vampire',
+    warrior: 'sprite-warrior',
+    mage: 'sprite-mage',
+    rogue: 'sprite-rogue',
+    // Герои с направленной анимацией
+    hero_warrior: 'sprite-hero_warrior',
+    hero_mage: 'sprite-hero_mage',
+    hero_rogue: 'sprite-hero_rogue',
+  };
+  const sheetClass = sheetClassMap[sprite.sheet] || 'sprite-item';
+
+  return (
+    <div
+      className={`sprite ${sheetClass} ${className}`}
+      style={{
+        width: SPRITE_SIZE,
+        height: SPRITE_SIZE,
+        backgroundPosition: getSpritePosition(sprite),
+        ...style
+      }}
+    />
+  );
+};
+
+// Получить тип ячейки по координатам (с проверкой границ)
+function getCellType(grid: CellData[][], x: number, y: number): string | null {
+  if (y < 0 || y >= grid.length || x < 0 || x >= grid[0].length) {
+    return null; // за границами = пустота
+  }
+  return grid[y][x].type;
+}
+
+// Проверить, является ли ячейка стеной
+function isWall(cellType: string | null): boolean {
+  return cellType === 'wall';
+}
+
+// Получить информацию о соседях для autotiling
+function getNeighborInfo(grid: CellData[][], x: number, y: number): NeighborInfo {
+  return {
+    top: isWall(getCellType(grid, x, y - 1)),
+    bottom: isWall(getCellType(grid, x, y + 1)),
+    left: isWall(getCellType(grid, x - 1, y)),
+    right: isWall(getCellType(grid, x + 1, y)),
+    topLeft: isWall(getCellType(grid, x - 1, y - 1)),
+    topRight: isWall(getCellType(grid, x + 1, y - 1)),
+    bottomLeft: isWall(getCellType(grid, x - 1, y + 1)),
+    bottomRight: isWall(getCellType(grid, x + 1, y + 1)),
+  };
+}
+
+// Получить информацию о соседних стенах для пола
+function getWallNeighborsForFloor(grid: CellData[][], x: number, y: number): NeighborInfo {
+  return {
+    top: isWall(getCellType(grid, x, y - 1)),
+    bottom: isWall(getCellType(grid, x, y + 1)),
+    left: isWall(getCellType(grid, x - 1, y)),
+    right: isWall(getCellType(grid, x + 1, y)),
+    topLeft: isWall(getCellType(grid, x - 1, y - 1)),
+    topRight: isWall(getCellType(grid, x + 1, y - 1)),
+    bottomLeft: isWall(getCellType(grid, x - 1, y + 1)),
+    bottomRight: isWall(getCellType(grid, x + 1, y + 1)),
+  };
+}
+
+// Кастомный компаратор для React.memo
 function arePropsEqual(prevProps: GameCellProps, nextProps: GameCellProps): boolean {
   const prevCell = prevProps.cell;
   const nextCell = nextProps.cell;
 
-  // В режиме DM проверяем изменение ячейки и обработчика клика
-  if (nextProps.mode === 'dm') {
-    // ВАЖНО: проверяем onClick - он меняется при смене инструмента редактирования
-    if (prevProps.onClick !== nextProps.onClick) return false;
+  // Проверяем изменение кадра анимации для анимированных объектов
+  // Если на ячейке есть враг, игрок, торговец, факелы, ловушки, вода или лава - перерендерить при смене кадра
+  const needsAnimation =
+    nextCell.enemy ||
+    nextCell.type === 'torch_lit' ||
+    nextCell.type === 'torch' ||
+    nextCell.type === 'merchant' ||
+    nextCell.type === 'trap' ||
+    nextCell.type === 'water' ||
+    nextCell.type === 'lava' ||
+    nextCell.item === 'chest' ||
+    (nextProps.playerX === nextCell.x && nextProps.playerY === nextCell.y);
 
+  if (needsAnimation && prevProps.animationFrame !== nextProps.animationFrame) {
+    return false;
+  }
+
+  // Проверяем изменение соседей для autotiling
+  // Это важно для стен и полов
+  if (prevCell.type === 'wall' || prevCell.type === 'floor' ||
+      nextCell.type === 'wall' || nextCell.type === 'floor') {
+    // Упрощённая проверка - если grid изменился, перерисовываем
+    if (prevProps.grid !== nextProps.grid) return false;
+  }
+
+  if (nextProps.mode === 'dm') {
+    if (prevProps.onClick !== nextProps.onClick) return false;
     if (prevCell.type !== nextCell.type) return false;
     if (prevCell.enemy !== nextCell.enemy) return false;
     if (prevCell.item !== nextCell.item) return false;
 
-    // isMovingEnemy - проверяем только для этой ячейки
     const wasMoving = prevProps.isMovingEnemy?.x === prevCell.x && prevProps.isMovingEnemy?.y === prevCell.y;
     const isMoving = nextProps.isMovingEnemy?.x === nextCell.x && nextProps.isMovingEnemy?.y === nextCell.y;
     if (wasMoving !== isMoving) return false;
 
     if (prevProps.mode !== nextProps.mode) return false;
-
     return true;
   }
 
-  // Режим player - более агрессивная оптимизация
   if (prevProps.mode !== nextProps.mode) return false;
-
-  // Сравниваем данные ячейки
   if (prevCell.type !== nextCell.type) return false;
   if (prevCell.enemy !== nextCell.enemy) return false;
   if (prevCell.enemyHp !== nextCell.enemyHp) return false;
   if (prevCell.item !== nextCell.item) return false;
   if (prevCell.isVisible !== nextCell.isVisible) return false;
   if (prevCell.isRevealed !== nextCell.isRevealed) return false;
+  if (prevProps.playerClass !== nextProps.playerClass) return false;
 
-  // Проверяем позицию игрока
   if (prevProps.playerX !== nextProps.playerX || prevProps.playerY !== nextProps.playerY) {
     const wasPlayerHere = prevProps.playerX === prevCell.x && prevProps.playerY === prevCell.y;
     const isPlayerHere = nextProps.playerX === nextCell.x && nextProps.playerY === nextCell.y;
     if (wasPlayerHere || isPlayerHere) return false;
 
-    // Проверяем aggro радиус если есть враг
     if (nextCell.enemy) {
       const prevDist = calculateDistance(prevCell.x, prevCell.y, prevProps.playerX, prevProps.playerY);
       const nextDist = calculateDistance(nextCell.x, nextCell.y, nextProps.playerX, nextProps.playerY);
@@ -72,18 +200,18 @@ function arePropsEqual(prevProps: GameCellProps, nextProps: GameCellProps): bool
 }
 
 export const GameCell: React.FC<GameCellProps> = React.memo(({
-  cell, mode, playerX, playerY, isMovingEnemy, onClick
+  cell, grid, mode, playerX, playerY, playerClass = 'warrior', playerDirection = 'down', isMovingEnemy, onClick, animationFrame = 0
 }) => {
-  // Мемоизируем обработчик клика
   const handleClick = useCallback(() => {
     onClick(cell.x, cell.y);
   }, [onClick, cell.x, cell.y]);
 
+  // Неоткрытая ячейка в режиме игрока
   if (mode === 'player' && !cell.isRevealed) {
-    return <div className="w-full h-full bg-black" style={{ width: CELL_SIZE, height: CELL_SIZE }} />;
+    return <div className="bg-black" style={{ width: CELL_SIZE, height: CELL_SIZE }} />;
   }
 
-  let content = null;
+  let content: React.ReactNode = null;
   let tooltip = '';
 
   // --- ЛОГИКА ВРАГОВ ---
@@ -95,25 +223,19 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
       const dist = mode === 'player' ? calculateDistance(cell.x, cell.y, playerX, playerY) : 999;
       const isAggro = dist <= AGGRO_RADIUS && mode === 'player';
 
-      let EnemyIcon = Ghost;
-      if (info.iconType === 'skull') EnemyIcon = Skull;
-      if (info.iconType === 'crown') EnemyIcon = Crown;
-      if (info.iconType === 'snake') EnemyIcon = Bug;
-
-      const colorClass = info.color.startsWith('text-') ? info.color : `text-${info.color}-500`;
+      // Используем новую систему анимации с отдельными спрайт-листами
+      const enemySprite = getAnimatedEnemySprite(cell.enemy, animationFrame);
 
       content = (
-        <div className="relative">
-          <EnemyIcon
-            size={CELL_SIZE * 0.8}
-            className={`${colorClass} ${cell.enemy === 'boss' || cell.enemy === 'lich' ? 'animate-pulse drop-shadow-md' : ''}`}
-            fill="currentColor"
-            fillOpacity={0.2}
-          />
+        <div className="relative flex items-center justify-center">
+          <Sprite sprite={enemySprite} />
           {isAggro && (
-            <div className="absolute -top-2 -right-2 text-red-500 animate-bounce">
+            <div className="absolute -top-1 -right-1 text-red-500 animate-bounce z-10">
               <AlertCircle size={8} fill="currentColor" />
             </div>
+          )}
+          {(cell.enemy === 'boss' || cell.enemy === 'lich' || cell.enemy === 'orc_chief') && (
+            <div className="absolute inset-0 animate-pulse bg-red-500/20 rounded" />
           )}
         </div>
       );
@@ -121,124 +243,172 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
   }
   // --- ЛОГИКА ПРЕДМЕТОВ ---
   else if (cell.item) {
+    const itemSprite = ITEM_SPRITES[cell.item];
+
     if (cell.item.includes('potion')) {
       const stats = POTION_STATS[cell.item as PotionType];
       if (stats) {
         tooltip = `${stats.name} (${stats.type === 'hp' ? 'HP' : 'MP'} +${stats.type === 'hp' ? stats.heal : stats.mana})`;
-        const colorClass = `text-${stats.color}`;
-
-        content = (
-          <FlaskConical
-            size={CELL_SIZE * 0.7}
-            className={`${colorClass} drop-shadow-sm`}
-            fill="currentColor"
-            fillOpacity={0.6}
-          />
-        );
+        content = itemSprite && <Sprite sprite={itemSprite} />;
       }
     } else if (cell.item.includes('weapon')) {
       const stats = GEAR_STATS[cell.item as WeaponType];
       if (stats) {
         tooltip = `${stats.name} (+${stats.val} ATK)`;
-        content = <Sword size={CELL_SIZE * 0.7} className={stats.color} />;
+        content = itemSprite && <Sprite sprite={itemSprite} />;
       }
     } else if (cell.item.includes('armor')) {
       const stats = GEAR_STATS[cell.item as ArmorType];
       if (stats) {
         tooltip = `${stats.name} (+${stats.val} DEF)`;
-        content = <Shield size={CELL_SIZE * 0.7} className={stats.color} />;
+        content = itemSprite && <Sprite sprite={itemSprite} />;
       }
     } else if (cell.item === 'chest') {
       tooltip = 'Сундук с сокровищами';
-      content = <Box size={CELL_SIZE * 0.7} className="text-amber-500" />;
+      // Анимированный сундук
+      content = <Sprite sprite={getAnimatedChestSprite(animationFrame)} />;
     } else if (cell.item === 'gold') {
       tooltip = 'Золото';
-      content = <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]" />;
+      content = itemSprite && <Sprite sprite={itemSprite} />;
     }
   }
 
+  // --- ИГРОК ---
   const isPlayerHere = playerX === cell.x && playerY === cell.y;
   if (isPlayerHere) {
-    content = <User size={CELL_SIZE * 0.8} className="text-white drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="currentColor" />;
+    // Используем новую систему направленной анимации
+    const playerSprite = getDirectionalPlayerSprite(playerClass, animationFrame, playerDirection);
+    content = (
+      <div className="relative flex items-center justify-center">
+        <Sprite sprite={playerSprite} />
+        <div className="absolute inset-0 shadow-[0_0_8px_rgba(59,130,246,0.6)] rounded" />
+      </div>
+    );
     tooltip = 'Это вы';
   }
 
   const isMovingThis = mode === 'dm' && isMovingEnemy?.x === cell.x && isMovingEnemy?.y === cell.y;
 
-  const baseClass = `w-full h-full flex items-center justify-center border-slate-800/20 relative select-none
-     ${cell.type === 'wall' ? 'bg-zinc-600' : ''}
-     ${cell.type === 'floor' ? 'bg-zinc-600/50' : ''}
-     ${cell.type === 'water' ? 'bg-blue-800/80' : ''}
-     ${cell.type === 'lava' ? 'bg-red-800/80' : ''}
-     ${cell.type === 'grass' ? 'bg-green-900/50' : ''}
-     ${cell.type === 'door' ? 'bg-zinc-600/50' : ''}
-     ${cell.type === 'door_open' ? 'bg-amber-900/30 cursor-pointer hover:bg-amber-900/50' : ''}
-     ${cell.type === 'trap' ? 'bg-zinc-600/50' : ''}
-     ${cell.type === 'secret_door' && mode === 'dm' ? 'bg-purple-900/50 border-dashed border-purple-500' : ''}
-     ${cell.type === 'torch' ? 'bg-amber-900/50 cursor-pointer hover:bg-amber-600/50' : ''}
-     ${cell.type === 'torch_lit' ? 'bg-zinc-600/50' : ''}
-     ${cell.type === 'merchant' ? 'bg-amber-800/60' : ''}
-     ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
+  // === AUTOTILING: выбор спрайта на основе соседей ===
+  let tileSprite: SpritePosition;
+
+  if (cell.type === 'wall') {
+    const neighbors = getNeighborInfo(grid, cell.x, cell.y);
+    // Проверяем, окружена ли стена только стенами (центральная/внутренняя)
+    const allWalls = neighbors.top && neighbors.bottom && neighbors.left && neighbors.right;
+    if (allWalls) {
+      // Полностью окружена стенами - используем VOID (пустота за стенами)
+      tileSprite = VOID_SPRITE;
+    } else {
+      tileSprite = getWallSprite(neighbors);
+    }
+  } else if (cell.type === 'floor' || cell.type === 'secret_door' ||
+             cell.type === 'door_open' || cell.type === 'merchant') {
+    // Для пола и подобных типов учитываем соседние стены для теней
+    const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
+    tileSprite = getFloorSprite(wallNeighbors);
+  } else if (cell.type === 'torch_lit' || cell.type === 'torch') {
+    // Факелы на полу - рендерим пол как базовый тайл
+    const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
+    tileSprite = getFloorSprite(wallNeighbors);
+  } else if (cell.type === 'trap') {
+    // Пол под ловушкой
+    const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
+    tileSprite = getFloorSprite(wallNeighbors);
+  } else {
+    // Для остальных типов используем прямой маппинг
+    tileSprite = TILE_SPRITES[cell.type] || FLOOR_SPRITES.center;
+  }
+
+  const tileStyle: React.CSSProperties = {
+    backgroundImage: `url(${SPRITE_SHEETS[tileSprite.sheet]})`,
+    backgroundPosition: getSpritePosition(tileSprite),
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'auto',
+    imageRendering: 'pixelated',
+  };
+
+  // Дополнительные классы для особых типов
+  const specialClasses = `
+    ${cell.type === 'secret_door' && mode === 'dm' ? 'ring-1 ring-purple-500 ring-dashed' : ''}
+    ${(cell.type === 'secret_button' || cell.type === 'secret_button_activated') && mode === 'dm' && cell.isSecretTrigger === true ? 'ring-1 ring-green-500' : ''}
+    ${(cell.type === 'secret_button' || cell.type === 'secret_button_activated') && mode === 'dm' && cell.isSecretTrigger === false ? 'ring-1 ring-red-500' : ''}
+    ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
   `;
 
-  if (cell.type === 'door_open' && !tooltip) {
-    tooltip = 'Кликните, чтобы закрыть';
+  // Тултипы для интерактивных тайлов
+  if (cell.type === 'door_open' && !tooltip) tooltip = 'Открытая дверь';
+  if (cell.type === 'door' && !tooltip) tooltip = 'Закрытая дверь';
+  if (cell.type === 'torch' && !tooltip) tooltip = 'Потухший факел';
+  if (cell.type === 'torch_lit' && !tooltip) tooltip = 'Горящий факел';
+  if (cell.type === 'merchant' && !tooltip) tooltip = 'Торговец — подойдите для торговли';
+  if (cell.type === 'stairs_down' && !tooltip) tooltip = 'Лестница вниз';
+  if (cell.type === 'stairs_up' && !tooltip) tooltip = 'Лестница вверх';
+  if (cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && !tooltip) tooltip = 'Ловушка!';
+  if (cell.type === 'secret_button' && mode === 'dm' && !tooltip) {
+    tooltip = cell.isSecretTrigger === true ? 'Секретная кнопка (ОТКРЫВАЕТ комнату)' : 'Секретная кнопка (ложная)';
   }
-
-  if (cell.type === 'torch' && !tooltip) {
-    tooltip = 'Потухший факел';
-  }
-
-  if (cell.type === 'torch_lit' && !tooltip) {
-    tooltip = 'Горящий факел';
-  }
-
-  if (cell.type === 'merchant' && !tooltip) {
-    tooltip = 'Торговец — подойдите для торговли';
+  if (cell.type === 'secret_button_activated' && mode === 'dm' && !tooltip) {
+    tooltip = cell.isSecretTrigger === true ? 'Активированная кнопка (открыла комнату)' : 'Активированная кнопка (была ложной)';
   }
 
   return (
     <div
       onClick={handleClick}
-      className={baseClass}
-      style={{ width: CELL_SIZE, height: CELL_SIZE }}
+      className={`flex items-center justify-center select-none relative ${specialClasses}`}
+      style={{
+        width: CELL_SIZE,
+        height: CELL_SIZE,
+        ...tileStyle
+      }}
       title={tooltip}
     >
       {content}
 
-      {cell.type === 'water' && !content && <Droplets size={10} className="text-blue-400/30 absolute" />}
-      {cell.type === 'lava' && !content && <Flame size={10} className="text-yellow-500/40 absolute animate-pulse" />}
-      {cell.type === 'grass' && !content && <Trees size={10} className="text-green-400/20 absolute" />}
-      {cell.type === 'stairs_down' && !content && <ArrowDownCircle size={14} className="text-blue-200" />}
-      {cell.type === 'stairs_up' && !content && <ArrowUpCircle size={14} className="text-blue-200" />}
-
-      {(cell.type === 'door' || (mode === 'dm' && cell.type === 'secret_door')) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          {cell.type === 'door'
-            ? <Lock size={12} className="text-amber-200 opacity-70" />
-            : <EyeOff size={10} className="text-purple-300 opacity-50" />}
-        </div>
-      )}
-      {cell.type === 'door_open' && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <DoorOpen size={14} className="text-amber-500/50" />
-        </div>
-      )}
-
-      {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && <Radiation size={10} className="absolute text-red-500" />}
-
-      {cell.type === 'torch' && !content && (
-        <Flame size={12} className="absolute text-slate-500 opacity-60" />
-      )}
-      {cell.type === 'torch_lit' && !content && (
-        <Flame size={14} className="absolute text-orange-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
-      )}
-
+      {/* Торговец NPC поверх тайла merchant (с анимацией) */}
       {cell.type === 'merchant' && !content && (
-        <Store size={14} className="absolute text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+        <Sprite
+          sprite={getAnimatedPlayerSprite('warrior', animationFrame)}
+          className="drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]"
+        />
       )}
 
-      {mode === 'player' && cell.isRevealed && !cell.isVisible && <div className="absolute inset-0 bg-zinc-300/10 z-10" />}
+      {/* Двери поверх пола */}
+      {cell.type === 'door' && !content && (
+        <Sprite sprite={TILE_SPRITES.door} />
+      )}
+      {cell.type === 'door_open' && !content && (
+        <Sprite sprite={TILE_SPRITES.door_open} />
+      )}
+
+      {/* Анимированная ловушка (только для DM или если раскрыта) */}
+      {cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && !content && (
+        <Sprite sprite={getAnimatedTrapSprite(animationFrame)} />
+      )}
+
+      {/* Жидкости */}
+      {cell.type === 'lava' && !content && (
+        <Sprite sprite={getAnimatedLavaSprite(animationFrame)} />
+      )}
+      {cell.type === 'water' && !content && (
+        <Sprite sprite={getAnimatedWaterSprite(animationFrame)} />
+      )}
+      {cell.type === 'grass' && !content && (
+        <Sprite sprite={TILE_SPRITES.grass} />
+      )}
+
+      {/* Анимированные факелы поверх пола */}
+      {cell.type === 'torch_lit' && !content && (
+        <Sprite sprite={getAnimatedTorchSprite(animationFrame, true)} />
+      )}
+      {cell.type === 'torch' && !content && (
+        <Sprite sprite={getAnimatedTorchSprite(animationFrame, false)} />
+      )}
+
+      {/* Туман войны */}
+      {mode === 'player' && cell.isRevealed && !cell.isVisible && (
+        <div className="absolute inset-0 bg-black/50 z-10" />
+      )}
     </div>
   );
 }, arePropsEqual);

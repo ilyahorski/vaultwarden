@@ -6,7 +6,7 @@ const CELL_TYPE_MAP: Record<CellType, string> = {
   wall: 'W', floor: 'F', door: 'D', door_open: 'O', secret_door: 'S',
   trap: 'T', water: 'A', lava: 'L', grass: 'G',
   stairs_down: 'd', stairs_up: 'u', torch: 't', torch_lit: 'l',
-  merchant: 'M'
+  merchant: 'M', secret_button: 'B', secret_button_activated: 'b'
 };
 const CELL_TYPE_REVERSE: Record<string, CellType> = Object.fromEntries(
   Object.entries(CELL_TYPE_MAP).map(([k, v]) => [v, k as CellType])
@@ -42,6 +42,7 @@ interface CompressedCell {
   h?: number;          // enemyHp (только если есть)
   r?: 1;               // isRevealed (только если true)
   v?: 1;               // isVisible (только если true)
+  s?: 1 | 0;           // isSecretTrigger (1 = true, 0 = false, undefined = не секретная кнопка)
 }
 
 export interface CompressedLevel {
@@ -61,8 +62,8 @@ export function compressLevel(grid: CellData[][]): CompressedLevel {
       const cell = grid[y][x];
       const typeCode = CELL_TYPE_MAP[cell.type] || 'W';
 
-      // Если клетка простая (без предметов, врагов, невидимая) — храним только тип
-      if (!cell.item && !cell.enemy && !cell.isRevealed && !cell.isVisible) {
+      // Если клетка простая (без предметов, врагов, невидимая, без секретного флага) — храним только тип
+      if (!cell.item && !cell.enemy && !cell.isRevealed && !cell.isVisible && cell.isSecretTrigger === undefined) {
         cells.push(typeCode);
       } else {
         const compressed: CompressedCell = { t: typeCode };
@@ -73,6 +74,7 @@ export function compressLevel(grid: CellData[][]): CompressedLevel {
         }
         if (cell.isRevealed) compressed.r = 1;
         if (cell.isVisible) compressed.v = 1;
+        if (cell.isSecretTrigger !== undefined) compressed.s = cell.isSecretTrigger ? 1 : 0;
         cells.push(compressed);
       }
     }
@@ -106,7 +108,7 @@ export function decompressLevel(compressed: CompressedLevel): CellData[][] {
         });
       } else {
         // Полная клетка
-        row.push({
+        const cellData: CellData = {
           x, y,
           type: CELL_TYPE_REVERSE[cell.t] || 'wall',
           item: cell.i ? (ITEM_REVERSE[cell.i] || null) : null,
@@ -114,7 +116,9 @@ export function decompressLevel(compressed: CompressedLevel): CellData[][] {
           enemyHp: cell.h,
           isRevealed: cell.r === 1,
           isVisible: cell.v === 1
-        });
+        };
+        if (cell.s !== undefined) cellData.isSecretTrigger = cell.s === 1;
+        row.push(cellData);
       }
     }
     grid.push(row);

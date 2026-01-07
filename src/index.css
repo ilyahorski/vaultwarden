@@ -4,6 +4,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Пиксельные спрайты - критично для четкого рендеринга */
+@layer components {
+  .sprite {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background-repeat: no-repeat;
+    background-size: auto;
+  }
+
+  .sprite-tile {
+    background-image: url('/sprites/tileset.png');
+  }
+
+  .sprite-tileset_new {
+    background-image: url('/sprites/tileset_new.png');
+  }
+
+  .sprite-character {
+    background-image: url('/sprites/characters_new.png');
+  }
+
+  .sprite-item {
+    background-image: url('/sprites/items.png');
+  }
+
+  .sprite-items-rpg {
+    background-image: url('/sprites/items_rpg.png');
+  }
+
+  .sprite-items_sheet {
+    background-image: url('/sprites/items_sheet.png');
+  }
+
+  /* Анимированные спрайт-листы */
+  .sprite-torch_lit {
+    background-image: url('/sprites/torch_lit_anim.png');
+  }
+
+  .sprite-torch_off {
+    background-image: url('/sprites/torch_off_anim.png');
+  }
+
+  .sprite-trap {
+    background-image: url('/sprites/trap_anim.png');
+  }
+
+  .sprite-chest {
+    background-image: url('/sprites/chest_anim.png');
+  }
+
+  .sprite-lava {
+    background-image: url('/sprites/lava_anim_16.png?v=3');
+  }
+
+  .sprite-water {
+    background-image: url('/sprites/water_anim_16.png?v=3');
+  }
+
+  .sprite-grass {
+    background-image: url('/sprites/grass_16.png?v=3');
+  }
+
+  /* Персонажи */
+  .sprite-skeleton1 {
+    background-image: url('/sprites/skeleton1_anim.png');
+  }
+
+  .sprite-skeleton2 {
+    background-image: url('/sprites/skeleton2_anim.png');
+  }
+
+  .sprite-skull {
+    background-image: url('/sprites/skull_anim.png');
+  }
+
+  .sprite-vampire {
+    background-image: url('/sprites/vampire_anim.png');
+  }
+
+  .sprite-warrior {
+    background-image: url('/sprites/warrior_anim.png');
+  }
+
+  .sprite-mage {
+    background-image: url('/sprites/mage_anim.png');
+  }
+
+  .sprite-rogue {
+    background-image: url('/sprites/rogue_anim.png');
+  }
+
+  /* Герои с направленной анимацией */
+  .sprite-hero_warrior {
+    background-image: url('/sprites/hero_warrior_directional.png');
+  }
+
+  .sprite-hero_mage {
+    background-image: url('/sprites/hero_mage_directional.png');
+  }
+
+  .sprite-hero_rogue {
+    background-image: url('/sprites/hero_rogue_directional.png');
+  }
+}
+
 /* Кастомные тонкие закругленные скроллбары */
 @layer base {
   /* Для Webkit браузеров (Chrome, Safari, Edge) */

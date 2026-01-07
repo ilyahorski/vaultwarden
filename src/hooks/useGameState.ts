@@ -299,12 +299,7 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
        const gen = generateDungeonGrid(levelIndex);
        newGrid = gen.grid;
        startPos = getStartPosition(gen.rooms);
-       
-       if (levelIndex > 1) {
-          newGrid[startPos.y][startPos.x].type = 'stairs_up';
-       } else {
-          newGrid[startPos.y][startPos.x].type = 'floor';
-       }
+       // Генератор уже установил правильный тип клетки (stairs_up для уровней > 1)
     }
 
     newGrid[startPos.y][startPos.x].enemy = null;

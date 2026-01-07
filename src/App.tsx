@@ -376,13 +376,15 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
             <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
               <div className="relative">
-                <GameGrid 
+                <GameGrid
                   grid={grid}
                   mode={mode}
                   playerX={player.x}
                   playerY={player.y}
+                  playerClass={player.class}
+                  playerDirection={player.facing}
                   isMovingEnemy={isMovingEnemy}
-                  onCellClick={onGridClick} 
+                  onCellClick={onGridClick}
                 />
 
                 {isMenuOpen && !combatTarget && (
@@ -438,11 +440,13 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
         {mode === 'dm' && (
           <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
-            <GameGrid 
+            <GameGrid
               grid={grid}
               mode={mode}
               playerX={player.x}
               playerY={player.y}
+              playerClass={player.class}
+              playerDirection={player.facing}
               isMovingEnemy={isMovingEnemy}
               onCellClick={onGridClick}
             />

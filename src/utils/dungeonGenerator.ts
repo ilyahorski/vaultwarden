@@ -23,12 +23,12 @@ const BLOCKING_TILE_TYPES: Set<CellData['type']> = new Set([
   'water', 'lava', 'wall', 'trap', 'door', 'secret_door', 'merchant'
 ]);
 
-// --- Проверка, можно ли разместить предмет на клетке ---
+// --- Проверка, можно ли разместить предмет/врага на клетке ---
 const canPlaceItem = (cell: CellData): boolean => {
-  return cell.type === 'floor' &&
+  return !BLOCKING_TILE_TYPES.has(cell.type) &&
+         (cell.type === 'floor' || cell.type === 'grass') &&
          !cell.item &&
-         !cell.enemy &&
-         !BLOCKING_TILE_TYPES.has(cell.type);
+         !cell.enemy;
 };
 
 // --- Темы уровней ---
@@ -191,71 +191,91 @@ const carveCorridor = (grid: CellData[][], room1: Room, room2: Room): void => {
   grid[y][x].type = 'floor'; // Конечная точка
 };
 
-// --- Поиск точек входа в комнаты (где коридор соединяется с комнатой) ---
-const findRoomEntrances = (grid: CellData[][], rooms: Room[]): { x: number; y: number }[] => {
-  const entrances: { x: number; y: number }[] = [];
+// --- Проверка, является ли точка узким проходом (коридором) ---
+// Узкий проход = пол со стенами с двух противоположных сторон
+const isNarrowPassage = (grid: CellData[][], x: number, y: number): boolean => {
+  if (x < 1 || x >= GRID_SIZE - 1 || y < 1 || y >= GRID_SIZE - 1) return false;
+  if (grid[y][x].type !== 'floor') return false;
 
-  for (const room of rooms) {
-    // Проверяем каждую сторону комнаты
-    // Левая сторона (x = room.x - 1)
-    for (let y = room.y; y < room.y + room.h; y++) {
-      const wallX = room.x - 1;
-      if (wallX >= 0 && wallX < GRID_SIZE) {
-        // Если слева от комнаты есть пол (коридор) — это вход
-        if (grid[y][wallX].type === 'floor') {
-          // Ставим дверь на границе комнаты
-          entrances.push({ x: room.x, y });
+  const top = grid[y - 1][x].type;
+  const bottom = grid[y + 1][x].type;
+  const left = grid[y][x - 1].type;
+  const right = grid[y][x + 1].type;
+
+  // Горизонтальный коридор: стены сверху и снизу
+  const isHorizontalCorridor = (top === 'wall' && bottom === 'wall');
+  // Вертикальный коридор: стены слева и справа
+  const isVerticalCorridor = (left === 'wall' && right === 'wall');
+
+  return isHorizontalCorridor || isVerticalCorridor;
+};
+
+// --- Поиск всех связных коридоров (проходов между комнатами) ---
+// Возвращает массив коридоров, каждый коридор - массив клеток
+const findCorridors = (grid: CellData[][]): { x: number; y: number }[][] => {
+  const visited = new Set<string>();
+  const corridors: { x: number; y: number }[][] = [];
+
+  // Находим все узкие проходы
+  for (let y = 1; y < GRID_SIZE - 1; y++) {
+    for (let x = 1; x < GRID_SIZE - 1; x++) {
+      const key = `${x},${y}`;
+      if (visited.has(key)) continue;
+      if (!isNarrowPassage(grid, x, y)) continue;
+
+      // BFS для поиска связного коридора
+      const corridor: { x: number; y: number }[] = [];
+      const queue: { x: number; y: number }[] = [{ x, y }];
+      visited.add(key);
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        corridor.push(current);
+
+        // Проверяем соседей
+        const directions = [
+          { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+          { dx: 0, dy: -1 }, { dx: 0, dy: 1 }
+        ];
+
+        for (const { dx, dy } of directions) {
+          const nx = current.x + dx;
+          const ny = current.y + dy;
+          const nkey = `${nx},${ny}`;
+
+          if (visited.has(nkey)) continue;
+          if (!isNarrowPassage(grid, nx, ny)) continue;
+
+          visited.add(nkey);
+          queue.push({ x: nx, y: ny });
         }
       }
-    }
 
-    // Правая сторона (x = room.x + room.w)
-    for (let y = room.y; y < room.y + room.h; y++) {
-      const wallX = room.x + room.w;
-      if (wallX >= 0 && wallX < GRID_SIZE) {
-        if (grid[y][wallX].type === 'floor') {
-          entrances.push({ x: room.x + room.w - 1, y });
-        }
-      }
-    }
-
-    // Верхняя сторона (y = room.y - 1)
-    for (let x = room.x; x < room.x + room.w; x++) {
-      const wallY = room.y - 1;
-      if (wallY >= 0 && wallY < GRID_SIZE) {
-        if (grid[wallY][x].type === 'floor') {
-          entrances.push({ x, y: room.y });
-        }
-      }
-    }
-
-    // Нижняя сторона (y = room.y + room.h)
-    for (let x = room.x; x < room.x + room.w; x++) {
-      const wallY = room.y + room.h;
-      if (wallY >= 0 && wallY < GRID_SIZE) {
-        if (grid[wallY][x].type === 'floor') {
-          entrances.push({ x, y: room.y + room.h - 1 });
-        }
+      // Добавляем коридор только если он не пустой
+      if (corridor.length > 0) {
+        corridors.push(corridor);
       }
     }
   }
 
-  return entrances;
+  return corridors;
 };
 
-// --- Размещение дверей на входах в комнаты ---
-const placeDoors = (grid: CellData[][], rooms: Room[], doorChance: number = 70): void => {
-  const entrances = findRoomEntrances(grid, rooms);
+// --- Размещение дверей в проходах между комнатами ---
+// В каждом коридоре размещаем одну дверь
+const placeDoors = (grid: CellData[][], _rooms: Room[], doorChance: number = 80): void => {
+  const corridors = findCorridors(grid);
 
-  // Убираем дубликаты (одна точка может быть входом для нескольких комнат)
-  const uniqueEntrances = entrances.filter((e, i, arr) =>
-    arr.findIndex(e2 => e2.x === e.x && e2.y === e.y) === i
-  );
+  for (const corridor of corridors) {
+    // Пропускаем коридор с некоторым шансом
+    if (rand(0, 100) >= doorChance) continue;
 
-  for (const entrance of uniqueEntrances) {
-    if (rand(0, 100) < doorChance) {
-      grid[entrance.y][entrance.x].type = 'door';
-    }
+    // Выбираем случайную позицию в коридоре для двери
+    // Предпочитаем середину коридора
+    const midIndex = Math.floor(corridor.length / 2);
+    const pos = corridor[midIndex];
+
+    grid[pos.y][pos.x].type = 'door';
   }
 };
 
@@ -626,17 +646,30 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
     }
   }
 
+  // Сохраняем последнюю комнату для скрытия
+  const exitRoom = rooms[rooms.length - 1];
+
   // Размещение объектов с учетом уровня сложности
   rooms.forEach((room, index) => {
-    // Первая комната - Старт (только декорации)
+    // Первая комната - Старт
     if (index === 0) {
+      // Для этажей глубже первого ставим лестницу вверх
+      if (levelIndex > 1) {
+        newGrid[room.centerY][room.centerX].type = 'stairs_up';
+        // Очищаем клетку от врагов и предметов
+        newGrid[room.centerY][room.centerX].enemy = null;
+        newGrid[room.centerY][room.centerX].item = null;
+      }
       decorateRoom(newGrid, room, levelIndex, theme);
       return;
     }
 
-    // Последняя комната - Выход
+    // Последняя комната - Выход (будет скрыта)
     if (index === rooms.length - 1) {
       newGrid[room.centerY][room.centerX].type = 'stairs_down';
+      // Очищаем клетку от врагов и предметов
+      newGrid[room.centerY][room.centerX].enemy = null;
+      newGrid[room.centerY][room.centerX].item = null;
       decorateRoom(newGrid, room, levelIndex, theme);
       return;
     }
@@ -657,38 +690,96 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
       }
     }
 
-    // Размещение врагов
+    // Размещение врагов (с проверкой на блокирующие клетки)
     if (rand(0, 100) > (25 - levelIndex * 2)) {
-      const ex = rand(room.x, room.x + room.w - 1);
-      const ey = rand(room.y, room.y + room.h - 1);
-      if (!newGrid[ey][ex].item && newGrid[ey][ex].type === 'floor') {
-        const enemyType = rollEnemy(levelIndex, theme);
-        if (enemyType) {
-          newGrid[ey][ex].enemy = enemyType;
+      let placed = false;
+      for (let attempts = 0; attempts < 10 && !placed; attempts++) {
+        const ex = rand(room.x, room.x + room.w - 1);
+        const ey = rand(room.y, room.y + room.h - 1);
+        if (canPlaceItem(newGrid[ey][ex])) {
+          const enemyType = rollEnemy(levelIndex, theme);
+          if (enemyType) {
+            newGrid[ey][ex].enemy = enemyType;
 
-          // Расчет и сохранение HP врага с бонусом от глубины
-          const stats = MONSTER_STATS[enemyType];
-          const maxHp = Math.floor(stats.hp * (1 + (levelIndex - 1) * 0.15));
-          newGrid[ey][ex].enemyHp = maxHp;
+            // Расчет и сохранение HP врага с бонусом от глубины
+            const stats = MONSTER_STATS[enemyType];
+            const maxHp = Math.floor(stats.hp * (1 + (levelIndex - 1) * 0.15));
+            newGrid[ey][ex].enemyHp = maxHp;
+            placed = true;
+          }
         }
       }
     }
 
-    // Шанс на второго врага в больших комнатах
+    // Шанс на второго врага в больших комнатах (с проверкой на блокирующие клетки)
     if (room.w * room.h >= 25 && rand(0, 100) > 60) {
-      const ex = rand(room.x, room.x + room.w - 1);
-      const ey = rand(room.y, room.y + room.h - 1);
-      if (!newGrid[ey][ex].item && !newGrid[ey][ex].enemy && newGrid[ey][ex].type === 'floor') {
-        const enemyType = rollEnemy(levelIndex, theme);
-        if (enemyType) {
-          newGrid[ey][ex].enemy = enemyType;
-          const stats = MONSTER_STATS[enemyType];
-          const maxHp = Math.floor(stats.hp * (1 + (levelIndex - 1) * 0.15));
-          newGrid[ey][ex].enemyHp = maxHp;
+      let placed = false;
+      for (let attempts = 0; attempts < 10 && !placed; attempts++) {
+        const ex = rand(room.x, room.x + room.w - 1);
+        const ey = rand(room.y, room.y + room.h - 1);
+        if (canPlaceItem(newGrid[ey][ex])) {
+          const enemyType = rollEnemy(levelIndex, theme);
+          if (enemyType) {
+            newGrid[ey][ex].enemy = enemyType;
+            const stats = MONSTER_STATS[enemyType];
+            const maxHp = Math.floor(stats.hp * (1 + (levelIndex - 1) * 0.15));
+            newGrid[ey][ex].enemyHp = maxHp;
+            placed = true;
+          }
         }
       }
     }
   });
+
+  // --- МЕХАНИКА СЕКРЕТНЫХ КНОПОК ---
+  // Скрываем последнюю комнату стенами, сохраняя оригинальные типы
+  for (let y = exitRoom.y; y < exitRoom.y + exitRoom.h; y++) {
+    for (let x = exitRoom.x; x < exitRoom.x + exitRoom.w; x++) {
+      const cell = newGrid[y][x];
+      if (cell.type !== 'wall') {
+        cell.originalType = cell.type; // Сохраняем оригинальный тип
+        cell.isHiddenRoom = true; // Помечаем как часть скрытой комнаты
+        cell.type = 'wall'; // Превращаем в стену
+      }
+    }
+  }
+
+  // Размещаем 4 секретные кнопки на карте
+  const secretButtons: { x: number; y: number; isTrigger: boolean }[] = [];
+  const buttonCount = 4;
+  const triggerCount = 2; // 2 кнопки откроют комнату, 2 - ложные
+
+  // Собираем все доступные позиции для кнопок (пол без предметов/врагов в обычных комнатах)
+  const availablePositions: { x: number; y: number }[] = [];
+
+  for (let i = 0; i < rooms.length - 1; i++) { // Не включаем последнюю (скрытую) комнату
+    const room = rooms[i];
+    for (let y = room.y; y < room.y + room.h; y++) {
+      for (let x = room.x; x < room.x + room.w; x++) {
+        const cell = newGrid[y][x];
+        if (cell.type === 'floor' && !cell.item && !cell.enemy) {
+          availablePositions.push({ x, y });
+        }
+      }
+    }
+  }
+
+  // Размещаем кнопки в случайных местах
+  for (let i = 0; i < buttonCount && availablePositions.length > 0; i++) {
+    const randomIndex = rand(0, availablePositions.length - 1);
+    const pos = availablePositions[randomIndex];
+
+    // Удаляем выбранную позицию из доступных
+    availablePositions.splice(randomIndex, 1);
+
+    // Определяем, будет ли эта кнопка триггером (первые 2 - триггеры)
+    const isTrigger = i < triggerCount;
+
+    newGrid[pos.y][pos.x].type = 'secret_button';
+    newGrid[pos.y][pos.x].isSecretTrigger = isTrigger;
+
+    secretButtons.push({ x: pos.x, y: pos.y, isTrigger });
+  }
 
   return { grid: newGrid, rooms };
 };

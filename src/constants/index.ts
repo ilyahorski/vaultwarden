@@ -4,7 +4,7 @@ import type { ClassData, MonsterStats, PotionStats, GearStats, Artifact } from '
 
 // --- Конфигурация карты ---
 export const GRID_SIZE = 45;
-export const CELL_SIZE = 15;
+export const CELL_SIZE = 16; // Изменено с 15 на 16 для соответствия размеру спрайтов
 export const VISIBILITY_RADIUS = 5;
 export const AGGRO_RADIUS = 4;
 export const TORCH_LIGHT_RADIUS = 8;
@@ -32,7 +32,8 @@ export const INITIAL_PLAYER = {
   inventory: [],
   equippedWeapon: null,
   equippedArmor: null,
-  dungeonLevel: 1
+  dungeonLevel: 1,
+  facing: 'down'
 };
 
 // --- Характеристики снаряжения ---

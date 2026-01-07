@@ -126,7 +126,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <ToolButton active={selectedTool === 'wall'} onClick={() => onToolChange('wall')} icon={<Box size={16} />} label="Стена" />
                       <ToolButton active={selectedTool === 'floor'} onClick={() => onToolChange('floor')} icon={<MapIcon size={16} />} label="Пол" />
                       <ToolButton active={selectedTool === 'door'} onClick={() => onToolChange('door')} icon={<DoorClosed size={16} />} label="Дверь" />
-                      <ToolButton active={selectedTool === 'secret'} onClick={() => onToolChange('secret')} icon={<EyeOff size={16} />} label="Секрет" />
                     </div>
                   </div>
                   <div>
@@ -144,6 +143,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                       <ToolButton active={selectedTool === 'stairs_down'} onClick={() => onToolChange('stairs_down')} icon={<ArrowDownCircle size={16} className="text-blue-400" />} label="Вниз" />
                       <ToolButton active={selectedTool === 'stairs_up'} onClick={() => onToolChange('stairs_up')} icon={<ArrowUpCircle size={16} className="text-blue-400" />} label="Вверх" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-purple-500 uppercase tracking-widest mb-3 pl-1">Секреты</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      <ToolButton active={selectedTool === 'secret_button'} onClick={() => onToolChange('secret_button')} icon={<EyeOff size={16} className="text-purple-400" />} label="Секретная кнопка" />
                     </div>
                   </div>
                   <div>

@@ -1,7 +1,7 @@
 import React from 'react';
 
 // --- Типы ячеек ---
-export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit' | 'merchant';
+export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit' | 'merchant' | 'secret_button' | 'secret_button_activated';
 
 // --- Типы предметов ---
 // HP Зелья
@@ -47,6 +47,9 @@ export type EnemyType =
 // --- Типы классов ---
 export type ClassType = 'warrior' | 'mage' | 'rogue';
 
+// --- Направления движения ---
+export type Direction = 'left' | 'right' | 'up' | 'down';
+
 // --- Интерфейс навыка ---
 export interface Skill {
   id: string;
@@ -84,6 +87,9 @@ export interface CellData {
   enemyHp?: number;
   isRevealed: boolean;
   isVisible: boolean;
+  isSecretTrigger?: boolean; // Для secret_button: true = открывает комнату, false = ложная кнопка
+  isHiddenRoom?: boolean; // Помечает клетки, которые являются частью скрытой комнаты
+  originalType?: CellType; // Сохраняет оригинальный тип клетки до скрытия
 }
 
 // --- Интерфейс записи лога ---
@@ -112,10 +118,11 @@ export interface Player {
   gold: number;
   name: string;
   class: ClassType;
-  inventory: (PotionType | WeaponType | ArmorType)[]; 
-  equippedWeapon: WeaponType | null; 
-  equippedArmor: ArmorType | null;   
+  inventory: (PotionType | WeaponType | ArmorType)[];
+  equippedWeapon: WeaponType | null;
+  equippedArmor: ArmorType | null;
   dungeonLevel: number;
+  facing?: Direction; // Направление, куда смотрит игрок
 }
 
 // --- Интерфейс статистики монстра ---

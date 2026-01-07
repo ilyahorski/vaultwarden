@@ -13,7 +13,7 @@ interface UseEditorHandlersProps {
 
 // Выносим список простых структурных типов в константу (readonly tuple)
 const BASIC_STRUCTURE_TYPES = [
-  'wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap', 'torch', 'merchant'
+  'wall', 'floor', 'water', 'lava', 'grass', 'stairs_down', 'stairs_up', 'trap', 'torch', 'merchant', 'secret_button'
 ] as const;
 
 export function useEditorHandlers({
@@ -76,6 +76,10 @@ export function useEditorHandlers({
           newCell.enemy = null;
           newCell.enemyHp = undefined;
           newCell.type = 'floor';
+          // Очищаем специальные флаги секретов
+          newCell.isSecretTrigger = undefined;
+          newCell.isHiddenRoom = undefined;
+          newCell.originalType = undefined;
         }
         // Враги
         else if (selectedTool.startsWith('enemy_')) {
@@ -108,6 +112,28 @@ export function useEditorHandlers({
               newCell.item = null;
               newCell.enemy = null;
               newCell.enemyHp = undefined;
+            }
+
+            // Специальная обработка для секретных кнопок
+            if (selectedTool === 'secret_button') {
+              // Подсчитываем существующие кнопки на карте
+              let existingButtons = 0;
+              let existingTriggers = 0;
+
+              for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[0].length; x++) {
+                  const cell = grid[y][x];
+                  if (cell.type === 'secret_button' || cell.type === 'secret_button_activated') {
+                    existingButtons++;
+                    if (cell.isSecretTrigger === true) {
+                      existingTriggers++;
+                    }
+                  }
+                }
+              }
+
+              // Автоматически назначаем триггер, если их меньше 2
+              newCell.isSecretTrigger = existingTriggers < 2;
             }
           }
           else if (selectedTool === 'door') {

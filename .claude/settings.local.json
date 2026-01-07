@@ -7,7 +7,14 @@
       "Bash(source ~/.nvm/nvm.sh)",
       "Bash(nvm use:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(identify:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(convert:*)",
+      "Bash(nvm install:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)"
     ]
   }
 }
