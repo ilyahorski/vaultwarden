@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -333,6 +334,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
+      <Analytics />
       
       <Sidebar
         mode={mode}
