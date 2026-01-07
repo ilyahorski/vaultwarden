@@ -1,4 +1,4 @@
-import { X, Move, Sword, Heart, Zap, Backpack, Dice6, DoorOpen, Flame, ArrowDownCircle } from 'lucide-react';
+import { X, Move, Sword, Heart, Zap, Backpack, Dice6, DoorOpen, Flame, ArrowDownCircle, Eye, ShoppingCart, KeyRound } from 'lucide-react';
 
 interface TutorialPopupProps {
   onClose: () => void;
@@ -40,8 +40,9 @@ export function TutorialPopup({ onClose }: TutorialPopupProps) {
               <Sword size={14} /> Бой
             </h3>
             <p className="text-slate-400">
-              При столкновении с врагом начинается бой. Выбирайте действие: атака, навыки или предметы.
-              Результат зависит от броска D20: 12+ критический успех, 5- провал.
+              При столкновении с врагом начинается бой. Двигайтесь на противника чтобы продолжать сражение. 
+              Выбирайте действие: атака, навыки или предметы.
+              Результат зависит от броска D20 - не обязательно, но можно испытать удачу: 12+ критический успех, 5- провал.
             </p>
           </section>
 
@@ -52,7 +53,8 @@ export function TutorialPopup({ onClose }: TutorialPopupProps) {
             </h3>
             <p className="text-slate-400">
               Нажмите <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-xs">Shift</kbd> чтобы бросить кубик.
-              Результат влияет на следующее действие в бою и восстанавливает очки движения.
+              Результат влияет на следующее действие в бою, успех/неудачу в обезвреживании ловушек.
+              <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-xs">Shift</kbd> восстанавливает очки движения если они иссякли.
             </p>
           </section>
 
@@ -75,7 +77,7 @@ export function TutorialPopup({ onClose }: TutorialPopupProps) {
               <Zap size={14} /> Навыки
             </h3>
             <p className="text-slate-400">
-              Лечащие навыки можно использовать в любое время через меню (<kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-xs">Enter</kbd>).
+              Лечащие навыки можно использовать в любое время через меню персонажа (<kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-xs">Enter</kbd>).
               Атакующие навыки доступны только в бою.
             </p>
           </section>
@@ -96,9 +98,33 @@ export function TutorialPopup({ onClose }: TutorialPopupProps) {
               <DoorOpen size={14} /> Окружение
             </h3>
             <ul className="space-y-1 text-slate-400">
-              <li><DoorOpen size={12} className="inline text-amber-500" /> Двери — кликните чтобы открыть/закрыть</li>
-              <li><Flame size={12} className="inline text-orange-400" /> Факелы — зажигайте для освещения области</li>
-              <li><ArrowDownCircle size={12} className="inline text-blue-400" /> Лестницы — переход между этажами</li>
+              <li><DoorOpen size={12} className="inline text-amber-500" /> <span className="font-bold">Двери</span> — кликните чтобы открыть/закрыть. Используйте их для защиты от врагов!</li>
+              <li><Flame size={12} className="inline text-orange-400" /> <span className="font-bold">Факелы</span> — кликните для зажигания/тушения. Освещают область вокруг.</li>
+              <li><ArrowDownCircle size={12} className="inline text-blue-400" /> <span className="font-bold">Лестницы</span> — переход между этажами подземелья.</li>
+            </ul>
+          </section>
+
+          {/* Инвентарь и торговля */}
+          <section>
+            <h3 className="text-emerald-500 font-bold uppercase text-xs mb-2 flex items-center gap-2">
+              <ShoppingCart size={14} /> Инвентарь и Торговля
+            </h3>
+            <ul className="space-y-1 text-slate-400">
+              <li><span className="font-bold">Инвентарь:</span> Откройте меню персонажа <kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-xs">Enter</kbd>, чтобы использовать зелья и экипировать снаряжение.</li>
+              <li><span className="font-bold">Торговцы:</span> Подойдите к торговцу и откройте меню персонажа. Покупайте зелья, оружие и броню за золото.</li>
+              <li><span className="font-bold">Автоэкипировка:</span> Лучшее оружие и броня экипируются автоматически при получении.</li>
+            </ul>
+          </section>
+
+          {/* Секреты */}
+          <section>
+            <h3 className="text-purple-500 font-bold uppercase text-xs mb-2 flex items-center gap-2">
+              <Eye size={14} /> Секреты и Тайны
+            </h3>
+            <ul className="space-y-1 text-slate-400">
+              <li><KeyRound size={12} className="inline text-purple-400" /> <span className="font-bold">Секретные кнопки</span> — скрыты на полу, ищите их внимательно!</li>
+              <li><span className="font-bold">Скрытые комнаты</span> — активируйте секретную кнопку, чтобы раскрыть невидимую комнату с переходом на следующий уровень.</li>
+              <li className="text-purple-400 text-xs italic">Совет: исследуйте все углы подземелья!</li>
             </ul>
           </section>
 
