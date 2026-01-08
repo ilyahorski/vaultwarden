@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Music, ChevronDown, SkipBack, Play, Pause, SkipForward, Volume2, VolumeX, Repeat } from 'lucide-react';
 import { useAudio } from '../../context/AudioContext';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
-interface MusicPlayerProps {
-  compact?: boolean;
-}
-
-export function MusicPlayer({ compact = false }: MusicPlayerProps) {
+export function MusicPlayer() {
   const {
     isPlaying,
     togglePlay,
@@ -26,6 +23,8 @@ export function MusicPlayer({ compact = false }: MusicPlayerProps) {
     repeatMode,
     toggleRepeat
   } = useAudio();
+
+  const isMobile = useIsMobile();
 
   const [isDragging, setIsDragging] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -62,30 +61,16 @@ export function MusicPlayer({ compact = false }: MusicPlayerProps) {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Компактная версия — только кнопка toggle
-  if (compact && !showPlayer) {
-    return (
-      <button
-        onClick={togglePlayer}
-        className="flex items-center justify-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-amber-400 transition-colors w-full"
-        title="Открыть плеер"
-      >
-        <Music size={16} />
-        <span className="text-xs">Музыка</span>
-      </button>
-    );
-  }
-
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       {/* Кнопка toggle */}
       <button
         onClick={togglePlayer}
-        className="flex items-center justify-between gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-amber-400 transition-colors w-full mb-1"
+        className={`flex ${isMobile ? 'w-44' : 'w-full'} items-center justify-between gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-amber-400 transition-colors mb-1`}
       >
         <div className="flex items-center gap-2">
           <Music size={16} className={isPlaying ? 'text-amber-400' : ''} />
-          <span className="text-xs truncate max-w-[120px]">
+          <span className="text-xs truncate max-w-30">
             {isPlaying ? getTrackName(currentTrack) : 'Музыка'}
           </span>
         </div>
@@ -94,7 +79,7 @@ export function MusicPlayer({ compact = false }: MusicPlayerProps) {
 
       {/* Развернутый плеер */}
       {showPlayer && (
-        <div className="bg-slate-900 border border-slate-700 rounded p-3 space-y-3">
+        <div className={`bg-slate-900 ${isMobile ? 'absolute right-0' : ''} border border-slate-700 rounded p-3 space-y-3`}>
           {/* Название трека */}
           <div className="text-center">
             <p className="text-amber-400 text-xs font-medium truncate">

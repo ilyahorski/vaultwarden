@@ -10,6 +10,7 @@ import { useEnemyAI } from './hooks/useEnemyAI';
 import { useEditorHandlers } from './hooks/useEditorHandlers';
 import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useFogOfWar } from './hooks/useFogOfWar';
+import { useIsMobile } from './hooks/useMediaQuery';
 
 // Компоненты
 import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls, TutorialPopup } from './components/game';
@@ -32,6 +33,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
+  const [mapScale, setMapScale] = useState(1);
+  const isMobile = useIsMobile();
 
   const {
     grid, setGrid,
@@ -116,7 +119,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     setPlayer
   });
 
-  const handleRollActionDie = () => {
+  const handleRollActionDie = useCallback(() => {
     rollActionDie(
       player,
       setPlayer,
@@ -125,7 +128,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
       processEnemyTurn,
       grid
     );
-  };
+  }, [player, setPlayer, setActiveRoll, addLog, processEnemyTurn, grid]);
 
   // Проверка на наличие открытой двери рядом
   const getAdjacentDoor = () => {
@@ -328,9 +331,32 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   
   // Расчет максимального этажа для пагинации в сайдбаре
   const maxLevel = Math.max(
-      ...Object.keys(levelHistory).map(Number), 
+      ...Object.keys(levelHistory).map(Number),
       player.dungeonLevel
   );
+
+  // Обработчик Enter для мобильных (эмуляция Enter)
+  const handleMobileEnter = useCallback(() => {
+    if (combatTarget) {
+      // В бою Enter = атака
+      executeCombatAction(combatTarget, 'attack');
+    } else if (isMenuOpen) {
+      // В меню - выбор пункта (симулируем через клавиатуру)
+      // Это будет работать через существующую логику меню
+    } else {
+      // Вне боя и меню - бросок кубика или взаимодействие
+      if (player.moves <= 0 || activeRoll === null) {
+        handleRollActionDie();
+      }
+    }
+  }, [combatTarget, isMenuOpen, player.moves, activeRoll, executeCombatAction, handleRollActionDie]);
+
+  // Обработчик Shift для мобильных (открытие меню)
+  const handleMobileShift = useCallback(() => {
+    if (!combatTarget && !shopOpen) {
+      setIsMenuOpen(prev => !prev);
+    }
+  }, [combatTarget, shopOpen, setIsMenuOpen]);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
@@ -370,14 +396,18 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
         {mode === 'player' && hasChosenClass && (
           <>
-            <PlayerHeader 
+            <PlayerHeader
               player={player}
               activeRoll={activeRoll}
               onRollDice={handleRollActionDie}
             />
 
-            <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
-              <div className="relative">
+            {/* Контейнер карты - на мобильных занимает 50vh и начинается от 30vh сверху */}
+            <div className={`bg-slate-950 overflow-auto flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1 p-4'}`}>
+              <div
+                className="relative transition-transform duration-200"
+                style={{ transform: isMobile ? `scale(${mapScale})` : 'none' }}
+              >
                 <GameGrid
                   grid={grid}
                   mode={mode}
@@ -432,27 +462,50 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                   />
                 )}
               </div>
-
-              {!combatTarget && !isMenuOpen && (
-                <MobileControls onMove={movePlayer} />
-              )}
             </div>
+
+            {/* MobileControls - фиксированная панель внизу на мобильных */}
+            {isMobile && (
+              <MobileControls
+                onMove={movePlayer}
+                onEnter={handleMobileEnter}
+                onShift={handleMobileShift}
+                mapScale={mapScale}
+                onScaleChange={setMapScale}
+              />
+            )}
           </>
         )}
 
         {mode === 'dm' && (
-          <div className="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px]">
-            <GameGrid
-              grid={grid}
-              mode={mode}
-              playerX={player.x}
-              playerY={player.y}
-              playerClass={player.class}
-              playerDirection={player.facing}
-              isMovingEnemy={isMovingEnemy}
-              onCellClick={onGridClick}
-            />
-          </div>
+          <>
+            <div className={`bg-slate-950 overflow-auto flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[55vh]' : 'flex-1 p-4'}`}>
+              <div
+                className="relative transition-transform duration-200"
+                style={{ transform: isMobile ? `scale(${mapScale})` : 'none' }}
+              >
+                <GameGrid
+                  grid={grid}
+                  mode={mode}
+                  playerX={player.x}
+                  playerY={player.y}
+                  playerClass={player.class}
+                  playerDirection={player.facing}
+                  isMovingEnemy={isMovingEnemy}
+                  onCellClick={onGridClick}
+                />
+              </div>
+            </div>
+
+            {/* MobileControls для режима редактора - только слайдер и навигация */}
+            {isMobile && (
+              <MobileControls
+                onMove={() => {}}
+                mapScale={mapScale}
+                onScaleChange={setMapScale}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
