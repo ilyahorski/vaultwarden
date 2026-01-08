@@ -33,15 +33,54 @@ export type ArmorType =
 export type ItemType = PotionType | WeaponType | ArmorType | 'gold' | 'chest' | null;
 
 // --- Типы врагов ---
-export type EnemyType = 
-  | 'snake'      // Животные
-  | 'goblin'     // Животные/Простые
-  | 'skeleton'   // Нежить
-  | 'zombie'     // Нежить
-  | 'lich'       // Нежить (Босс)
-  | 'orc'        // Орда
-  | 'orc_chief'  // Орда (Босс)
-  | 'boss'       // Тёмный Рыцарь (Главный босс)
+export type EnemyType =
+  // Слабые враги
+  | 'snake'
+  | 'goblin'
+  // Гоблины
+  | 'goblin_archer'
+  | 'goblin_fanatic'
+  | 'goblin_fighter'
+  | 'goblin_occultist'
+  | 'goblin_wolf_rider'
+  // Халфлинги
+  | 'halfling_assassin'
+  | 'halfling_bard'
+  | 'halfling_ranger'
+  | 'halfling_rogue'
+  | 'halfling_slinger'
+  // Ящеролюди
+  | 'bestial_lizardfolk'
+  | 'lizardfolk_archer'
+  | 'lizardfolk_gladiator'
+  | 'lizardfolk_scout'
+  | 'lizardfolk_spearman'
+  // Нежить
+  | 'skeleton'
+  | 'zombie'
+  | 'lich'
+  // Гноллы
+  | 'gnoll_brute'
+  | 'gnoll_grunt'
+  | 'gnoll_pikeman'
+  | 'gnoll_ripper'
+  | 'gnoll_warlord'
+  // Гномы
+  | 'gnome_alchemist'
+  | 'gnome_mage'
+  | 'gnome_tinkerer'
+  | 'gnome_wanderer'
+  | 'gnome_wizard'
+  // Орки
+  | 'orc'
+  | 'orc_captain'
+  | 'orc_reaver'
+  | 'orc_savage'
+  | 'orc_shaman'
+  | 'orc_warlock'
+  | 'orc_chief'
+  // Боссы
+  | 'boss'
   | null;
 
 // --- Типы классов ---

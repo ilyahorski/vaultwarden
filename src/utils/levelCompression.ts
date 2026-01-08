@@ -28,8 +28,27 @@ const ITEM_REVERSE: Record<string, ItemType> = Object.fromEntries(
 
 // Короткие коды для врагов
 const ENEMY_MAP: Record<NonNullable<EnemyType>, string> = {
+  // Старые враги
   snake: 'sn', goblin: 'go', skeleton: 'sk', zombie: 'zo',
-  lich: 'li', orc: 'or', orc_chief: 'oc', boss: 'bo'
+  lich: 'li', orc: 'or', orc_chief: 'oc', boss: 'bo',
+  // Гоблины
+  goblin_archer: 'ga', goblin_fanatic: 'gf', goblin_fighter: 'gg',
+  goblin_occultist: 'gt', goblin_wolf_rider: 'gw',
+  // Халфлинги
+  halfling_assassin: 'ha', halfling_bard: 'hb', halfling_ranger: 'hr',
+  halfling_rogue: 'hg', halfling_slinger: 'hs',
+  // Ящеролюди
+  bestial_lizardfolk: 'lb', lizardfolk_archer: 'la', lizardfolk_gladiator: 'lg',
+  lizardfolk_scout: 'ls', lizardfolk_spearman: 'lp',
+  // Гноллы
+  gnoll_brute: 'nb', gnoll_grunt: 'ng', gnoll_pikeman: 'np',
+  gnoll_ripper: 'nr', gnoll_warlord: 'nw',
+  // Гномы
+  gnome_alchemist: 'ma', gnome_mage: 'mm', gnome_tinkerer: 'mt',
+  gnome_wanderer: 'mw', gnome_wizard: 'mz',
+  // Орки
+  orc_captain: 'oa', orc_reaver: 'oe', orc_savage: 'os',
+  orc_shaman: 'oh', orc_warlock: 'ol'
 };
 const ENEMY_REVERSE: Record<string, EnemyType> = Object.fromEntries(
   Object.entries(ENEMY_MAP).map(([k, v]) => [v, k as EnemyType])

@@ -60,7 +60,7 @@ const Sprite: React.FC<{
     lava: 'sprite-lava',
     water: 'sprite-water',
     grass: 'sprite-grass',
-    // Персонажи
+    // Старые персонажи
     skeleton1: 'sprite-skeleton1',
     skeleton2: 'sprite-skeleton2',
     skull: 'sprite-skull',
@@ -72,6 +72,43 @@ const Sprite: React.FC<{
     hero_warrior: 'sprite-hero_warrior',
     hero_mage: 'sprite-hero_mage',
     hero_rogue: 'sprite-hero_rogue',
+    // === НОВЫЕ ВРАГИ ===
+    // Гоблины
+    goblin_archer: 'sprite-goblin_archer',
+    goblin_fanatic: 'sprite-goblin_fanatic',
+    goblin_fighter: 'sprite-goblin_fighter',
+    goblin_occultist: 'sprite-goblin_occultist',
+    goblin_wolf_rider: 'sprite-goblin_wolf_rider',
+    // Халфлинги
+    halfling_assassin: 'sprite-halfling_assassin',
+    halfling_bard: 'sprite-halfling_bard',
+    halfling_ranger: 'sprite-halfling_ranger',
+    halfling_rogue: 'sprite-halfling_rogue',
+    halfling_slinger: 'sprite-halfling_slinger',
+    // Ящеролюди
+    bestial_lizardfolk: 'sprite-bestial_lizardfolk',
+    lizardfolk_archer: 'sprite-lizardfolk_archer',
+    lizardfolk_gladiator: 'sprite-lizardfolk_gladiator',
+    lizardfolk_scout: 'sprite-lizardfolk_scout',
+    lizardfolk_spearman: 'sprite-lizardfolk_spearman',
+    // Гноллы
+    gnoll_brute: 'sprite-gnoll_brute',
+    gnoll_grunt: 'sprite-gnoll_grunt',
+    gnoll_pikeman: 'sprite-gnoll_pikeman',
+    gnoll_ripper: 'sprite-gnoll_ripper',
+    gnoll_warlord: 'sprite-gnoll_warlord',
+    // Гномы
+    gnome_alchemist: 'sprite-gnome_alchemist',
+    gnome_mage: 'sprite-gnome_mage',
+    gnome_tinkerer: 'sprite-gnome_tinkerer',
+    gnome_wanderer: 'sprite-gnome_wanderer',
+    gnome_wizard: 'sprite-gnome_wizard',
+    // Орки
+    orc_captain: 'sprite-orc_captain',
+    orc_reaver: 'sprite-orc_reaver',
+    orc_savage: 'sprite-orc_savage',
+    orc_shaman: 'sprite-orc_shaman',
+    orc_warlock: 'sprite-orc_warlock',
   };
   const sheetClass = sheetClassMap[sprite.sheet] || 'sprite-item';
 
@@ -307,7 +344,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
     // Для пола и подобных типов учитываем соседние стены для теней
     const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
     tileSprite = getFloorSprite(wallNeighbors);
-  } else if (cell.type === 'torch_lit' || cell.type === 'torch') {
+  } else if (cell.type === 'torch_lit' || cell.type === 'torch' || cell.type === 'grass') {
     // Факелы на полу - рендерим пол как базовый тайл
     const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
     tileSprite = getFloorSprite(wallNeighbors);
@@ -326,11 +363,12 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'auto',
     imageRendering: 'pixelated',
+    // Отражаем лестницу вверх по горизонтали
+    ...(cell.type === 'stairs_up' ? { transform: 'scaleX(-1)' } : {}),
   };
 
   // Дополнительные классы для особых типов
   const specialClasses = `
-    ${cell.type === 'secret_door' && mode === 'dm' ? 'ring-1 ring-purple-500 ring-dashed' : ''}
     ${(cell.type === 'secret_button' || cell.type === 'secret_button_activated') && mode === 'dm' && cell.isSecretTrigger === true ? 'ring-1 ring-green-500' : ''}
     ${(cell.type === 'secret_button' || cell.type === 'secret_button_activated') && mode === 'dm' && cell.isSecretTrigger === false ? 'ring-1 ring-red-500' : ''}
     ${isMovingThis ? 'ring-2 ring-blue-500 z-20' : ''}
@@ -391,7 +429,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
         <Sprite sprite={getAnimatedLavaSprite(animationFrame)} />
       )}
       {cell.type === 'water' && !content && (
-        <Sprite sprite={getAnimatedWaterSprite(animationFrame)} />
+        <Sprite sprite={getAnimatedWaterSprite(animationFrame)} className="water-filter" />
       )}
       {cell.type === 'grass' && !content && (
         <Sprite sprite={TILE_SPRITES.grass} />

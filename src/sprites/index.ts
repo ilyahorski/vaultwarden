@@ -17,7 +17,7 @@ export const SPRITE_SHEETS = {
   trap: '/sprites/trap_anim.png',             // Ловушка-шипы (80x16, 5 кадров)
   chest: '/sprites/chest_anim.png',           // Сундук (64x16, 4 кадра)
   lava: '/sprites/lava_anim_16.png?v=3',      // Лава (анимированная, 45 кадров, 16x16)
-  water: '/sprites/water_anim_16.png?v=3',    // Вода (анимированная, 8 кадров, 16x16)
+  water: '/sprites/water_16.png',    // Вода (анимированная, 8 кадров, 16x16)
   grass: '/sprites/grass_16.png?v=3',         // Трава (статичная, 16x16)
   // Персонажи (горизонтальные, 4 кадра по 16px)
   skeleton1: '/sprites/skeleton1_anim.png',   // Скелет-воин
@@ -31,6 +31,49 @@ export const SPRITE_SHEETS = {
   hero_warrior: '/sprites/hero_warrior_directional.png',
   hero_mage: '/sprites/hero_mage_directional.png',
   hero_rogue: '/sprites/hero_rogue_directional.png',
+
+  // === НОВЫЕ ВРАГИ (64x16, 4 кадра по 16px) ===
+  // Гоблины
+  goblin_archer: '/sprites/goblin_archer_anim.png',
+  goblin_fanatic: '/sprites/goblin_fanatic_anim.png',
+  goblin_fighter: '/sprites/goblin_fighter_anim.png',
+  goblin_occultist: '/sprites/goblin_occultist_anim.png',
+  goblin_wolf_rider: '/sprites/goblin_wolf_rider_anim.png',
+
+  // Халфлинги
+  halfling_assassin: '/sprites/halfling_assassin_anim.png',
+  halfling_bard: '/sprites/halfling_bard_anim.png',
+  halfling_ranger: '/sprites/halfling_ranger_anim.png',
+  halfling_rogue: '/sprites/halfling_rogue_anim.png',
+  halfling_slinger: '/sprites/halfling_slinger_anim.png',
+
+  // Ящеролюди
+  bestial_lizardfolk: '/sprites/bestial_lizardfolk_anim.png',
+  lizardfolk_archer: '/sprites/lizardfolk_archer_anim.png',
+  lizardfolk_gladiator: '/sprites/lizardfolk_gladiator_anim.png',
+  lizardfolk_scout: '/sprites/lizardfolk_scout_anim.png',
+  lizardfolk_spearman: '/sprites/lizardfolk_spearman_anim.png',
+
+  // Гноллы
+  gnoll_brute: '/sprites/gnoll_brute_anim.png',
+  gnoll_grunt: '/sprites/gnoll_grunt_anim.png',
+  gnoll_pikeman: '/sprites/gnoll_pikeman_anim.png',
+  gnoll_ripper: '/sprites/gnoll_ripper_anim.png',
+  gnoll_warlord: '/sprites/gnoll_warlord_anim.png',
+
+  // Гномы
+  gnome_alchemist: '/sprites/gnome_alchemist_anim.png',
+  gnome_mage: '/sprites/gnome_mage_anim.png',
+  gnome_tinkerer: '/sprites/gnome_tinkerer_anim.png',
+  gnome_wanderer: '/sprites/gnome_wanderer_anim.png',
+  gnome_wizard: '/sprites/gnome_wizard_anim.png',
+
+  // Орки
+  orc_captain: '/sprites/orc_captain_anim.png',
+  orc_reaver: '/sprites/orc_reaver_anim.png',
+  orc_savage: '/sprites/orc_savage_anim.png',
+  orc_shaman: '/sprites/orc_shaman_anim.png',
+  orc_warlock: '/sprites/orc_warlock_anim.png',
 } as const;
 
 // Типы для спрайтов
@@ -119,7 +162,7 @@ export const TILE_SPRITES: Record<string, SpritePosition> = {
   // Жидкости и природа
   water:       { sheet: 'water', col: 0, row: 0 },  // Вода (анимированная, начинается с кадра 3)
   lava:        { sheet: 'lava', col: 0, row: 0 },   // Лава (анимированная, 45 кадров)
-  grass:       { sheet: 'grass', col: 0, row: 0 },  // Трава (статичная, одиночный спрайт)
+  grass:       { sheet: 'water', col: 8, row: 12 },  // Трава (статичная, из отдельного файла grass_16.png)
   // Лестницы
   stairs_down: { sheet: 'tileset', col: 4, row: 9 },   // лестница вниз
   stairs_up:   { sheet: 'tileset', col: 4, row: 9 },   // лестница вверх
@@ -151,20 +194,63 @@ export const TILE_SPRITES: Record<string, SpritePosition> = {
 
 export const ENEMY_SPRITES: Record<string, SpritePosition> = {
   // Слабые враги
-  snake:      { sheet: 'characters', col: 3, row: 0 },  // skeleton1 (для змеи пока нет спрайта)
-  goblin:     { sheet: 'characters', col: 4, row: 0 },  // skeleton2 (для гоблина пока нет)
+  snake:      { sheet: 'bestial_lizardfolk', col: 0, row: 0 },  // Звероящер (как змея/рептилия)
+  goblin:     { sheet: 'goblin_fighter', col: 0, row: 0 },      // Гоблин-воин
 
   // Нежить
-  skeleton:   { sheet: 'characters', col: 3, row: 0 },  // Skeleton1 - скелет-воин
-  zombie:     { sheet: 'characters', col: 4, row: 0 },  // Skeleton2 - скелет с щитом (как зомби)
-  lich:       { sheet: 'characters', col: 6, row: 0 },  // Vampire - вампир в плаще
+  skeleton:   { sheet: 'skeleton1', col: 0, row: 0 },           // Скелет-воин
+  zombie:     { sheet: 'skeleton2', col: 0, row: 0 },           // Скелет с щитом
+  lich:       { sheet: 'vampire', col: 0, row: 0 },             // Вампир-лич
 
   // Орда
-  orc:        { sheet: 'characters', col: 4, row: 0 },  // Skeleton2 (для орка пока нет)
-  orc_chief:  { sheet: 'characters', col: 6, row: 0 },  // Vampire (вождь)
+  orc:        { sheet: 'orc_savage', col: 0, row: 0 },          // Орк-дикарь
+  orc_chief:  { sheet: 'orc_captain', col: 0, row: 0 },         // Орк-капитан
 
   // Боссы
-  boss:       { sheet: 'characters', col: 5, row: 0 },  // Skull - летающий череп (босс)
+  boss:       { sheet: 'skull', col: 0, row: 0 },               // Летающий череп
+
+  // === НОВЫЕ ВРАГИ ===
+  // Гоблины
+  goblin_archer:     { sheet: 'goblin_archer', col: 0, row: 0 },
+  goblin_fanatic:    { sheet: 'goblin_fanatic', col: 0, row: 0 },
+  goblin_fighter:    { sheet: 'goblin_fighter', col: 0, row: 0 },
+  goblin_occultist:  { sheet: 'goblin_occultist', col: 0, row: 0 },
+  goblin_wolf_rider: { sheet: 'goblin_wolf_rider', col: 0, row: 0 },
+
+  // Халфлинги
+  halfling_assassin: { sheet: 'halfling_assassin', col: 0, row: 0 },
+  halfling_bard:     { sheet: 'halfling_bard', col: 0, row: 0 },
+  halfling_ranger:   { sheet: 'halfling_ranger', col: 0, row: 0 },
+  halfling_rogue:    { sheet: 'halfling_rogue', col: 0, row: 0 },
+  halfling_slinger:  { sheet: 'halfling_slinger', col: 0, row: 0 },
+
+  // Ящеролюди
+  bestial_lizardfolk:    { sheet: 'bestial_lizardfolk', col: 0, row: 0 },
+  lizardfolk_archer:     { sheet: 'lizardfolk_archer', col: 0, row: 0 },
+  lizardfolk_gladiator:  { sheet: 'lizardfolk_gladiator', col: 0, row: 0 },
+  lizardfolk_scout:      { sheet: 'lizardfolk_scout', col: 0, row: 0 },
+  lizardfolk_spearman:   { sheet: 'lizardfolk_spearman', col: 0, row: 0 },
+
+  // Гноллы
+  gnoll_brute:   { sheet: 'gnoll_brute', col: 0, row: 0 },
+  gnoll_grunt:   { sheet: 'gnoll_grunt', col: 0, row: 0 },
+  gnoll_pikeman: { sheet: 'gnoll_pikeman', col: 0, row: 0 },
+  gnoll_ripper:  { sheet: 'gnoll_ripper', col: 0, row: 0 },
+  gnoll_warlord: { sheet: 'gnoll_warlord', col: 0, row: 0 },
+
+  // Гномы
+  gnome_alchemist: { sheet: 'gnome_alchemist', col: 0, row: 0 },
+  gnome_mage:      { sheet: 'gnome_mage', col: 0, row: 0 },
+  gnome_tinkerer:  { sheet: 'gnome_tinkerer', col: 0, row: 0 },
+  gnome_wanderer:  { sheet: 'gnome_wanderer', col: 0, row: 0 },
+  gnome_wizard:    { sheet: 'gnome_wizard', col: 0, row: 0 },
+
+  // Орки
+  orc_captain: { sheet: 'orc_captain', col: 0, row: 0 },
+  orc_reaver:  { sheet: 'orc_reaver', col: 0, row: 0 },
+  orc_savage:  { sheet: 'orc_savage', col: 0, row: 0 },
+  orc_shaman:  { sheet: 'orc_shaman', col: 0, row: 0 },
+  orc_warlock: { sheet: 'orc_warlock', col: 0, row: 0 },
 };
 
 // ============================================================
@@ -351,10 +437,10 @@ export interface AnimationConfig {
 
 // Конфигурации анимаций для разных типов
 export const ANIMATION_CONFIGS = {
-  character: { frames: 4, frameTime: 200 },  // 5 FPS для idle персонажей
+  character: { frames: 4, frameTime: 100 },  // 5 FPS для idle персонажей
   torch: { frames: 6, frameTime: 120 },      // ~8 FPS для огня (6 кадров)
-  trap: { frames: 5, frameTime: 500 },       // 10 FPS для ловушки (5 кадров)
-  chest: { frames: 4, frameTime: 1000 },      // 4 FPS для сундука
+  trap: { frames: 5, frameTime: 100 },       // 10 FPS для ловушки (5 кадров)
+  chest: { frames: 4, frameTime: 500 },      // 4 FPS для сундука
 
   water:     { frames: 2, frameTime: 100 }, // Плавная вода (первые 4 кадра из 8)
   lava:      { frames: 45, frameTime: 80 }, // Лава (720px / 16px = 45 кадров)
@@ -369,14 +455,58 @@ export const CHARACTER_ANIMATION: AnimationConfig = {
 
 // Маппинг врагов на их анимированные спрайт-листы
 export const ENEMY_ANIM_SHEETS: Record<string, keyof typeof SPRITE_SHEETS> = {
-  snake: 'skeleton1',
-  goblin: 'skeleton2',
+  // Старые враги (обновлены)
+  snake: 'bestial_lizardfolk',
+  goblin: 'goblin_fighter',
   skeleton: 'skeleton1',
   zombie: 'skeleton2',
   lich: 'vampire',
-  orc: 'skeleton2',
-  orc_chief: 'vampire',
+  orc: 'orc_savage',
+  orc_chief: 'orc_captain',
   boss: 'skull',
+
+  // === НОВЫЕ ВРАГИ ===
+  // Гоблины
+  goblin_archer: 'goblin_archer',
+  goblin_fanatic: 'goblin_fanatic',
+  goblin_fighter: 'goblin_fighter',
+  goblin_occultist: 'goblin_occultist',
+  goblin_wolf_rider: 'goblin_wolf_rider',
+
+  // Халфлинги
+  halfling_assassin: 'halfling_assassin',
+  halfling_bard: 'halfling_bard',
+  halfling_ranger: 'halfling_ranger',
+  halfling_rogue: 'halfling_rogue',
+  halfling_slinger: 'halfling_slinger',
+
+  // Ящеролюди
+  bestial_lizardfolk: 'bestial_lizardfolk',
+  lizardfolk_archer: 'lizardfolk_archer',
+  lizardfolk_gladiator: 'lizardfolk_gladiator',
+  lizardfolk_scout: 'lizardfolk_scout',
+  lizardfolk_spearman: 'lizardfolk_spearman',
+
+  // Гноллы
+  gnoll_brute: 'gnoll_brute',
+  gnoll_grunt: 'gnoll_grunt',
+  gnoll_pikeman: 'gnoll_pikeman',
+  gnoll_ripper: 'gnoll_ripper',
+  gnoll_warlord: 'gnoll_warlord',
+
+  // Гномы
+  gnome_alchemist: 'gnome_alchemist',
+  gnome_mage: 'gnome_mage',
+  gnome_tinkerer: 'gnome_tinkerer',
+  gnome_wanderer: 'gnome_wanderer',
+  gnome_wizard: 'gnome_wizard',
+
+  // Орки
+  orc_captain: 'orc_captain',
+  orc_reaver: 'orc_reaver',
+  orc_savage: 'orc_savage',
+  orc_shaman: 'orc_shaman',
+  orc_warlock: 'orc_warlock',
 };
 
 // Маппинг игроков на их анимированные спрайт-листы
@@ -463,15 +593,10 @@ export function getAnimatedChestSprite(frame: number): SpritePosition {
   return getAnimatedSprite('chest', frame, ANIMATION_CONFIGS.chest.frames);
 }
 
-// Получить спрайт воды с анимацией (горизонтальный спрайт-лист, начиная с кадра 3)
+// Получить спрайт воды с анимацией (используем лаву с CSS фильтром для изменения цвета)
 export function getAnimatedWaterSprite(frame: number): SpritePosition {
-  const startFrame = 4; // Начинаем с 3-го кадра
-  const col = startFrame + (frame % ANIMATION_CONFIGS.water.frames);
-  return {
-    sheet: 'water',
-    col,
-    row: 0,
-  };
+  // Используем анимацию лавы, но с CSS фильтром она станет синей водой
+  return getAnimatedSprite('lava', frame, ANIMATION_CONFIGS.lava.frames);
 }
 
 // Получить спрайт лавы с анимацией

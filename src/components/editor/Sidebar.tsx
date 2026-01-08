@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame,
-  Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shield, Trash2,
+  Map as MapIcon, Settings, User, RefreshCw, Download, Box, Droplets, Flame, FlameKindling,
+  Trees, DoorClosed, EyeOff, Ghost, Skull, Crown, Footprints, Sword, Shell, Shield, Trash2,
   ArrowDownCircle, ArrowUpCircle, FlaskConical, LayoutGrid, Coins, Wrench, Swords, Bug,
   Plus, ChevronLeft, ChevronRight, Layers, Upload, Info, Dices, RotateCcw, Store
 } from 'lucide-react';
@@ -134,8 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <ToolButton active={selectedTool === 'water'} onClick={() => onToolChange('water')} icon={<Droplets size={16} className="text-blue-400" />} label="Вода" />
                       <ToolButton active={selectedTool === 'lava'} onClick={() => onToolChange('lava')} icon={<Flame size={16} className="text-red-500" />} label="Лава" />
                       <ToolButton active={selectedTool === 'grass'} onClick={() => onToolChange('grass')} icon={<Trees size={16} className="text-green-500" />} label="Лес" />
-                      <ToolButton active={selectedTool === 'trap'} onClick={() => onToolChange('trap')} icon={<Flame size={16} />} label="Ловушка" />
-                      <ToolButton active={selectedTool === 'torch'} onClick={() => onToolChange('torch')} icon={<Flame size={16} className="text-orange-400" />} label="Факел" />
+                      <ToolButton active={selectedTool === 'trap'} onClick={() => onToolChange('trap')} icon={<Shell size={16} />} label="Ловушка" />
+                      <ToolButton active={selectedTool === 'torch'} onClick={() => onToolChange('torch')} icon={<FlameKindling size={16} className="text-orange-400" />} label="Факел" />
                     </div>
                   </div>
                   <div>
@@ -162,31 +162,102 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {activeTab === 'enemies' && (
                 <div className="space-y-4">
-                  {/* ... (код врагов без изменений) ... */}
                   <div>
-                    <h3 className="text-xs font-bold text-lime-600 uppercase tracking-widest mb-2 pl-1 border-b border-lime-900/30 pb-1">Животные</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <h3 className="text-xs font-bold text-lime-600 uppercase tracking-widest mb-2 pl-1 border-b border-lime-900/30 pb-1">Слабые враги</h3>
+                    <div className="grid grid-cols-2 gap-2">
                       <ToolButton active={selectedTool === 'enemy_snake'} onClick={() => onToolChange('enemy_snake')} icon={<Bug size={16} className="text-lime-400" />} label="Змея" />
-                      <ToolButton active={selectedTool === 'enemy_goblin'} onClick={() => onToolChange('enemy_goblin')} icon={<Ghost size={16} className="text-green-500" />} label="Гоблин" />
+                      <ToolButton active={selectedTool === 'enemy_goblin'} onClick={() => onToolChange('enemy_goblin')} icon={<Ghost size={16} className="text-lime-500" />} label="Гоблин" />
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 pl-1 border-b border-purple-900/30 pb-1">Нежить</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <ToolButton active={selectedTool === 'enemy_skeleton'} onClick={() => onToolChange('enemy_skeleton')} icon={<Skull size={16} className="text-slate-300" />} label="Скелет" />
-                      <ToolButton active={selectedTool === 'enemy_zombie'} onClick={() => onToolChange('enemy_zombie')} icon={<Ghost size={16} className="text-emerald-700" />} label="Зомби" />
+                    <h3 className="text-xs font-bold text-green-500 uppercase tracking-widest mb-2 pl-1 border-b border-green-900/30 pb-1">Гоблины</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_goblin_archer'} onClick={() => onToolChange('enemy_goblin_archer')} icon={<Ghost size={14} className="text-green-400" />} label="Лучник" />
+                      <ToolButton active={selectedTool === 'enemy_goblin_fanatic'} onClick={() => onToolChange('enemy_goblin_fanatic')} icon={<Ghost size={14} className="text-green-500" />} label="Фанатик" />
+                      <ToolButton active={selectedTool === 'enemy_goblin_fighter'} onClick={() => onToolChange('enemy_goblin_fighter')} icon={<Ghost size={14} className="text-green-600" />} label="Воин" />
+                      <ToolButton active={selectedTool === 'enemy_goblin_occultist'} onClick={() => onToolChange('enemy_goblin_occultist')} icon={<Ghost size={14} className="text-green-700" />} label="Оккультист" />
                       <div className="col-span-2">
-                        <ToolButton active={selectedTool === 'enemy_lich'} onClick={() => onToolChange('enemy_lich')} icon={<Crown size={16} className="text-purple-400" />} label="Лич (Босс)" />
+                        <ToolButton active={selectedTool === 'enemy_goblin_wolf_rider'} onClick={() => onToolChange('enemy_goblin_wolf_rider')} icon={<Ghost size={14} className="text-green-800" />} label="Наездник на волке" />
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2 pl-1 border-b border-red-900/30 pb-1">Орда</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <ToolButton active={selectedTool === 'enemy_orc'} onClick={() => onToolChange('enemy_orc')} icon={<Skull size={16} className="text-green-700" />} label="Орк" />
-                      <ToolButton active={selectedTool === 'enemy_orc_chief'} onClick={() => onToolChange('enemy_orc_chief')} icon={<Crown size={16} className="text-red-600" />} label="Вождь" />
+                    <h3 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2 pl-1 border-b border-orange-900/30 pb-1">Халфлинги</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_halfling_assassin'} onClick={() => onToolChange('enemy_halfling_assassin')} icon={<Ghost size={14} className="text-orange-400" />} label="Ассасин" />
+                      <ToolButton active={selectedTool === 'enemy_halfling_bard'} onClick={() => onToolChange('enemy_halfling_bard')} icon={<Ghost size={14} className="text-orange-500" />} label="Бард" />
+                      <ToolButton active={selectedTool === 'enemy_halfling_ranger'} onClick={() => onToolChange('enemy_halfling_ranger')} icon={<Ghost size={14} className="text-orange-600" />} label="Рейнджер" />
+                      <ToolButton active={selectedTool === 'enemy_halfling_rogue'} onClick={() => onToolChange('enemy_halfling_rogue')} icon={<Ghost size={14} className="text-orange-700" />} label="Плут" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_halfling_slinger'} onClick={() => onToolChange('enemy_halfling_slinger')} icon={<Ghost size={14} className="text-orange-800" />} label="Пращник" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-teal-500 uppercase tracking-widest mb-2 pl-1 border-b border-teal-900/30 pb-1">Ящеролюди</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_bestial_lizardfolk'} onClick={() => onToolChange('enemy_bestial_lizardfolk')} icon={<Bug size={14} className="text-teal-400" />} label="Зверь" />
+                      <ToolButton active={selectedTool === 'enemy_lizardfolk_archer'} onClick={() => onToolChange('enemy_lizardfolk_archer')} icon={<Ghost size={14} className="text-teal-500" />} label="Лучник" />
+                      <ToolButton active={selectedTool === 'enemy_lizardfolk_gladiator'} onClick={() => onToolChange('enemy_lizardfolk_gladiator')} icon={<Sword size={14} className="text-teal-600" />} label="Гладиатор" />
+                      <ToolButton active={selectedTool === 'enemy_lizardfolk_scout'} onClick={() => onToolChange('enemy_lizardfolk_scout')} icon={<Ghost size={14} className="text-teal-700" />} label="Разведчик" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_lizardfolk_spearman'} onClick={() => onToolChange('enemy_lizardfolk_spearman')} icon={<Sword size={14} className="text-teal-800" />} label="Копейщик" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 pl-1 border-b border-purple-900/30 pb-1">Нежить</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_skeleton'} onClick={() => onToolChange('enemy_skeleton')} icon={<Skull size={16} className="text-purple-500" />} label="Скелет" />
+                      <ToolButton active={selectedTool === 'enemy_zombie'} onClick={() => onToolChange('enemy_zombie')} icon={<Ghost size={16} className="text-purple-600" />} label="Зомби" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_lich'} onClick={() => onToolChange('enemy_lich')} icon={<Crown size={16} className="text-purple-700" />} label="Лич (Босс)" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2 pl-1 border-b border-amber-900/30 pb-1">Гноллы</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_gnoll_brute'} onClick={() => onToolChange('enemy_gnoll_brute')} icon={<Skull size={14} className="text-amber-400" />} label="Громила" />
+                      <ToolButton active={selectedTool === 'enemy_gnoll_grunt'} onClick={() => onToolChange('enemy_gnoll_grunt')} icon={<Ghost size={14} className="text-amber-500" />} label="Пехотинец" />
+                      <ToolButton active={selectedTool === 'enemy_gnoll_pikeman'} onClick={() => onToolChange('enemy_gnoll_pikeman')} icon={<Sword size={14} className="text-amber-600" />} label="Пикинёр" />
+                      <ToolButton active={selectedTool === 'enemy_gnoll_ripper'} onClick={() => onToolChange('enemy_gnoll_ripper')} icon={<Skull size={14} className="text-amber-700" />} label="Потрошитель" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_gnoll_warlord'} onClick={() => onToolChange('enemy_gnoll_warlord')} icon={<Crown size={14} className="text-amber-800" />} label="Полководец" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2 pl-1 border-b border-cyan-900/30 pb-1">Гномы</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_gnome_alchemist'} onClick={() => onToolChange('enemy_gnome_alchemist')} icon={<FlaskConical size={14} className="text-cyan-400" />} label="Алхимик" />
+                      <ToolButton active={selectedTool === 'enemy_gnome_mage'} onClick={() => onToolChange('enemy_gnome_mage')} icon={<Ghost size={14} className="text-cyan-500" />} label="Маг" />
+                      <ToolButton active={selectedTool === 'enemy_gnome_tinkerer'} onClick={() => onToolChange('enemy_gnome_tinkerer')} icon={<Wrench size={14} className="text-cyan-600" />} label="Изобретатель" />
+                      <ToolButton active={selectedTool === 'enemy_gnome_wanderer'} onClick={() => onToolChange('enemy_gnome_wanderer')} icon={<Ghost size={14} className="text-cyan-700" />} label="Странник" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_gnome_wizard'} onClick={() => onToolChange('enemy_gnome_wizard')} icon={<Ghost size={14} className="text-cyan-800" />} label="Волшебник" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2 pl-1 border-b border-red-900/30 pb-1">Орки</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ToolButton active={selectedTool === 'enemy_orc'} onClick={() => onToolChange('enemy_orc')} icon={<Skull size={14} className="text-red-300" />} label="Орк" />
+                      <ToolButton active={selectedTool === 'enemy_orc_captain'} onClick={() => onToolChange('enemy_orc_captain')} icon={<Crown size={14} className="text-red-400" />} label="Капитан" />
+                      <ToolButton active={selectedTool === 'enemy_orc_reaver'} onClick={() => onToolChange('enemy_orc_reaver')} icon={<Skull size={14} className="text-red-500" />} label="Налётчик" />
+                      <ToolButton active={selectedTool === 'enemy_orc_savage'} onClick={() => onToolChange('enemy_orc_savage')} icon={<Skull size={14} className="text-red-600" />} label="Дикарь" />
+                      <ToolButton active={selectedTool === 'enemy_orc_shaman'} onClick={() => onToolChange('enemy_orc_shaman')} icon={<Ghost size={14} className="text-red-700" />} label="Шаман" />
+                      <ToolButton active={selectedTool === 'enemy_orc_warlock'} onClick={() => onToolChange('enemy_orc_warlock')} icon={<Ghost size={14} className="text-red-800" />} label="Колдун" />
+                      <div className="col-span-2">
+                        <ToolButton active={selectedTool === 'enemy_orc_chief'} onClick={() => onToolChange('enemy_orc_chief')} icon={<Crown size={16} className="text-red-900" />} label="Вождь Орков" />
+                      </div>
                     </div>
                   </div>
 

@@ -59,7 +59,7 @@
   }
 
   .sprite-water {
-    background-image: url('/sprites/water_anim_16.png?v=3');
+    background-image: url('/sprites/water_16.png?v=3');
   }
 
   .sprite-grass {
@@ -107,6 +107,133 @@
   .sprite-hero_rogue {
     background-image: url('/sprites/hero_rogue_directional.png');
   }
+
+  /* === НОВЫЕ ВРАГИ === */
+  /* Гоблины */
+  .sprite-goblin_archer {
+    background-image: url('/sprites/goblin_archer_anim.png');
+  }
+
+  .sprite-goblin_fanatic {
+    background-image: url('/sprites/goblin_fanatic_anim.png');
+  }
+
+  .sprite-goblin_fighter {
+    background-image: url('/sprites/goblin_fighter_anim.png');
+  }
+
+  .sprite-goblin_occultist {
+    background-image: url('/sprites/goblin_occultist_anim.png');
+  }
+
+  .sprite-goblin_wolf_rider {
+    background-image: url('/sprites/goblin_wolf_rider_anim.png');
+  }
+
+  /* Халфлинги */
+  .sprite-halfling_assassin {
+    background-image: url('/sprites/halfling_assassin_anim.png');
+  }
+
+  .sprite-halfling_bard {
+    background-image: url('/sprites/halfling_bard_anim.png');
+  }
+
+  .sprite-halfling_ranger {
+    background-image: url('/sprites/halfling_ranger_anim.png');
+  }
+
+  .sprite-halfling_rogue {
+    background-image: url('/sprites/halfling_rogue_anim.png');
+  }
+
+  .sprite-halfling_slinger {
+    background-image: url('/sprites/halfling_slinger_anim.png');
+  }
+
+  /* Ящеролюди */
+  .sprite-bestial_lizardfolk {
+    background-image: url('/sprites/bestial_lizardfolk_anim.png');
+  }
+
+  .sprite-lizardfolk_archer {
+    background-image: url('/sprites/lizardfolk_archer_anim.png');
+  }
+
+  .sprite-lizardfolk_gladiator {
+    background-image: url('/sprites/lizardfolk_gladiator_anim.png');
+  }
+
+  .sprite-lizardfolk_scout {
+    background-image: url('/sprites/lizardfolk_scout_anim.png');
+  }
+
+  .sprite-lizardfolk_spearman {
+    background-image: url('/sprites/lizardfolk_spearman_anim.png');
+  }
+
+  /* Гноллы */
+  .sprite-gnoll_brute {
+    background-image: url('/sprites/gnoll_brute_anim.png');
+  }
+
+  .sprite-gnoll_grunt {
+    background-image: url('/sprites/gnoll_grunt_anim.png');
+  }
+
+  .sprite-gnoll_pikeman {
+    background-image: url('/sprites/gnoll_pikeman_anim.png');
+  }
+
+  .sprite-gnoll_ripper {
+    background-image: url('/sprites/gnoll_ripper_anim.png');
+  }
+
+  .sprite-gnoll_warlord {
+    background-image: url('/sprites/gnoll_warlord_anim.png');
+  }
+
+  /* Гномы */
+  .sprite-gnome_alchemist {
+    background-image: url('/sprites/gnome_alchemist_anim.png');
+  }
+
+  .sprite-gnome_mage {
+    background-image: url('/sprites/gnome_mage_anim.png');
+  }
+
+  .sprite-gnome_tinkerer {
+    background-image: url('/sprites/gnome_tinkerer_anim.png');
+  }
+
+  .sprite-gnome_wanderer {
+    background-image: url('/sprites/gnome_wanderer_anim.png');
+  }
+
+  .sprite-gnome_wizard {
+    background-image: url('/sprites/gnome_wizard_anim.png');
+  }
+
+  /* Орки */
+  .sprite-orc_captain {
+    background-image: url('/sprites/orc_captain_anim.png');
+  }
+
+  .sprite-orc_reaver {
+    background-image: url('/sprites/orc_reaver_anim.png');
+  }
+
+  .sprite-orc_savage {
+    background-image: url('/sprites/orc_savage_anim.png');
+  }
+
+  .sprite-orc_shaman {
+    background-image: url('/sprites/orc_shaman_anim.png');
+  }
+
+  .sprite-orc_warlock {
+    background-image: url('/sprites/orc_warlock_anim.png');
+  }
 }
 
 /* Кастомные тонкие закругленные скроллбары */
@@ -136,5 +263,10 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.4) rgba(0, 0, 0, 0.2);
+  }
+
+  /* Фильтр для воды: превращаем красную лаву в синюю воду */
+  .water-filter {
+    filter: hue-rotate(200deg) saturate(1.2) brightness(1.1);
   }
 }

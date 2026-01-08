@@ -61,7 +61,7 @@ const THEMES: Record<DungeonTheme, ThemeConfig> = {
     grassChance: 20,
     torchChance: 20,
     trapMultiplier: 1.0,
-    preferredEnemies: ['snake', 'goblin', 'orc']
+    preferredEnemies: ['snake', 'bestial_lizardfolk', 'goblin_fighter', 'lizardfolk_scout']
   },
   dungeon: {
     name: 'Подземелье',
@@ -70,7 +70,7 @@ const THEMES: Record<DungeonTheme, ThemeConfig> = {
     grassChance: 5,
     torchChance: 60,
     trapMultiplier: 1.5,
-    preferredEnemies: ['goblin', 'skeleton', 'orc']
+    preferredEnemies: ['goblin_archer', 'goblin_fighter', 'skeleton', 'orc']
   },
   ruins: {
     name: 'Руины',
@@ -79,7 +79,7 @@ const THEMES: Record<DungeonTheme, ThemeConfig> = {
     grassChance: 40,
     torchChance: 30,
     trapMultiplier: 0.8,
-    preferredEnemies: ['snake', 'skeleton', 'zombie']
+    preferredEnemies: ['snake', 'halfling_ranger', 'skeleton', 'zombie']
   },
   inferno: {
     name: 'Инферно',
@@ -88,7 +88,7 @@ const THEMES: Record<DungeonTheme, ThemeConfig> = {
     grassChance: 0,
     torchChance: 90,
     trapMultiplier: 2.0,
-    preferredEnemies: ['orc', 'orc_chief', 'boss']
+    preferredEnemies: ['orc_savage', 'orc_shaman', 'orc_chief', 'gnoll_warlord']
   }
 };
 
@@ -534,16 +534,21 @@ const decorateRoom = (grid: CellData[][], room: Room, depth: number, theme: Them
 
 // --- Таблица врагов по глубине (с учётом темы) ---
 // Возвращает тип врага на основе броска, уровня подземелья и темы
+// Прогрессия: Слабые (1-2) -> Обычные (2-4) -> Сильные (4-6) -> Элитные (6-8) -> Боссы (8+)
 const rollEnemy = (depth: number, theme?: ThemeConfig): EnemyType => {
   const roll = rand(0, 100);
   const depthBonus = depth * 5;
 
-  // Боссы (очень редко, чаще на глубине)
+  // Боссы (очень редко, чаще на глубине 8+)
   if (roll + depthBonus > 120) {
-    // Главный босс только на глубине 4+
-    if (depth >= 4 && rand(0, 100) > 70) return 'boss';
-    // Мини-боссы
-    return rand(0, 1) === 0 ? 'lich' : 'orc_chief';
+    // Главный босс только на глубине 8+
+    if (depth >= 8 && rand(0, 100) > 70) return 'boss';
+    // Мини-боссы (на глубине 6+)
+    if (depth >= 6) {
+      const miniBosses: EnemyType[] = ['lich', 'orc_chief', 'gnoll_warlord', 'lizardfolk_gladiator'];
+      return miniBosses[rand(0, miniBosses.length - 1)];
+    }
+    return 'orc_chief';
   }
 
   // 50% шанс использовать врага из темы
@@ -551,26 +556,52 @@ const rollEnemy = (depth: number, theme?: ThemeConfig): EnemyType => {
     return theme.preferredEnemies[rand(0, theme.preferredEnemies.length - 1)];
   }
 
-  // Сильные враги
-  if (roll + depthBonus > 90) {
-    const strongEnemies: EnemyType[] = ['orc', 'zombie', 'orc_chief'];
+  // Элитные враги (глубина 6-8+)
+  if (roll + depthBonus > 95 && depth >= 6) {
+    const eliteEnemies: EnemyType[] = [
+      'orc_warlock', 'orc_captain', 'orc_reaver',
+      'gnoll_warlord', 'gnoll_ripper',
+      'lizardfolk_gladiator', 'gnome_wizard'
+    ];
+    return eliteEnemies[rand(0, eliteEnemies.length - 1)];
+  }
+
+  // Сильные враги (глубина 4-7)
+  if (roll + depthBonus > 80 && depth >= 4) {
+    const strongEnemies: EnemyType[] = [
+      'orc', 'orc_savage', 'orc_shaman', 'zombie',
+      'gnoll_brute', 'gnoll_pikeman', 'gnoll_grunt',
+      'lizardfolk_spearman', 'lizardfolk_archer',
+      'gnome_mage', 'gnome_wizard'
+    ];
     return strongEnemies[rand(0, strongEnemies.length - 1)];
   }
 
-  // Средние враги
-  if (roll + depthBonus > 60) {
-    const midEnemies: EnemyType[] = ['skeleton', 'orc', 'zombie'];
-    return midEnemies[rand(0, midEnemies.length - 1)];
+  // Обычные враги (глубина 3-6)
+  if (roll + depthBonus > 60 && depth >= 3) {
+    const normalEnemies: EnemyType[] = [
+      'skeleton', 'goblin_wolf_rider', 'goblin_occultist',
+      'halfling_assassin', 'halfling_ranger',
+      'lizardfolk_scout', 'lizardfolk_archer',
+      'gnome_alchemist', 'gnome_tinkerer'
+    ];
+    return normalEnemies[rand(0, normalEnemies.length - 1)];
   }
 
-  // Слабые враги (чаще на первых уровнях)
-  if (roll > 20 || depth <= 2) {
-    const weakEnemies: EnemyType[] = ['snake', 'goblin', 'skeleton'];
+  // Слабые враги (глубина 2-4)
+  if (roll > 30 || depth <= 3) {
+    const weakEnemies: EnemyType[] = [
+      'goblin_archer', 'goblin_fighter', 'goblin_fanatic',
+      'halfling_rogue', 'halfling_slinger', 'halfling_bard',
+      'bestial_lizardfolk', 'lizardfolk_scout',
+      'gnome_wanderer', 'skeleton'
+    ];
     return weakEnemies[rand(0, weakEnemies.length - 1)];
   }
 
-  // Базовые враги
-  return rand(0, 1) === 0 ? 'snake' : 'goblin';
+  // Базовые враги (глубина 1-2)
+  const baseEnemies: EnemyType[] = ['snake', 'goblin', 'goblin_archer', 'halfling_rogue'];
+  return baseEnemies[rand(0, baseEnemies.length - 1)];
 };
 
 // --- Генерация подземелья ---
