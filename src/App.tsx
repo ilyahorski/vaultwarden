@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -33,7 +34,6 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
-  const [mapScale, setMapScale] = useState(1);
   const isMobile = useIsMobile();
 
   const {
@@ -335,28 +335,45 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
       player.dungeonLevel
   );
 
-  // Обработчик Enter для мобильных (эмуляция Enter)
+  // Обработчик Enter для мобильных (открытие меню / подтверждение)
   const handleMobileEnter = useCallback(() => {
-    if (combatTarget) {
-      // В бою Enter = атака
-      executeCombatAction(combatTarget, 'attack');
-    } else if (isMenuOpen) {
-      // В меню - выбор пункта (симулируем через клавиатуру)
-      // Это будет работать через существующую логику меню
-    } else {
-      // Вне боя и меню - бросок кубика или взаимодействие
-      if (player.moves <= 0 || activeRoll === null) {
-        handleRollActionDie();
-      }
+    if (!combatTarget && !shopOpen && !isMenuOpen) {
+      // Вне боя и меню - открыть меню игрока
+      setIsMenuOpen(true);
+      setActiveMenu('main');
+      setMainMenuIndex(0);
     }
-  }, [combatTarget, isMenuOpen, player.moves, activeRoll, executeCombatAction, handleRollActionDie]);
+    // В бою или в меню - эмулируем нажатие Enter через событие клавиатуры
+    // чтобы использовать существующую логику useKeyboardControls
+    else {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    }
+  }, [combatTarget, shopOpen, isMenuOpen, setIsMenuOpen, setActiveMenu, setMainMenuIndex]);
 
-  // Обработчик Shift для мобильных (открытие меню)
+  // Обработчик Shift для мобильных (бросок кубика)
   const handleMobileShift = useCallback(() => {
-    if (!combatTarget && !shopOpen) {
-      setIsMenuOpen(prev => !prev);
+    if (activeRoll === null && mode === 'player') {
+      handleRollActionDie();
     }
-  }, [combatTarget, shopOpen, setIsMenuOpen]);
+  }, [activeRoll, mode, handleRollActionDie]);
+
+  // Обработчик стрелок для мобильных (движение или навигация по меню)
+  const handleMobileArrow = useCallback((dx: number, dy: number) => {
+    // Если открыто меню или бой - эмулируем клавиши для навигации
+    if (isMenuOpen || combatTarget) {
+      let key = '';
+      if (dy === -1) key = 'ArrowUp';
+      else if (dy === 1) key = 'ArrowDown';
+      else if (dx === -1) key = 'ArrowLeft';
+      else if (dx === 1) key = 'ArrowRight';
+      if (key) {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key }));
+      }
+    } else {
+      // Обычное движение
+      movePlayer(dx, dy);
+    }
+  }, [isMenuOpen, combatTarget, movePlayer]);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
@@ -403,75 +420,86 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
             />
 
             {/* Контейнер карты - на мобильных занимает 50vh и начинается от 30vh сверху */}
-            <div className={`bg-slate-950 overflow-auto flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1 p-4'}`}>
-              <div
-                className="relative transition-transform duration-200"
-                style={{ transform: isMobile ? `scale(${mapScale})` : 'none' }}
+            <div className={`bg-slate-950 overflow-hidden flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1 p-4 overflow-auto'}`}>
+              <TransformWrapper
+                initialScale={isMobile ? 0.6 : 1}
+                minScale={0.3}
+                maxScale={2}
+                centerOnInit={true}
+                disabled={!isMobile}
+                panning={{ disabled: !isMobile }}
+                pinch={{ disabled: !isMobile }}
+                doubleClick={{ disabled: true }}
               >
-                <GameGrid
-                  grid={grid}
-                  mode={mode}
-                  playerX={player.x}
-                  playerY={player.y}
-                  playerClass={player.class}
-                  playerDirection={player.facing}
-                  isMovingEnemy={isMovingEnemy}
-                  onCellClick={onGridClick}
-                />
+                <TransformComponent
+                  wrapperStyle={{ width: '100%', height: '100%' }}
+                  contentStyle={{ width: 'fit-content', height: 'fit-content' }}
+                >
+                  <div className="relative">
+                    <GameGrid
+                      grid={grid}
+                      mode={mode}
+                      playerX={player.x}
+                      playerY={player.y}
+                      playerClass={player.class}
+                      playerDirection={player.facing}
+                      isMovingEnemy={isMovingEnemy}
+                      onCellClick={onGridClick}
+                    />
 
-                {isMenuOpen && !combatTarget && (
-                  <PlayerMenu
-                    player={player}
-                    activeMenu={activeMenu}
-                    mainMenuIndex={mainMenuIndex}
-                    subMenuIndex={subMenuIndex}
-                    onClose={() => setIsMenuOpen(false)}
-                    canCloseDoor={canCloseDoor}
-                    onCloseDoor={handleCloseDoor}
-                    canLightTorch={canLightTorch}
-                    onLightTorch={handleLightTorch}
-                    canOpenShop={canOpenShop}
-                    onOpenShop={handleOpenShop}
-                    onUseSkill={handleUseSkill}
-                  />
-                )}
+                    {isMenuOpen && !combatTarget && (
+                      <PlayerMenu
+                        player={player}
+                        activeMenu={activeMenu}
+                        mainMenuIndex={mainMenuIndex}
+                        subMenuIndex={subMenuIndex}
+                        onClose={() => setIsMenuOpen(false)}
+                        canCloseDoor={canCloseDoor}
+                        onCloseDoor={handleCloseDoor}
+                        canLightTorch={canLightTorch}
+                        onLightTorch={handleLightTorch}
+                        canOpenShop={canOpenShop}
+                        onOpenShop={handleOpenShop}
+                        onUseSkill={handleUseSkill}
+                      />
+                    )}
 
-                {combatTarget && (
-                  <CombatMenu
-                    combatTarget={combatTarget}
-                    player={player}
-                    activeMenu={activeMenu}
-                    mainMenuIndex={mainMenuIndex}
-                    subMenuIndex={subMenuIndex}
-                    onAttack={() => executeCombatAction(combatTarget, 'attack')}
-                    onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
-                    onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
-                    onFlee={() => setCombatTarget(null)}
-                    onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
-                    onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
-                  />
-                )}
+                    {combatTarget && (
+                      <CombatMenu
+                        combatTarget={combatTarget}
+                        player={player}
+                        activeMenu={activeMenu}
+                        mainMenuIndex={mainMenuIndex}
+                        subMenuIndex={subMenuIndex}
+                        onAttack={() => executeCombatAction(combatTarget, 'attack')}
+                        onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
+                        onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
+                        onFlee={() => setCombatTarget(null)}
+                        onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
+                        onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
+                      />
+                    )}
 
-                {shopOpen && (
-                  <ShopMenu
-                    player={player}
-                    merchantPosition={shopOpen}
-                    onBuy={handleBuyItem}
-                    onSell={handleSellItem}
-                    onClose={() => setShopOpen(null)}
-                  />
-                )}
-              </div>
+                    {shopOpen && (
+                      <ShopMenu
+                        player={player}
+                        merchantPosition={shopOpen}
+                        onBuy={handleBuyItem}
+                        onSell={handleSellItem}
+                        onClose={() => setShopOpen(null)}
+                      />
+                    )}
+                  </div>
+                </TransformComponent>
+              </TransformWrapper>
             </div>
 
             {/* MobileControls - фиксированная панель внизу на мобильных */}
             {isMobile && (
               <MobileControls
-                onMove={movePlayer}
+                onMove={handleMobileArrow}
                 onEnter={handleMobileEnter}
                 onShift={handleMobileShift}
-                mapScale={mapScale}
-                onScaleChange={setMapScale}
               />
             )}
           </>
@@ -479,32 +507,36 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
         {mode === 'dm' && (
           <>
-            <div className={`bg-slate-950 overflow-auto flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[55vh]' : 'flex-1 p-4'}`}>
-              <div
-                className="relative transition-transform duration-200"
-                style={{ transform: isMobile ? `scale(${mapScale})` : 'none' }}
+            <div className={`bg-slate-950 overflow-hidden flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[70vh]' : 'flex-1 p-4 overflow-auto'}`}>
+              <TransformWrapper
+                initialScale={isMobile ? 0.6 : 1}
+                minScale={0.3}
+                maxScale={2}
+                centerOnInit={true}
+                disabled={!isMobile}
+                panning={{ disabled: !isMobile }}
+                pinch={{ disabled: !isMobile }}
+                doubleClick={{ disabled: true }}
               >
-                <GameGrid
-                  grid={grid}
-                  mode={mode}
-                  playerX={player.x}
-                  playerY={player.y}
-                  playerClass={player.class}
-                  playerDirection={player.facing}
-                  isMovingEnemy={isMovingEnemy}
-                  onCellClick={onGridClick}
-                />
-              </div>
+                <TransformComponent
+                  wrapperStyle={{ width: '100%', height: '100%' }}
+                  contentStyle={{ width: 'fit-content', height: 'fit-content' }}
+                >
+                  <div className="relative">
+                    <GameGrid
+                      grid={grid}
+                      mode={mode}
+                      playerX={player.x}
+                      playerY={player.y}
+                      playerClass={player.class}
+                      playerDirection={player.facing}
+                      isMovingEnemy={isMovingEnemy}
+                      onCellClick={onGridClick}
+                    />
+                  </div>
+                </TransformComponent>
+              </TransformWrapper>
             </div>
-
-            {/* MobileControls для режима редактора - только слайдер и навигация */}
-            {isMobile && (
-              <MobileControls
-                onMove={() => {}}
-                mapScale={mapScale}
-                onScaleChange={setMapScale}
-              />
-            )}
           </>
         )}
       </div>

@@ -79,7 +79,7 @@ export function MusicPlayer() {
 
       {/* Развернутый плеер */}
       {showPlayer && (
-        <div className={`bg-slate-900 ${isMobile ? 'absolute right-0' : ''} border border-slate-700 rounded p-3 space-y-3`}>
+        <div className={`bg-slate-900 ${isMobile ? 'absolute right-0 z-100' : ''} border border-slate-700 rounded p-3 space-y-3`}>
           {/* Название трека */}
           <div className="text-center">
             <p className="text-amber-400 text-xs font-medium truncate">
