@@ -20,7 +20,7 @@ const MAX_ROOM_ATTEMPTS = 150; // Увеличено для больших ко�
 // --- Типы клеток, на которых нельзя размещать предметы ---
 const BLOCKING_TILE_TYPES: Set<CellData['type']> = new Set([
   'torch', 'torch_lit', 'stairs_up', 'stairs_down',
-  'water', 'lava', 'wall', 'trap', 'door', 'secret_door', 'merchant'
+  'water', 'lava', 'wall', 'trap', 'door', 'secret_door', 'merchant', 'bonfire'
 ]);
 
 // --- Проверка, можно ли разместить предмет/врага на клетке ---
@@ -761,6 +761,27 @@ export const generateDungeonGrid = (levelIndex: number = 1): { grid: CellData[][
       }
     }
   });
+
+  // --- РАЗМЕЩЕНИЕ КОСТРА (Dark Souls bonfire) ---
+  // Один костёр на уровень в случайной комнате (не первая и не последняя)
+  if (rooms.length > 2) {
+    // Выбираем случайную комнату (исключаем первую и последнюю)
+    const bonfireRoomIndex = rand(1, rooms.length - 2);
+    const bonfireRoom = rooms[bonfireRoomIndex];
+
+    // Ищем пустую клетку для размещения костра
+    let bonfirePlaced = false;
+    for (let attempts = 0; attempts < 20 && !bonfirePlaced; attempts++) {
+      // Пытаемся разместить в центре или рядом
+      const bx = attempts === 0 ? bonfireRoom.centerX : rand(bonfireRoom.x + 1, bonfireRoom.x + bonfireRoom.w - 2);
+      const by = attempts === 0 ? bonfireRoom.centerY : rand(bonfireRoom.y + 1, bonfireRoom.y + bonfireRoom.h - 2);
+
+      if (canPlaceItem(newGrid[by][bx])) {
+        newGrid[by][bx].type = 'bonfire';
+        bonfirePlaced = true;
+      }
+    }
+  }
 
   // --- МЕХАНИКА СЕКРЕТНЫХ КНОПОК ---
   // Скрываем последнюю комнату стенами, сохраняя оригинальные типы

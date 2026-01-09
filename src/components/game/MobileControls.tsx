@@ -16,7 +16,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const actionButtonClass = "p-3 bg-slate-800 rounded-lg border border-slate-600 active:bg-amber-600 touch-manipulation select-none flex items-center justify-center gap-1";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-[13vh] bg-slate-900/95 border-t border-slate-700 md:hidden z-30 flex items-center justify-between px-6">
+    <div className="fixed bottom-0 left-0 right-0 h-[17vh] bg-slate-900/95 border-t border-slate-700 md:hidden z-30 flex items-center justify-between px-6">
       {/* Левая часть: Enter и Shift */}
       <div className="flex flex-col gap-2">
         <button

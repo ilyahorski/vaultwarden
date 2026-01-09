@@ -30,6 +30,8 @@ interface UseKeyboardControlsProps {
   onLightTorch: () => void;
   canOpenShop: boolean;
   onOpenShop: () => void;
+  canRestAtBonfire: boolean;
+  onRest: () => void;
   onUseSkill: (skillId: string) => void;
   isShopOpen: boolean;
 }
@@ -59,6 +61,8 @@ export function useKeyboardControls({
   onLightTorch,
   canOpenShop,
   onOpenShop,
+  canRestAtBonfire,
+  onRest,
   onUseSkill,
   isShopOpen
 }: UseKeyboardControlsProps) {
@@ -131,6 +135,7 @@ export function useKeyboardControls({
           if (canCloseDoor) menuOptions.push('door');
           if (canLightTorch) menuOptions.push('torch');
           if (canOpenShop) menuOptions.push('shop');
+          if (canRestAtBonfire) menuOptions.push('rest');
           menuOptions.push('skills', 'items', 'close');
 
           const menuSize = menuOptions.length;
@@ -143,6 +148,7 @@ export function useKeyboardControls({
             if (currentOption === 'door' && e.key === 'Enter') { onCloseDoor(); }
             else if (currentOption === 'torch' && e.key === 'Enter') { onLightTorch(); }
             else if (currentOption === 'shop' && e.key === 'Enter') { onOpenShop(); }
+            else if (currentOption === 'rest' && e.key === 'Enter') { onRest(); }
             else if (currentOption === 'skills') { setActiveMenu('skills'); setSubMenuIndex(0); }
             else if (currentOption === 'items') { setActiveMenu('items'); setSubMenuIndex(0); }
             else if (currentOption === 'close' && e.key === 'Enter') setIsMenuOpen(false);
@@ -206,5 +212,5 @@ export function useKeyboardControls({
   }, [mode, hasChosenClass, combatTarget, activeMenu, mainMenuIndex, subMenuIndex, player, activeRoll,
     rollActionDie, movePlayer, executeCombatAction, setCombatTarget, isMenuOpen, setIsMenuOpen,
     onConsumeItem, setMainMenuIndex, setActiveMenu, setSubMenuIndex, canCloseDoor, onCloseDoor,
-    canLightTorch, onLightTorch, canOpenShop, onOpenShop, onUseSkill, isShopOpen]);
+    canLightTorch, onLightTorch, canOpenShop, onOpenShop, canRestAtBonfire, onRest, onUseSkill, isShopOpen]);
 }

@@ -19,6 +19,7 @@ export const SPRITE_SHEETS = {
   lava: '/sprites/lava_anim_16.png?v=3',      // Лава (анимированная, 45 кадров, 16x16)
   water: '/sprites/water_16.png',    // Вода (анимированная, 8 кадров, 16x16)
   grass: '/sprites/grass_16.png?v=3',         // Трава (статичная, 16x16)
+  bonfire: '/sprites/bonfire.png',            // Костёр (анимированный, 8 кадров, 16x16)
   // Персонажи (горизонтальные, 4 кадра по 16px)
   skeleton1: '/sprites/skeleton1_anim.png',   // Скелет-воин
   skeleton2: '/sprites/skeleton2_anim.png',   // Скелет с щитом
@@ -444,6 +445,7 @@ export const ANIMATION_CONFIGS = {
 
   water:     { frames: 2, frameTime: 100 }, // Плавная вода (первые 4 кадра из 8)
   lava:      { frames: 45, frameTime: 80 }, // Лава (720px / 16px = 45 кадров)
+  bonfire:   { frames: 8, frameTime: 100 }, // Костёр (8 кадров)
 } as const;
 
 // Глобальная скорость анимации (используется в GameGrid)
@@ -602,6 +604,11 @@ export function getAnimatedWaterSprite(frame: number): SpritePosition {
 // Получить спрайт лавы с анимацией
 export function getAnimatedLavaSprite(frame: number): SpritePosition {
   return getAnimatedSprite('lava', frame, ANIMATION_CONFIGS.lava.frames);
+}
+
+// Получить спрайт костра с анимацией
+export function getAnimatedBonfireSprite(frame: number): SpritePosition {
+  return getAnimatedSprite('bonfire', frame, ANIMATION_CONFIGS.bonfire.frames);
 }
 
 // Legacy функция для совместимости (использует старый characters sheet)

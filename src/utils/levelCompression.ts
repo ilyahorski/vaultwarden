@@ -6,7 +6,8 @@ const CELL_TYPE_MAP: Record<CellType, string> = {
   wall: 'W', floor: 'F', door: 'D', door_open: 'O', secret_door: 'S',
   trap: 'T', water: 'A', lava: 'L', grass: 'G',
   stairs_down: 'd', stairs_up: 'u', torch: 't', torch_lit: 'l',
-  merchant: 'M', secret_button: 'B', secret_button_activated: 'b'
+  merchant: 'M', secret_button: 'B', secret_button_activated: 'b',
+  bonfire: 'f'
 };
 const CELL_TYPE_REVERSE: Record<string, CellType> = Object.fromEntries(
   Object.entries(CELL_TYPE_MAP).map(([k, v]) => [v, k as CellType])

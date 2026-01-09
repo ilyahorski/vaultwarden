@@ -66,6 +66,10 @@
     background-image: url('/sprites/grass_16.png?v=3');
   }
 
+  .sprite-bonfire {
+    background-image: url('/sprites/bonfire.png');
+  }
+
   /* Персонажи */
   .sprite-skeleton1 {
     background-image: url('/sprites/skeleton1_anim.png');

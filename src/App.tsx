@@ -187,6 +187,25 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const adjacentMerchant = getAdjacentMerchant();
   const canOpenShop = !!adjacentMerchant;
 
+  // Проверка на наличие костра рядом (для отдыха как в Dark Souls)
+  const getAdjacentBonfire = () => {
+    if (!grid || !grid.length) return null;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dx, dy] of dirs) {
+      const nx = player.x + dx;
+      const ny = player.y + dy;
+      if (ny >= 0 && ny < grid.length && nx >= 0 && nx < grid[0].length) {
+        if (grid[ny][nx].type === 'bonfire') {
+          return { x: nx, y: ny };
+        }
+      }
+    }
+    return null;
+  };
+
+  const adjacentBonfire = getAdjacentBonfire();
+  const canRestAtBonfire = !!adjacentBonfire;
+
   const handleOpenShop = useCallback(() => {
     if (adjacentMerchant) {
       setShopOpen(adjacentMerchant);
@@ -237,6 +256,30 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
           setIsMenuOpen(false);
       }
   };
+
+  // Отдых у костра - восстановление HP и MP до максимума
+  const handleRest = useCallback(() => {
+    if (!canRestAtBonfire) return;
+
+    setPlayer(prev => {
+      const hpRestored = prev.maxHp - prev.hp;
+      const mpRestored = prev.maxMp - prev.mp;
+
+      if (hpRestored === 0 && mpRestored === 0) {
+        addLog('Вы уже полностью отдохнули.', 'info');
+        return prev;
+      }
+
+      addLog(`Отдых у костра: +${hpRestored} HP, +${mpRestored} MP`, 'rest');
+      return {
+        ...prev,
+        hp: prev.maxHp,
+        mp: prev.maxMp
+      };
+    });
+
+    setIsMenuOpen(false);
+  }, [canRestAtBonfire, addLog, setPlayer, setIsMenuOpen]);
 
   // Использование навыка вне боя (только лечащие навыки)
   const handleUseSkill = useCallback((skillId: string) => {
@@ -301,6 +344,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     onLightTorch: handleLightTorch,
     canOpenShop,
     onOpenShop: handleOpenShop,
+    canRestAtBonfire,
+    onRest: handleRest,
     onUseSkill: handleUseSkill,
     isShopOpen: !!shopOpen
   });
@@ -460,6 +505,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                         onLightTorch={handleLightTorch}
                         canOpenShop={canOpenShop}
                         onOpenShop={handleOpenShop}
+                        canRestAtBonfire={canRestAtBonfire}
+                        onRest={handleRest}
                         onUseSkill={handleUseSkill}
                       />
                     )}

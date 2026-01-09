@@ -15,6 +15,8 @@ interface PlayerMenuProps {
   onLightTorch: () => void;
   canOpenShop: boolean;
   onOpenShop: () => void;
+  canRestAtBonfire: boolean;
+  onRest: () => void;
   onUseSkill: (skillId: string) => void;
 }
 
@@ -30,6 +32,8 @@ export function PlayerMenu({
   onLightTorch,
   canOpenShop,
   onOpenShop,
+  canRestAtBonfire,
+  onRest,
   onUseSkill
 }: PlayerMenuProps) {
 
@@ -45,6 +49,10 @@ export function PlayerMenu({
 
   if (canOpenShop) {
     menuOptions.push({ label: 'Торговля', icon: <Store size={18} className="text-amber-400" /> });
+  }
+
+  if (canRestAtBonfire) {
+    menuOptions.push({ label: 'Отдых', icon: <Flame size={18} className="text-orange-400" /> });
   }
 
   menuOptions.push(
@@ -90,6 +98,7 @@ export function PlayerMenu({
                     if (opt.label === 'Закрыть дверь') onCloseDoor();
                     if (opt.label === 'Зажечь факел') onLightTorch();
                     if (opt.label === 'Торговля') onOpenShop();
+                    if (opt.label === 'Отдых') onRest();
                   }}
                 >
                   {opt.icon}

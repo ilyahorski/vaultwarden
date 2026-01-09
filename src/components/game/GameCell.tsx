@@ -21,6 +21,7 @@ import {
   getAnimatedChestSprite,
   getAnimatedLavaSprite,
   getAnimatedWaterSprite,
+  getAnimatedBonfireSprite,
   type SpritePosition,
   type NeighborInfo
 } from '../../sprites';
@@ -60,6 +61,7 @@ const Sprite: React.FC<{
     lava: 'sprite-lava',
     water: 'sprite-water',
     grass: 'sprite-grass',
+    bonfire: 'sprite-bonfire',
     // Старые персонажи
     skeleton1: 'sprite-skeleton1',
     skeleton2: 'sprite-skeleton2',
@@ -172,7 +174,7 @@ function arePropsEqual(prevProps: GameCellProps, nextProps: GameCellProps): bool
   const nextCell = nextProps.cell;
 
   // Проверяем изменение кадра анимации для анимированных объектов
-  // Если на ячейке есть враг, игрок, торговец, факелы, ловушки, вода или лава - перерендерить при смене кадра
+  // Если на ячейке есть враг, игрок, торговец, факелы, ловушки, вода, лава или костёр - перерендерить при смене кадра
   const needsAnimation =
     nextCell.enemy ||
     nextCell.type === 'torch_lit' ||
@@ -181,6 +183,7 @@ function arePropsEqual(prevProps: GameCellProps, nextProps: GameCellProps): bool
     nextCell.type === 'trap' ||
     nextCell.type === 'water' ||
     nextCell.type === 'lava' ||
+    nextCell.type === 'bonfire' ||
     nextCell.item === 'chest' ||
     (nextProps.playerX === nextCell.x && nextProps.playerY === nextCell.y);
 
@@ -344,8 +347,8 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
     // Для пола и подобных типов учитываем соседние стены для теней
     const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
     tileSprite = getFloorSprite(wallNeighbors);
-  } else if (cell.type === 'torch_lit' || cell.type === 'torch' || cell.type === 'grass') {
-    // Факелы на полу - рендерим пол как базовый тайл
+  } else if (cell.type === 'torch_lit' || cell.type === 'torch' || cell.type === 'grass' || cell.type === 'bonfire') {
+    // Факелы, трава и костёр на полу - рендерим пол как базовый тайл
     const wallNeighbors = getWallNeighborsForFloor(grid, cell.x, cell.y);
     tileSprite = getFloorSprite(wallNeighbors);
   } else if (cell.type === 'trap') {
@@ -383,6 +386,7 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
   if (cell.type === 'stairs_down' && !tooltip) tooltip = 'Лестница вниз';
   if (cell.type === 'stairs_up' && !tooltip) tooltip = 'Лестница вверх';
   if (cell.type === 'trap' && (mode === 'dm' || cell.isRevealed) && !tooltip) tooltip = 'Ловушка!';
+  if (cell.type === 'bonfire' && !tooltip) tooltip = 'Костёр — отдохните, чтобы восстановить HP и MP';
   if (cell.type === 'secret_button' && mode === 'dm' && !tooltip) {
     tooltip = cell.isSecretTrigger === true ? 'Секретная кнопка (ОТКРЫВАЕТ комнату)' : 'Секретная кнопка (ложная)';
   }
@@ -441,6 +445,14 @@ export const GameCell: React.FC<GameCellProps> = React.memo(({
       )}
       {cell.type === 'torch' && !content && (
         <Sprite sprite={getAnimatedTorchSprite(animationFrame, false)} />
+      )}
+
+      {/* Анимированный костёр поверх пола */}
+      {cell.type === 'bonfire' && !content && (
+        <Sprite
+          sprite={getAnimatedBonfireSprite(animationFrame)}
+          className="drop-shadow-[0_0_6px_rgba(251,146,60,0.8)]"
+        />
       )}
 
       {/* Туман войны */}
