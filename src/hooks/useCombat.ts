@@ -1,6 +1,6 @@
 import type { CellData, Player, LogEntry, PotionType, CombatTarget } from '../types';
 import { MONSTER_STATS, CLASSES, POTION_STATS } from '../constants';
-import { applyLevelUp } from '../utils';
+import { applyLevelUp, checkPlayerDeath, clampHp } from '../utils';
 
 interface UseCombatProps {
   grid: CellData[][];
@@ -175,12 +175,8 @@ export function useCombat({
       updates.hp -= enemyDmg;
     }
 
-    if (updates.hp <= 0) {
-      // --- ИЗМЕНЕННАЯ ЛОГИКА СМЕРТИ ---
-      resetGame(); // Полный сброс вместо режима DM
-      alert('ВЫ ПОГИБЛИ! Игра будет перезапущена.');
-      return;
-    }
+    updates.hp = clampHp(updates.hp, updates.maxHp);
+    if (checkPlayerDeath(updates.hp, resetGame, addLog)) return;
 
     setPlayer(updates);
     setCombatTarget(null);

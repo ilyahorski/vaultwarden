@@ -21,8 +21,8 @@ export const INITIAL_PLAYER = {
   maxMp: 50,
   atk: 5,
   def: 0,
-  moves: 4,
-  maxMoves: 4,
+  moves: 10,
+  maxMoves: 10,
   xp: 0,
   level: 1,
   nextLevelXp: 100,
@@ -136,12 +136,12 @@ export const CLASSES: Record<string, ClassData> = {
     hp: 120, maxHp: 120,
     mp: 20, maxMp: 20,
     atk: 8, def: 2,
-    baseMoves: 4,
+    baseMoves: 8,
     desc: 'Мастер ближнего боя. Высокое здоровье и урон.',
     icon: React.createElement(Sword, { size: 24 }),
     skills: [
       { id: 'heavy_strike', name: 'Тяжелый удар', mpCost: 5, desc: 'Наносит 200% урона', dmgMult: 2 },
-      { id: 'rage', name: 'Ярость', mpCost: 10, desc: 'Восстанавливает 20 HP и бьет врага', heal: 20, dmgMult: 1 }
+      { id: 'rage', name: 'Ярость', mpCost: 10, desc: 'Восстанавливает 20 HP и бьет врага', heal: 20, dmgMult: 2 }
     ],
     startingWeapon: 'weapon_rusty',
     startingArmor: 'armor_leather'
@@ -151,7 +151,7 @@ export const CLASSES: Record<string, ClassData> = {
     hp: 70, maxHp: 70,
     mp: 100, maxMp: 100,
     atk: 4, def: 0,
-    baseMoves: 4,
+    baseMoves: 10,
     desc: 'Владеет мощными заклинаниями, но слаб телом.',
     icon: React.createElement(Zap, { size: 24 }),
     skills: [
@@ -166,7 +166,7 @@ export const CLASSES: Record<string, ClassData> = {
     hp: 90, maxHp: 90,
     mp: 40, maxMp: 40,
     atk: 6, def: 1,
-    baseMoves: 5,
+    baseMoves: 12,
     desc: 'Быстрый и ловкий. Умеет избегать ударов.',
     icon: React.createElement(Shield, { size: 24 }),
     skills: [
@@ -180,11 +180,11 @@ export const CLASSES: Record<string, ClassData> = {
 
 // --- Редкие артефакты ---
 export const RARE_ARTIFACTS: Artifact[] = [
-  { name: 'Золотой Идол', val: 250 },
-  { name: 'Древний Рубин', val: 400 },
-  { name: 'Корона Короля', val: 600 },
+  { name: 'Золотой Идол', val: 100 },
+  { name: 'Древний Рубин', val: 150 },
+  { name: 'Корона Короля', val: 200 },
   { name: 'Сапфировый Ключ', val: 300 },
-  { name: 'Кольцо Власти', val: 500 }
+  { name: 'Кольцо Власти', val: 400 }
 ];
 
 // --- Цены предметов (покупка/продажа) ---

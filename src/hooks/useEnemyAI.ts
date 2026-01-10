@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { CellData, Player, LogEntry, CombatTarget, EnemyType } from '../types';
 // EnemyType используется как NonNullable<EnemyType> ниже
 import { GRID_SIZE, AGGRO_RADIUS, MONSTER_STATS } from '../constants';
+import { checkPlayerDeath, clampHp } from '../utils';
 
 interface UseEnemyAIProps {
   mode: 'dm' | 'player';
@@ -104,13 +105,8 @@ export function useEnemyAI({
     }
 
     if (damageToPlayer > 0) {
-      const newHp = currentPlayer.hp - damageToPlayer;
-      if (newHp <= 0) {
-        // Игрок погиб - полный сброс игры
-        resetGame();
-        alert('ВЫ ПОГИБЛИ! Игра будет перезапущена.');
-        return;
-      }
+      const newHp = clampHp(currentPlayer.hp - damageToPlayer, currentPlayer.maxHp);
+      if (checkPlayerDeath(newHp, resetGame, addLog)) return;
       setPlayer(p => ({ ...p, hp: newHp }));
     }
   };

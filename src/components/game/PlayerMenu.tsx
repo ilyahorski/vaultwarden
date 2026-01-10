@@ -75,7 +75,7 @@ export function PlayerMenu({
   }, [subMenuIndex, activeMenu]);
 
   return (
-    <div className="absolute inset-0 bg-black/80 flex w-full items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/80 flex w-full items-center justify-center z-50">
       <div className="bg-slate-900 border-2 border-slate-700 p-6 rounded-lg w-1/2 shadow-2xl flex flex-col max-h-[80vh]">
         <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2 pb-2 border-b border-slate-700 shrink-0">
            Меню персонажа

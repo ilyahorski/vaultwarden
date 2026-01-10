@@ -293,6 +293,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           icon={<DoorClosed size={16} />}
                           label="Дверь"
                         />
+                        <ToolButton
+                          active={selectedTool === "bonfire"}
+                          onClick={() => onToolChange("bonfire")}
+                          icon={<Flame size={16} className="text-orange-400" />}
+                          label="Костёр"
+                        />
                       </div>
                     </div>
                     <div>

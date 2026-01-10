@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -20,6 +21,7 @@ import { ShopMenu } from './components/game/ShopMenu';
 import { Sidebar } from './components/editor';
 
 // Константы
+import { CELL_SIZE } from './constants';
 
 // Утилиты
 import { rollActionDie } from './utils';
@@ -32,6 +34,7 @@ interface DungeonAppProps {
 export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
   const isMobile = useIsMobile();
@@ -94,7 +97,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     processEnemyTurn,
     levelHistory, setLevelHistory,
     generateDungeon,
-    logs
+    logs,
+    resetGame
   });
 
   const { executeCombatAction } = useCombat({
@@ -357,6 +361,43 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     setGrid
   });
 
+  // Эффект следования камеры - центрирование игрока
+  useEffect(() => {
+    if (!transformRef.current || mode !== 'player' || !hasChosenClass) return;
+
+    // Небольшая задержка чтобы TransformWrapper был полностью готов
+    const timeoutId = setTimeout(() => {
+      if (!transformRef.current) return;
+
+      const { setTransform, instance } = transformRef.current;
+
+      if (!setTransform || !instance) return;
+
+      // Позиция игрока в пикселях (центр клетки)
+      const playerPixelX = player.x * CELL_SIZE + CELL_SIZE / 2;
+      const playerPixelY = player.y * CELL_SIZE + CELL_SIZE / 2;
+
+      // Получаем текущий масштаб
+      const currentScale = instance.transformState.scale;
+
+      // Размеры viewport
+      const viewportWidth = window.innerWidth;
+      const headerHeight = isMobile ? 110 : 70;
+      const viewportHeight = isMobile
+        ? window.innerHeight * 0.57
+        : window.innerHeight - headerHeight;
+
+      // Вычисляем смещение для центрирования
+      const offsetX = viewportWidth / 2 - playerPixelX * currentScale;
+      const offsetY = viewportHeight / 2 - playerPixelY * currentScale;
+
+      // Применяем трансформацию
+      setTransform(offsetX, offsetY, currentScale, 0);
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [player.x, player.y, player.dungeonLevel, mode, hasChosenClass, isMobile]);
+
   // Используем ref для grid чтобы callback не пересоздавался на каждое изменение grid
   const gridRef = useRef(grid);
   useEffect(() => {
@@ -462,83 +503,89 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
               player={player}
               activeRoll={activeRoll}
               onRollDice={handleRollActionDie}
+              canRestAtBonfire={canRestAtBonfire}
             />
 
             {/* Контейнер карты - на мобильных занимает 50vh и начинается от 30vh сверху */}
             <div className={`bg-slate-950 overflow-hidden flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1 p-4 overflow-auto'}`}>
-              <TransformWrapper
-                initialScale={isMobile ? 0.6 : 1}
-                minScale={0.3}
-                maxScale={2}
-                centerOnInit={true}
-                disabled={!isMobile}
-                panning={{ disabled: !isMobile }}
-                pinch={{ disabled: !isMobile }}
-                doubleClick={{ disabled: true }}
-              >
-                <TransformComponent
-                  wrapperStyle={{ width: '100%', height: '100%' }}
-                  contentStyle={{ width: 'fit-content', height: 'fit-content' }}
+              <div className="relative w-full h-full">
+                <TransformWrapper
+                  ref={transformRef}
+                  initialScale={isMobile ? 0.6 : 1}
+                  minScale={0.3}
+                  maxScale={2}
+                  centerOnInit={false}
+                  disabled={false}
+                  panning={{ disabled: false }}
+                  pinch={{ disabled: !isMobile }}
+                  doubleClick={{ disabled: true }}
+                  limitToBounds={false}
                 >
-                  <div className="relative">
-                    <GameGrid
-                      grid={grid}
-                      mode={mode}
-                      playerX={player.x}
-                      playerY={player.y}
-                      playerClass={player.class}
-                      playerDirection={player.facing}
-                      isMovingEnemy={isMovingEnemy}
-                      onCellClick={onGridClick}
-                    />
-
-                    {isMenuOpen && !combatTarget && (
-                      <PlayerMenu
-                        player={player}
-                        activeMenu={activeMenu}
-                        mainMenuIndex={mainMenuIndex}
-                        subMenuIndex={subMenuIndex}
-                        onClose={() => setIsMenuOpen(false)}
-                        canCloseDoor={canCloseDoor}
-                        onCloseDoor={handleCloseDoor}
-                        canLightTorch={canLightTorch}
-                        onLightTorch={handleLightTorch}
-                        canOpenShop={canOpenShop}
-                        onOpenShop={handleOpenShop}
-                        canRestAtBonfire={canRestAtBonfire}
-                        onRest={handleRest}
-                        onUseSkill={handleUseSkill}
+                  <TransformComponent
+                    wrapperStyle={{ width: '100%', height: '100%' }}
+                    contentStyle={{ width: 'fit-content', height: 'fit-content' }}
+                  >
+                    <div className="relative">
+                      <GameGrid
+                        grid={grid}
+                        mode={mode}
+                        playerX={player.x}
+                        playerY={player.y}
+                        playerClass={player.class}
+                        playerDirection={player.facing}
+                        isMovingEnemy={isMovingEnemy}
+                        onCellClick={onGridClick}
                       />
-                    )}
 
-                    {combatTarget && (
-                      <CombatMenu
-                        combatTarget={combatTarget}
-                        player={player}
-                        activeMenu={activeMenu}
-                        mainMenuIndex={mainMenuIndex}
-                        subMenuIndex={subMenuIndex}
-                        onAttack={() => executeCombatAction(combatTarget, 'attack')}
-                        onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
-                        onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
-                        onFlee={() => setCombatTarget(null)}
-                        onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
-                        onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
-                      />
-                    )}
+                      {combatTarget && (
+                        <CombatMenu
+                          combatTarget={combatTarget}
+                          player={player}
+                          activeMenu={activeMenu}
+                          mainMenuIndex={mainMenuIndex}
+                          subMenuIndex={subMenuIndex}
+                          onAttack={() => executeCombatAction(combatTarget, 'attack')}
+                          onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
+                          onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
+                          onFlee={() => setCombatTarget(null)}
+                          onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
+                          onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
+                        />
+                      )}
 
-                    {shopOpen && (
-                      <ShopMenu
-                        player={player}
-                        merchantPosition={shopOpen}
-                        onBuy={handleBuyItem}
-                        onSell={handleSellItem}
-                        onClose={() => setShopOpen(null)}
-                      />
-                    )}
-                  </div>
-                </TransformComponent>
-              </TransformWrapper>
+                      {shopOpen && (
+                        <ShopMenu
+                          player={player}
+                          merchantPosition={shopOpen}
+                          onBuy={handleBuyItem}
+                          onSell={handleSellItem}
+                          onClose={() => setShopOpen(null)}
+                        />
+                      )}
+                    </div>
+                  </TransformComponent>
+                </TransformWrapper>
+
+                {/* PlayerMenu вне трансформации - позиционируется относительно viewport */}
+                {isMenuOpen && !combatTarget && (
+                  <PlayerMenu
+                    player={player}
+                    activeMenu={activeMenu}
+                    mainMenuIndex={mainMenuIndex}
+                    subMenuIndex={subMenuIndex}
+                    onClose={() => setIsMenuOpen(false)}
+                    canCloseDoor={canCloseDoor}
+                    onCloseDoor={handleCloseDoor}
+                    canLightTorch={canLightTorch}
+                    onLightTorch={handleLightTorch}
+                    canOpenShop={canOpenShop}
+                    onOpenShop={handleOpenShop}
+                    canRestAtBonfire={canRestAtBonfire}
+                    onRest={handleRest}
+                    onUseSkill={handleUseSkill}
+                  />
+                )}
+              </div>
             </div>
 
             {/* MobileControls - фиксированная панель внизу на мобильных */}
@@ -560,8 +607,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                 minScale={0.3}
                 maxScale={2}
                 centerOnInit={true}
-                disabled={!isMobile}
-                panning={{ disabled: !isMobile }}
+                disabled={false}
+                panning={{ disabled: false }}
                 pinch={{ disabled: !isMobile }}
                 doubleClick={{ disabled: true }}
               >

@@ -2,6 +2,20 @@ import type { CellData, Player, LogEntry, CombatTarget, Direction } from '../typ
 import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX_INVENTORY_SIZE } from '../constants';
 import type { PotionType, WeaponType, ArmorType } from '../types';
 import { updateVisibility } from './useFogOfWar';
+import { checkPlayerDeath, clampHp } from '../utils';
+
+// Вспомогательная функция проверки соседства с костром
+const checkAdjacentBonfire = (grid: CellData[][], x: number, y: number): boolean => {
+  const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  for (const [dx, dy] of dirs) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (ny >= 0 && ny < GRID_SIZE && nx >= 0 && nx < GRID_SIZE) {
+      if (grid[ny][nx].type === 'bonfire') return true;
+    }
+  }
+  return false;
+};
 
 interface UsePlayerMovementProps {
   grid: CellData[][];
@@ -19,6 +33,7 @@ interface UsePlayerMovementProps {
   setLevelHistory: (history: Record<number, CellData[][]>) => void;
   generateDungeon: (level: number) => void;
   logs: LogEntry[];
+  resetGame: () => void;
 }
 
 export function usePlayerMovement({
@@ -36,7 +51,8 @@ export function usePlayerMovement({
   levelHistory,
   setLevelHistory,
   generateDungeon,
-  logs
+  logs,
+  resetGame
 }: UsePlayerMovementProps) {
   
   const movePlayer = (dx: number, dy: number) => {
@@ -285,13 +301,15 @@ export function usePlayerMovement({
         } else {
           addLog(`[D20: ${r.val}] Вы наступили на ЛОВУШКУ!`, 'fail');
         }
-        updates.hp -= dmg;
+        updates.hp = clampHp(updates.hp - dmg, updates.maxHp);
+        if (checkPlayerDeath(updates.hp, resetGame, addLog)) return;
       }
     }
 
     if (targetCell.type === 'lava') {
       addLog("Вы наступили в ЛАВУ! -1 HP", 'fail');
-      updates.hp -= 1;
+      updates.hp = clampHp(updates.hp - 1, updates.maxHp);
+      if (checkPlayerDeath(updates.hp, resetGame, addLog)) return;
     }
 
     updates.x = newX;
@@ -348,6 +366,14 @@ export function usePlayerMovement({
     }
 
     processEnemyTurn(currentGrid, updates);
+
+    // Проверка приближения к костру
+    const wasAdjacentBonfire = checkAdjacentBonfire(grid, player.x, player.y);
+    const nowAdjacentBonfire = checkAdjacentBonfire(currentGrid, updates.x, updates.y);
+
+    if (nowAdjacentBonfire && !wasAdjacentBonfire) {
+      addLog('🔥 Вы нашли костёр! Можно отдохнуть и восстановить силы.', 'info');
+    }
   };
 
   const toggleDoor = (x: number, y: number) => {

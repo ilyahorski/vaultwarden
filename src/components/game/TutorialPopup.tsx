@@ -6,7 +6,7 @@ interface TutorialPopupProps {
 
 export function TutorialPopup({ onClose }: TutorialPopupProps) {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-100 p-4">
       <div className="bg-slate-900 border-2 border-slate-700 rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Заголовок */}
         <div className="p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
@@ -100,6 +100,7 @@ export function TutorialPopup({ onClose }: TutorialPopupProps) {
             <ul className="space-y-1 text-slate-400">
               <li><DoorOpen size={12} className="inline text-amber-500" /> <span className="font-bold">Двери</span> — кликните чтобы открыть/закрыть. Используйте их для защиты от врагов!</li>
               <li><Flame size={12} className="inline text-orange-400" /> <span className="font-bold">Факелы</span> — кликните для зажигания/тушения. Освещают область вокруг.</li>
+              <li><Flame size={12} className="inline text-orange-500" /> <span className="font-bold">Костры</span> — подойдите к костру и откройте меню персонажа для отдыха. Восстанавливает очки движения.</li>
               <li><ArrowDownCircle size={12} className="inline text-blue-400" /> <span className="font-bold">Лестницы</span> — переход между этажами подземелья.</li>
             </ul>
           </section>

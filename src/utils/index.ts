@@ -91,8 +91,8 @@ export const applyLevelUp = (
     player.hp = player.maxHp;
     player.maxMp += 10;
     player.mp = player.maxMp;
-    player.atk += 5;
-    player.def += 2;
+    player.atk += 3;
+    player.def += 1;
     player.maxMoves += 1;
     player.moves = player.maxMoves;
   } else {
@@ -117,14 +117,17 @@ export const rollActionDie = (
     let msg = '';
 
     if (roll <= 5) {
-      newMoves = Math.max(1, player.maxMoves - 2);
+      // Плохой отдых: 70% от maxMoves (округление вниз, минимум 1)
+      newMoves = Math.max(1, Math.floor(player.maxMoves * 0.7));
       type = 'fail';
       msg = `Тяжелый отдых (D20: ${roll}). Восстановлено только ${newMoves} шагов.`;
     } else if (roll >= 12) {
-      newMoves = player.maxMoves + 2;
+      // Хороший отдых: 120% от maxMoves
+      newMoves = Math.floor(player.maxMoves * 1.2);
       type = 'success';
       msg = `Отличный привал (D20: ${roll})! Вы полны сил: ${newMoves} шагов.`;
     } else {
+      // Обычный отдых: 100% от maxMoves
       msg = `Отдых (D20: ${roll}). Силы восстановлены: ${newMoves} шагов.`;
     }
 
@@ -142,4 +145,24 @@ export const rollActionDie = (
   
   addLog(`🎲 Подготовка действия: ${roll}`, type);
   return roll;
+};
+
+// --- Проверка смерти игрока и обработка ---
+export const checkPlayerDeath = (
+  hp: number,
+  resetGame: () => void,
+  addLog?: (text: string, type?: LogEntry['type']) => void
+): boolean => {
+  if (hp <= 0) {
+    if (addLog) addLog('ВЫ ПОГИБЛИ!', 'fail');
+    resetGame();
+    alert('ВЫ ПОГИБЛИ! Игра будет перезапущена.');
+    return true;
+  }
+  return false;
+};
+
+// --- Ограничение HP валидным диапазоном [0, maxHp] ---
+export const clampHp = (hp: number, maxHp: number): number => {
+  return Math.max(0, Math.min(hp, maxHp));
 };
