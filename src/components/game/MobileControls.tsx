@@ -13,7 +13,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onShift
 }) => {
   const buttonClass = "p-3 bg-slate-800 rounded-full border border-slate-600 active:bg-blue-600 touch-manipulation select-none";
-  const actionButtonClass = "mim-w-20 w-30 p-3 bg-slate-800 rounded-lg border border-slate-600 active:bg-amber-600 touch-manipulation select-none flex items-center justify-center gap-1";
+  const actionButtonClass = "mim-w-15 max-w-25 p-3 bg-slate-800 rounded-lg border border-slate-600 active:bg-amber-600 touch-manipulation select-none flex items-center justify-center gap-1";
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-[16vh] bg-slate-900/95 border-t border-slate-700 md:hidden z-30 flex items-center justify-between px-6">
