@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Zap, Backpack, X, DoorClosed, Flame, Store } from 'lucide-react';
 import type { Player, ActiveMenu } from '../../types';
 import { CLASSES, POTION_STATS, GEAR_STATS } from '../../constants';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 interface PlayerMenuProps {
   player: Player;
@@ -39,6 +40,8 @@ export function PlayerMenu({
 
   const menuOptions = [];
 
+  const isMobile = useIsMobile();
+
   if (canCloseDoor) {
     menuOptions.push({ label: 'Закрыть дверь', icon: <DoorClosed size={18} /> });
   }
@@ -75,8 +78,8 @@ export function PlayerMenu({
   }, [subMenuIndex, activeMenu]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex w-full items-center justify-center z-50">
-      <div className="bg-slate-900 border-2 border-slate-700 p-6 rounded-lg w-1/2 shadow-2xl flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 bg-black/80 flex w-full items-center justify-center z-20 pointer-events-none">
+      <div className={`pointer-events-auto bg-slate-900 border-2 border-slate-700 p-6 rounded-lg ${isMobile ? 'w-full' : 'w-1/4'} shadow-2xl flex flex-col max-h-[80vh]`}>
         <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2 pb-2 border-b border-slate-700 shrink-0">
            Меню персонажа
         </h2>

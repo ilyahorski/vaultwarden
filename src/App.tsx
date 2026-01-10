@@ -391,8 +391,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
       const offsetX = viewportWidth / 2 - playerPixelX * currentScale;
       const offsetY = viewportHeight / 2 - playerPixelY * currentScale;
 
-      // Применяем трансформацию
-      setTransform(offsetX, offsetY, currentScale, 0);
+      // Применяем трансформацию с плавной анимацией (200ms)
+      setTransform(offsetX, offsetY, currentScale, 200);
     }, 50);
 
     return () => clearTimeout(timeoutId);
