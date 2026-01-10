@@ -445,8 +445,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
   // Обработчик стрелок для мобильных (движение или навигация по меню)
   const handleMobileArrow = useCallback((dx: number, dy: number) => {
-    // Если открыто меню или бой - эмулируем клавиши для навигации
-    if (isMenuOpen || combatTarget) {
+    // Если открыто меню, бой или магазин - эмулируем клавиши для навигации
+    if (isMenuOpen || combatTarget || shopOpen) {
       let key = '';
       if (dy === -1) key = 'ArrowUp';
       else if (dy === 1) key = 'ArrowDown';
@@ -459,7 +459,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
       // Обычное движение
       movePlayer(dx, dy);
     }
-  }, [isMenuOpen, combatTarget, movePlayer]);
+  }, [isMenuOpen, combatTarget, shopOpen, movePlayer]);
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">

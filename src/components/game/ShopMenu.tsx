@@ -26,8 +26,7 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
 
   const isMobile = useIsMobile();
 
-  // Рефы для фокуса и автоскролла
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Рефы для автоскролла
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Генерируем ассортимент по уровню подземелья
@@ -50,11 +49,6 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
 
   const currentList = activeTab === 'buy' ? stock : sellableItems;
 
-  // Автофокус на контейнере при открытии
-  useEffect(() => {
-    containerRef.current?.focus();
-  }, []);
-
   // Автоскролл к выбранному элементу
   useEffect(() => {
     if (itemRefs.current[selectedIndex]) {
@@ -65,29 +59,40 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
     }
   }, [selectedIndex]);
 
-  const handleKeyNavigation = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowUp') {
-      setSelectedIndex(prev => Math.max(0, prev - 1));
-    } else if (e.key === 'ArrowDown') {
-      setSelectedIndex(prev => Math.min(currentList.length - 1, prev + 1));
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      setActiveTab(prev => prev === 'buy' ? 'sell' : 'buy');
-      setSelectedIndex(0);
-    } else if (e.key === 'Enter') {
-      if (activeTab === 'buy' && stock[selectedIndex]) {
-        const item = stock[selectedIndex];
-        if (player.gold >= item.price) {
-          onBuy(item.itemType, item.price);
+  // Обработчик клавиатуры через window.addEventListener для поддержки виртуальных кнопок
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(prev => Math.min(currentList.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setActiveTab(prev => prev === 'buy' ? 'sell' : 'buy');
+        setSelectedIndex(0);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (activeTab === 'buy' && stock[selectedIndex]) {
+          const item = stock[selectedIndex];
+          if (player.gold >= item.price) {
+            onBuy(item.itemType, item.price);
+          }
+        } else if (activeTab === 'sell' && sellableItems[selectedIndex]) {
+          const item = sellableItems[selectedIndex];
+          onSell(item.index, item.price);
+          setSelectedIndex(prev => Math.min(prev, sellableItems.length - 2));
         }
-      } else if (activeTab === 'sell' && sellableItems[selectedIndex]) {
-        const item = sellableItems[selectedIndex];
-        onSell(item.index, item.price);
-        setSelectedIndex(prev => Math.min(prev, sellableItems.length - 2));
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
       }
-    } else if (e.key === 'Escape') {
-      onClose();
-    }
-  };
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, selectedIndex, stock, sellableItems, player.gold, onBuy, onSell, onClose, currentList.length]);
 
   const getItemName = (itemType: string): string => {
     return GEAR_STATS[itemType]?.name || POTION_STATS[itemType as PotionType]?.name || itemType;
@@ -99,10 +104,7 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
 
   return (
     <div
-      ref={containerRef}
       className="fixed inset-0 bg-black/70 flex w-full items-center justify-center z-20 pointer-events-none"
-      onKeyDown={handleKeyNavigation}
-      tabIndex={0}
     >
       <div className={`pointer-events-auto bg-linear-to-b from-amber-900 to-amber-950 border-4 border-amber-600 rounded-xl p-4 shadow-2xl ${isMobile ? 'w-3/4' : 'w-1/2'} shadow-2xl flex flex-col max-h-[80vh]`}>
         {/* Заголовок */}
