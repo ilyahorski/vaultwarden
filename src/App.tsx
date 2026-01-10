@@ -504,6 +504,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
               activeRoll={activeRoll}
               onRollDice={handleRollActionDie}
               canRestAtBonfire={canRestAtBonfire}
+              canOpenShop={canOpenShop}
             />
 
             {/* Контейнер карты - на мобильных занимает 50vh и начинается от 30vh сверху */}
@@ -552,16 +553,6 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                           onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
                         />
                       )}
-
-                      {shopOpen && (
-                        <ShopMenu
-                          player={player}
-                          merchantPosition={shopOpen}
-                          onBuy={handleBuyItem}
-                          onSell={handleSellItem}
-                          onClose={() => setShopOpen(null)}
-                        />
-                      )}
                     </div>
                   </TransformComponent>
                 </TransformWrapper>
@@ -583,6 +574,17 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                     canRestAtBonfire={canRestAtBonfire}
                     onRest={handleRest}
                     onUseSkill={handleUseSkill}
+                  />
+                )}
+
+                {/* ShopMenu вне трансформации - позиционируется относительно viewport */}
+                {shopOpen && (
+                  <ShopMenu
+                    player={player}
+                    merchantPosition={shopOpen}
+                    onBuy={handleBuyItem}
+                    onSell={handleSellItem}
+                    onClose={() => setShopOpen(null)}
                   />
                 )}
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Store, Coins, ShoppingCart, Package, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Store, Coins, ShoppingCart, Package, X } from 'lucide-react';
 import type { Player, PotionType } from '../../types';
 import { ITEM_PRICES, GEAR_STATS, POTION_STATS, generateMerchantStock, MERCHANT_NAMES } from '../../constants';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 interface ShopMenuProps {
   player: Player;
@@ -22,6 +23,8 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ShopTab>('buy');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const isMobile = useIsMobile();
 
   // Рефы для фокуса и автоскролла
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,11 +100,11 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/70 flex w-full items-center justify-center z-20 pointer-events-none"
       onKeyDown={handleKeyNavigation}
       tabIndex={0}
     >
-      <div className="bg-gradient-to-b from-amber-900 to-amber-950 border-4 border-amber-600 rounded-xl p-4 shadow-2xl w-[500px] max-h-[80vh] flex flex-col">
+      <div className={`pointer-events-auto bg-linear-to-b from-amber-900 to-amber-950 border-4 border-amber-600 rounded-xl p-4 shadow-2xl ${isMobile ? 'w-3/4' : 'w-1/2'} shadow-2xl flex flex-col max-h-[80vh]`}>
         {/* Заголовок */}
         <div className="flex items-center justify-between mb-3 border-b border-amber-700 pb-2">
           <div className="flex items-center gap-2">
@@ -138,7 +141,6 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
           >
             <ShoppingCart size={16} />
             Купить
-            <ChevronLeft size={14} className="opacity-50" />
           </button>
           <button
             onClick={() => { setActiveTab('sell'); setSelectedIndex(0); }}
@@ -150,12 +152,11 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
           >
             <Package size={16} />
             Продать
-            <ChevronRight size={14} className="opacity-50" />
           </button>
         </div>
 
         {/* Список товаров */}
-        <div className="flex-1 overflow-y-auto bg-black/20 rounded p-2 min-h-[200px]">
+        <div className="flex-1 overflow-y-auto bg-black/20 rounded p-2 max-h-30">
           {activeTab === 'buy' ? (
             stock.length === 0 ? (
               <div className="text-amber-500/50 text-center py-8 italic">Товаров нет...</div>
@@ -176,7 +177,7 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
                       <span className={getItemColor(item.itemType)}>
                         {getItemName(item.itemType)}
                       </span>
-                      <span className={`flex items-center gap-1 ${canAfford ? 'text-yellow-300' : 'text-red-400'}`}>
+                      <span className={`flex items-center gap-1 ${canAfford ? 'text-yellow-300' : 'text-yellow-300'}`}>
                         <Coins size={12} />
                         {item.price}
                       </span>
@@ -215,8 +216,9 @@ export const ShopMenu: React.FC<ShopMenuProps> = ({
 
         {/* Подсказки */}
         <div className="mt-3 text-xs text-amber-500/70 flex justify-between border-t border-amber-700 pt-2">
-          <span>↑↓ выбор • ←→ вкладка</span>
-          <span>Enter подтвердить • Esc закрыть</span>
+          <span>↑↓ ←→ выбор</span>
+          <span>• Enter (Меню) подтвердить</span>
+          <span>• Esc (X) закрыть</span>
         </div>
       </div>
     </div>

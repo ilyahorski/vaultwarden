@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dices, Sword, Shield, Coins, Footprints, Flame } from 'lucide-react';
+import { Dices, Sword, Shield, Coins, Footprints, Flame, Store } from 'lucide-react';
 import type { Player } from '../../types';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 
@@ -8,13 +8,15 @@ interface PlayerHeaderProps {
   activeRoll: number | null;
   onRollDice: () => void;
   canRestAtBonfire?: boolean;
+  canOpenShop?: boolean;
 }
 
 export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
   player,
   activeRoll,
   onRollDice,
-  canRestAtBonfire
+  canRestAtBonfire,
+  canOpenShop
 }) => {
   const isMobile = useIsMobile();
 
@@ -116,6 +118,15 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
               </div>
             </>
           )}
+          {canOpenShop && (
+            <>
+              <div className="w-px h-3 bg-slate-600"></div>
+              <div className="flex items-center gap-0.5 text-amber-400">
+                <Store size={10} />
+                <span className="text-[9px]">Торговец</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -201,6 +212,15 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
             <div className="flex items-center gap-1 text-orange-400">
               <Flame size={14} />
               <span>Костёр</span>
+            </div>
+          </>
+        )}
+        {canOpenShop && (
+          <>
+            <div className="w-px h-4 bg-slate-600 mx-1"></div>
+            <div className="flex items-center gap-1 text-amber-400">
+              <Store size={14} />
+              <span>Торговец</span>
             </div>
           </>
         )}

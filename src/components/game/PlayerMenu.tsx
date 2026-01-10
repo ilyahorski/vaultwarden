@@ -257,6 +257,11 @@ export function PlayerMenu({
             </div>
           )}
         </div>
+        <div className="mt-3 text-xs text-blue-500/70 flex justify-between border-t border-blue-700 pt-2">
+          <span>↑↓ ←→ выбор</span>
+          <span>• Enter (Меню) подтвердить</span>
+          <span>• ← закрыть</span>
+        </div>
       </div>
     </div>
   );

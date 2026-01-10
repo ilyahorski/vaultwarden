@@ -171,7 +171,7 @@ export function usePlayerMovement({
       }
     }
 
-    if (targetCell.type === 'wall' || targetCell.type === 'torch' || targetCell.type === 'torch_lit') {
+    if (targetCell.type === 'wall' || targetCell.type === 'torch' || targetCell.type === 'torch_lit' || targetCell.type === 'merchant' || targetCell.type === 'bonfire') {
       if (!autoRolled) addLog(`Вы потратили подготовленный бросок ${r.val} в стену...`, 'info');
       processEnemyTurn(currentGrid, updates);
       return;
