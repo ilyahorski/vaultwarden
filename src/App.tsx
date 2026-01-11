@@ -26,6 +26,7 @@ import { CELL_SIZE } from './constants';
 // Утилиты
 import { rollActionDie } from './utils';
 import { CLASSES } from './constants';
+import { preloadWorldMap } from './utils/townGenerator';
 
 interface DungeonAppProps {
   initialMode?: 'player' | 'dm';
@@ -71,6 +72,13 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     isMovingEnemy, setIsMovingEnemy,
     isMenuOpen, setIsMenuOpen
   } = useUIState();
+
+  // Предзагрузка большой карты мира при монтировании приложения
+  useEffect(() => {
+    preloadWorldMap('/maps/interdest_map.json').catch(err => {
+      console.error('Failed to preload world map:', err);
+    });
+  }, []);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });

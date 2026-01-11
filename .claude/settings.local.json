@@ -20,7 +20,8 @@
       "Bash(grep:*)",
       "Bash(export NVM_DIR=\"$HOME/.nvm\")",
       "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
-      "Bash(. \"$NVM_DIR/nvm.sh\")"
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash(node scripts/convertMapImage.js:*)"
     ]
   }
 }

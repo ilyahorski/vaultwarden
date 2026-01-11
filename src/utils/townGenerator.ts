@@ -2,6 +2,34 @@ import type { CellData } from '../types';
 import { GRID_SIZE } from '../constants';
 import { rand, createEmptyGrid } from './index';
 
+/**
+ * Загружает карту мира из JSON файла
+ * @param jsonPath - путь к JSON файлу относительно public/
+ * @returns Promise с сеткой карты
+ */
+export const loadMapFromJson = async (jsonPath: string): Promise<CellData[][]> => {
+  try {
+    const response = await fetch(jsonPath);
+    if (!response.ok) {
+      throw new Error(`Failed to load map: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.grid || !Array.isArray(data.grid)) {
+      throw new Error('Invalid map format: missing grid array');
+    }
+
+    console.log(`Loaded map: ${data.name || 'Unknown'} (${data.width}x${data.height})`);
+
+    return data.grid as CellData[][];
+  } catch (error) {
+    console.error('Error loading map from JSON:', error);
+    // Возвращаем пустую сетку в случае ошибки
+    return createEmptyGrid();
+  }
+};
+
 // =====================================================
 // ГЕНЕРАТОР ГОРОДОВ (TOWN GENERATOR)
 // =====================================================
@@ -90,9 +118,53 @@ const placeBuilding = (
     }
   }
 
-  // Вход в здание (дверь в нижней стене)
-  const doorX = x + Math.floor(w / 2);
-  const doorY = y + h - 1;
+  // Ищем сторону здания, которая выходит на улицу (floor)
+  let doorX = x + Math.floor(w / 2);
+  let doorY = y + h - 1;
+  let foundStreet = false;
+
+  // Проверяем нижнюю стену (приоритет)
+  const bottomDoorX = x + Math.floor(w / 2);
+  const bottomDoorY = y + h - 1;
+  if (bottomDoorY + 1 < GRID_SIZE && grid[bottomDoorY + 1][bottomDoorX].type === 'floor') {
+    doorX = bottomDoorX;
+    doorY = bottomDoorY;
+    foundStreet = true;
+  }
+
+  // Если снизу нет улицы, проверяем верхнюю стену
+  if (!foundStreet) {
+    const topDoorX = x + Math.floor(w / 2);
+    const topDoorY = y;
+    if (topDoorY - 1 >= 0 && grid[topDoorY - 1][topDoorX].type === 'floor') {
+      doorX = topDoorX;
+      doorY = topDoorY;
+      foundStreet = true;
+    }
+  }
+
+  // Если сверху нет улицы, проверяем правую стену
+  if (!foundStreet) {
+    const rightDoorX = x + w - 1;
+    const rightDoorY = y + Math.floor(h / 2);
+    if (rightDoorX + 1 < GRID_SIZE && grid[rightDoorY][rightDoorX + 1].type === 'floor') {
+      doorX = rightDoorX;
+      doorY = rightDoorY;
+      foundStreet = true;
+    }
+  }
+
+  // Если справа нет улицы, проверяем левую стену
+  if (!foundStreet) {
+    const leftDoorX = x;
+    const leftDoorY = y + Math.floor(h / 2);
+    if (leftDoorX - 1 >= 0 && grid[leftDoorY][leftDoorX - 1].type === 'floor') {
+      doorX = leftDoorX;
+      doorY = leftDoorY;
+    }
+  }
+
+  // Размещаем дверь
   grid[doorY][doorX].type = 'door';
 
   // Специальные маркеры для типов зданий
@@ -166,31 +238,19 @@ const placeTownBuildings = (
  * Добавляет декорации в город (деревья, фонари)
  */
 const addTownDecorations = (grid: CellData[][]): void => {
-  // Размещаем факелы вдоль улиц
+  // НЕ размещаем факелы на улицах - они блокируют движение!
+  // Вместо этого можно добавить траву по краям
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      if (grid[y][x].type === 'floor') {
-        // Шанс разместить факел на углах улиц
-        const hasWallNearby =
-          (x > 0 && grid[y][x - 1].type === 'wall') ||
-          (x < GRID_SIZE - 1 && grid[y][x + 1].type === 'wall') ||
-          (y > 0 && grid[y - 1][x].type === 'wall') ||
-          (y < GRID_SIZE - 1 && grid[y + 1][x].type === 'wall');
-
-        if (hasWallNearby && rand(0, 100) < 15) {
-          grid[y][x].type = 'torch_lit';
-        }
-      }
-
-      // Добавляем траву вокруг зданий
+      // Добавляем траву случайно вокруг стен
       if (grid[y][x].type === 'wall') {
-        const isExteriorWall =
-          (x > 0 && grid[y][x - 1].type === 'wall') ||
-          (x < GRID_SIZE - 1 && grid[y][x + 1].type === 'wall') ||
-          (y > 0 && grid[y - 1][x].type === 'wall') ||
-          (y < GRID_SIZE - 1 && grid[y + 1][x].type === 'wall');
+        const nearFloor =
+          (x > 0 && grid[y][x - 1].type === 'floor') ||
+          (x < GRID_SIZE - 1 && grid[y][x + 1].type === 'floor') ||
+          (y > 0 && grid[y - 1][x].type === 'floor') ||
+          (y < GRID_SIZE - 1 && grid[y + 1][x].type === 'floor');
 
-        if (isExteriorWall && rand(0, 100) < 5) {
+        if (nearFloor && rand(0, 100) < 3) {
           grid[y][x].type = 'grass';
         }
       }
@@ -248,11 +308,43 @@ export const generateTownGrid = (): {
   return { grid: newGrid, buildings };
 };
 
+// Глобальная переменная для хранения предзагруженной большой карты
+let _preloadedWorldMap: CellData[][] | null = null;
+
+/**
+ * Предзагружает большую карту мира для последующего использования
+ * Должна быть вызвана один раз при инициализации приложения
+ */
+export const preloadWorldMap = async (mapPath: string = '/maps/interdest_map.json'): Promise<void> => {
+  try {
+    _preloadedWorldMap = await loadMapFromJson(mapPath);
+    console.log('World map preloaded successfully');
+  } catch (error) {
+    console.error('Failed to preload world map:', error);
+    _preloadedWorldMap = null;
+  }
+};
+
+/**
+ * Возвращает предзагруженную карту мира
+ */
+export const getPreloadedWorldMap = (): CellData[][] | null => {
+  return _preloadedWorldMap;
+};
+
 /**
  * Генерирует базовую карту мира
  * @returns сгенерированная сетка карты мира
  */
 export const generateWorldMapGrid = (): CellData[][] => {
+  // Если большая карта предзагружена, возвращаем её
+  if (_preloadedWorldMap) {
+    console.log('Using preloaded world map');
+    return _preloadedWorldMap;
+  }
+
+  // Иначе генерируем маленькую процедурную карту (fallback)
+  console.log('Generating fallback world map');
   const newGrid = createEmptyGrid();
 
   // Заполняем всю карту травой
