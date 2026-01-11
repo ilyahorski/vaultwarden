@@ -361,7 +361,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     setGrid
   });
 
-  // Эффект следования камеры - центрирование игрока
+  // Эффект следования камеры - центрирование игрока относительно фиксированной игровой области
   useEffect(() => {
     if (!transformRef.current || mode !== 'player' || !hasChosenClass) return;
 
@@ -380,16 +380,27 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
       // Получаем текущий масштаб
       const currentScale = instance.transformState.scale;
 
-      // Размеры viewport
-      const viewportWidth = window.innerWidth;
+      // Вычисляем размер фиксированной квадратной зоны просмотра
       const headerHeight = isMobile ? 110 : 70;
-      const viewportHeight = isMobile
-        ? window.innerHeight * 0.57
-        : window.innerHeight - headerHeight;
+      const sidebarWidth = isMobile ? 0 : 384; // w-96 на desktop
+      const padding = isMobile ? 0 : 32; // 2rem отступы на desktop
 
-      // Вычисляем смещение для центрирования
-      const offsetX = viewportWidth / 2 - playerPixelX * currentScale;
-      const offsetY = viewportHeight / 2 - playerPixelY * currentScale;
+      // Доступное пространство для квадратной зоны
+      const availableWidth = window.innerWidth - sidebarWidth - padding;
+      const availableHeight = isMobile
+        ? window.innerHeight * 0.57
+        : window.innerHeight - headerHeight - padding;
+
+      // Размер квадратной зоны = минимум из доступных размеров
+      const viewportSize = Math.min(availableWidth, availableHeight);
+
+      // Центр квадратной зоны = половина её размера
+      const viewportCenterX = viewportSize / 2;
+      const viewportCenterY = viewportSize / 2;
+
+      // Вычисляем смещение для центрирования персонажа относительно центра зоны
+      const offsetX = viewportCenterX - playerPixelX * currentScale;
+      const offsetY = viewportCenterY - playerPixelY * currentScale;
 
       // Применяем трансформацию с плавной анимацией (200ms)
       setTransform(offsetX, offsetY, currentScale, 200);
@@ -507,9 +518,17 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
               canOpenShop={canOpenShop}
             />
 
-            {/* Контейнер карты - на мобильных занимает 50vh и начинается от 30vh сверху */}
-            <div className={`bg-slate-950 overflow-hidden flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1 p-4 overflow-auto'}`}>
-              <div className="relative w-full h-full">
+            {/* Контейнер для игровой области - заполняет всё доступное пространство */}
+            <div className={`bg-slate-950 flex items-center justify-center relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[57vh]' : 'flex-1'}`}>
+              {/* Фиксированная квадратная игровая зона с overflow: hidden */}
+              <div
+                className="relative overflow-hidden bg-slate-900/50 border-2 border-slate-800/50 rounded-lg shadow-2xl"
+                style={{
+                  width: isMobile ? 'min(90vw, 57vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 70px - 4rem))',
+                  height: isMobile ? 'min(90vw, 57vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 70px - 4rem))',
+                  aspectRatio: '1/1'
+                }}
+              >
                 <TransformWrapper
                   ref={transformRef}
                   initialScale={isMobile ? 0.6 : 1}
@@ -556,9 +575,10 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                     </div>
                   </TransformComponent>
                 </TransformWrapper>
+              </div>
 
-                {/* PlayerMenu вне трансформации - позиционируется относительно viewport */}
-                {isMenuOpen && !combatTarget && (
+              {/* PlayerMenu вне фиксированной зоны - позиционируется относительно viewport */}
+              {isMenuOpen && !combatTarget && (
                   <PlayerMenu
                     player={player}
                     activeMenu={activeMenu}
@@ -577,17 +597,16 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                   />
                 )}
 
-                {/* ShopMenu вне трансформации - позиционируется относительно viewport */}
-                {shopOpen && (
-                  <ShopMenu
-                    player={player}
-                    merchantPosition={shopOpen}
-                    onBuy={handleBuyItem}
-                    onSell={handleSellItem}
-                    onClose={() => setShopOpen(null)}
-                  />
-                )}
-              </div>
+              {/* ShopMenu вне фиксированной зоны - позиционируется относительно viewport */}
+              {shopOpen && (
+                <ShopMenu
+                  player={player}
+                  merchantPosition={shopOpen}
+                  onBuy={handleBuyItem}
+                  onSell={handleSellItem}
+                  onClose={() => setShopOpen(null)}
+                />
+              )}
             </div>
 
             {/* MobileControls - фиксированная панель внизу на мобильных */}
