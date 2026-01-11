@@ -75,7 +75,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
   // Предзагрузка большой карты мира при монтировании приложения
   useEffect(() => {
-    preloadWorldMap('/maps/interdest_map.json').catch(err => {
+    preloadWorldMap('/maps/interdest_map_compact.json').catch(err => {
       console.error('Failed to preload world map:', err);
     });
   }, []);

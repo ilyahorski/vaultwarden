@@ -1,9 +1,10 @@
-import type { CellData } from '../types';
+import type { CellData, CellType } from '../types';
 import { GRID_SIZE } from '../constants';
 import { rand, createEmptyGrid } from './index';
+import { extractViewport } from './viewportUtils';
 
 /**
- * Загружает карту мира из JSON файла
+ * Загружает карту мира из JSON файла (поддерживает как обычный, так и компактный формат)
  * @param jsonPath - путь к JSON файлу относительно public/
  * @returns Promise с сеткой карты
  */
@@ -16,13 +17,52 @@ export const loadMapFromJson = async (jsonPath: string): Promise<CellData[][]> =
 
     const data = await response.json();
 
-    if (!data.grid || !Array.isArray(data.grid)) {
-      throw new Error('Invalid map format: missing grid array');
+    console.log(`Loading map: ${data.name || 'Unknown'} (${data.width}x${data.height})`);
+
+    // Компактный формат (версия 2)
+    if (data.format === 'compact' && data.rows && Array.isArray(data.rows)) {
+      console.log('Decoding compact format...');
+
+      const grid: CellData[][] = [];
+      const legend = data.legend || { 'w': 'water', 'g': 'grass', '#': 'wall', '.': 'floor' };
+
+      for (let y = 0; y < data.height; y++) {
+        const row: CellData[] = [];
+        const rowString = data.rows[y] || '';
+
+        for (let x = 0; x < data.width; x++) {
+          const code = rowString[x] || 'g';
+          const cellType = legend[code] || 'grass';
+
+          row.push({
+            x,
+            y,
+            type: cellType as CellType,
+            item: null,
+            enemy: null,
+            isRevealed: false,
+            isVisible: false
+          });
+        }
+
+        grid.push(row);
+
+        if ((y + 1) % 100 === 0) {
+          console.log(`Decoded ${y + 1}/${data.height} rows`);
+        }
+      }
+
+      console.log(`✓ Compact map loaded: ${data.width}x${data.height}`);
+      return grid;
     }
 
-    console.log(`Loaded map: ${data.name || 'Unknown'} (${data.width}x${data.height})`);
+    // Обычный формат (версия 1) - старый формат с полными объектами
+    if (data.grid && Array.isArray(data.grid)) {
+      console.log(`✓ Full map loaded: ${data.width}x${data.height}`);
+      return data.grid as CellData[][];
+    }
 
-    return data.grid as CellData[][];
+    throw new Error('Invalid map format: missing grid or rows');
   } catch (error) {
     console.error('Error loading map from JSON:', error);
     // Возвращаем пустую сетку в случае ошибки
@@ -334,12 +374,31 @@ export const getPreloadedWorldMap = (): CellData[][] | null => {
 
 /**
  * Генерирует базовую карту мира
- * @returns сгенерированная сетка карты мира
+ * @param playerX - X координата игрока для создания viewport (опционально)
+ * @param playerY - Y координата игрока для создания viewport (опционально)
+ * @returns сгенерированная сетка карты мира (либо полная, либо viewport)
  */
-export const generateWorldMapGrid = (): CellData[][] => {
-  // Если большая карта предзагружена, возвращаем её
+export const generateWorldMapGrid = (playerX?: number, playerY?: number): CellData[][] => {
+  // Если большая карта предзагружена
   if (_preloadedWorldMap) {
-    console.log('Using preloaded world map');
+    const mapHeight = _preloadedWorldMap.length;
+    const mapWidth = _preloadedWorldMap[0]?.length || 0;
+
+    console.log(`Using preloaded world map (${mapWidth}x${mapHeight})`);
+
+    // Если карта больше стандартного размера, создаём viewport
+    if (mapWidth > GRID_SIZE || mapHeight > GRID_SIZE) {
+      // Определяем центр для viewport (по умолчанию - центр карты)
+      const centerX = playerX !== undefined ? playerX : Math.floor(mapWidth / 2);
+      const centerY = playerY !== undefined ? playerY : Math.floor(mapHeight / 2);
+
+      console.log(`Creating viewport around (${centerX}, ${centerY})`);
+
+      const { viewport } = extractViewport(_preloadedWorldMap, centerX, centerY);
+      return viewport;
+    }
+
+    // Если карта маленькая, возвращаем как есть
     return _preloadedWorldMap;
   }
 
