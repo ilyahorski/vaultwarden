@@ -200,10 +200,9 @@ const addTownDecorations = (grid: CellData[][]): void => {
 
 /**
  * Основная функция генерации города
- * @param townName - название города (для будущего использования)
  * @returns сгенерированная сетка города и список зданий
  */
-export const generateTownGrid = (townName: string = 'Town'): {
+export const generateTownGrid = (): {
   grid: CellData[][];
   buildings: TownBuilding[];
 } => {

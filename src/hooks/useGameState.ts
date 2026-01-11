@@ -315,7 +315,7 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
        addLog('Вы оказались на карте мира...', 'info');
     } else if (levelIndex === 2) {
        // Уровень 2 = Город (ПРОТОТИП JRPG)
-       const gen = generateTownGrid('Стартовый город');
+       const gen = generateTownGrid();
        newGrid = gen.grid;
        // Ищем таверну (bonfire) или выход (stairs_up) для спавна
        let foundStart = false;
