@@ -3,6 +3,7 @@ import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, Act
 import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS, GRID_SIZE } from '../constants';
 import { createLogEntry, createEmptyGrid } from '../utils';
 import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator';
+import { generateWorldMapGrid, generateTownGrid } from '../utils/townGenerator';
 import { compressLevel, decompressLevel, type CompressedLevel } from '../utils/levelCompression';
 
 // Вспомогательная функция для распаковки истории уровней
@@ -249,7 +250,7 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
     if (currentCampaign && currentCampaign.levels[levelIndex]) {
        newGrid = JSON.parse(JSON.stringify(currentCampaign.levels[levelIndex]));
        let foundStart = false;
-       
+
        // 1. Приоритет: Лестница вверх (стандарт для входа)
        for(let y=0; y<GRID_SIZE; y++){
          for(let x=0; x<GRID_SIZE; x++){
@@ -295,11 +296,46 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
        if(!foundStart) startPos = {x: 1, y: 1};
 
        addLog(`Загружен уровень из кампании: ${currentCampaign.name}`, 'info');
+    } else if (levelIndex === 1) {
+       // Уровень 1 = Карта мира (ПРОТОТИП JRPG)
+       newGrid = generateWorldMapGrid();
+       // Ищем безопасную точку спавна (трава без врагов)
+       let foundStart = false;
+       for(let y=0; y<GRID_SIZE; y++){
+         for(let x=0; x<GRID_SIZE; x++){
+            if(newGrid[y][x].type === 'grass' && !newGrid[y][x].enemy) {
+               startPos = {x, y};
+               foundStart = true;
+               break;
+            }
+         }
+         if(foundStart) break;
+       }
+       if(!foundStart) startPos = {x: 22, y: 22}; // Центр карты как fallback
+       addLog('Вы оказались на карте мира...', 'info');
+    } else if (levelIndex === 2) {
+       // Уровень 2 = Город (ПРОТОТИП JRPG)
+       const gen = generateTownGrid('Стартовый город');
+       newGrid = gen.grid;
+       // Ищем таверну (bonfire) или выход (stairs_up) для спавна
+       let foundStart = false;
+       for(let y=0; y<GRID_SIZE; y++){
+         for(let x=0; x<GRID_SIZE; x++){
+            if(newGrid[y][x].type === 'bonfire' || newGrid[y][x].type === 'stairs_up') {
+               startPos = {x, y};
+               foundStart = true;
+               break;
+            }
+         }
+         if(foundStart) break;
+       }
+       if(!foundStart) startPos = {x: 22, y: 22}; // Центр города как fallback
+       addLog('Вы входите в город...', 'info');
     } else {
+       // Уровни 3+ = Подземелья (как раньше)
        const gen = generateDungeonGrid(levelIndex);
        newGrid = gen.grid;
        startPos = getStartPosition(gen.rooms);
-       // Генератор уже установил правильный тип клетки (stairs_up для уровней > 1)
     }
 
     newGrid[startPos.y][startPos.x].enemy = null;
