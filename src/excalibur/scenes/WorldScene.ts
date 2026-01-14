@@ -4,6 +4,8 @@ import { TriggerActor } from '../actors/TriggerActor';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EditorMode } from '../systems/EditorMode';
 import { MapLoader } from '../loaders/MapLoader';
+import { TILE_CONFIG } from '../config/TileConfig';
+import { preloadAllTilesets } from '../resources/ImageSprites';
 import type { MapData } from '../loaders/MapLoader';
 import type { CellType } from '../../types';
 
@@ -24,6 +26,11 @@ export class WorldScene extends ex.Scene {
     console.log('WorldScene: Initializing...');
 
     try {
+      // Предзагрузка тайлсетов
+      console.log('WorldScene: Preloading tilesets...');
+      await preloadAllTilesets();
+      console.log('WorldScene: Tilesets preloaded');
+
       // Загружаем карту из JSON
       console.log('WorldScene: Loading map...');
       const mapData = await MapLoader.load('/maps/interdest_map.json');
@@ -33,8 +40,8 @@ export class WorldScene extends ex.Scene {
       this.tileMap = new ex.TileMap({
         rows: mapData.height,
         columns: mapData.width,
-        tileWidth: 32,
-        tileHeight: 32
+        tileWidth: TILE_CONFIG.TILE_SIZE,
+        tileHeight: TILE_CONFIG.TILE_SIZE
       });
 
       // Заполняем TileMap placeholder спрайтами (асинхронно)
@@ -46,7 +53,7 @@ export class WorldScene extends ex.Scene {
       console.log(`WorldScene: Player start position (${startPos.x}, ${startPos.y})`);
 
       // Создаем игрока в центре карты (pixel coordinates)
-      this.player = new PlayerActor(startPos.x * 32, startPos.y * 32);
+      this.player = new PlayerActor(startPos.x * TILE_CONFIG.TILE_SIZE, startPos.y * TILE_CONFIG.TILE_SIZE);
       this.add(this.player);
 
       // Камера следует за игроком
@@ -89,6 +96,9 @@ export class WorldScene extends ex.Scene {
   onPreUpdate(engine: ex.Engine, delta: number): void {
     // Обновляем систему случайных боев
     this.combatSystem?.update(delta);
+
+    // Обновляем режим редактирования (для панорамирования WASD)
+    this.editorMode?.update(delta);
   }
 
   /**

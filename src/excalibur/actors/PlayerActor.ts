@@ -1,6 +1,7 @@
 import * as ex from 'excalibur';
 import type { Direction } from '../../types';
 import { EventBridge } from '../utils/EventBridge';
+import { TILE_CONFIG } from '../config/TileConfig';
 
 export class PlayerActor extends ex.Actor {
   private speed = 120; // pixels per second
@@ -11,8 +12,8 @@ export class PlayerActor extends ex.Actor {
   constructor(x: number, y: number) {
     super({
       pos: new ex.Vector(x, y),
-      width: 32,
-      height: 32,
+      width: TILE_CONFIG.TILE_SIZE,
+      height: TILE_CONFIG.TILE_SIZE,
       collisionType: ex.CollisionType.Active
     });
 
@@ -28,10 +29,10 @@ export class PlayerActor extends ex.Actor {
   }
 
   onInitialize(engine: ex.Engine): void {
-    // Создаем placeholder спрайт (синий квадрат 32×32)
+    // Создаем placeholder спрайт (синий квадрат)
     const rect = new ex.Rectangle({
-      width: 32,
-      height: 32,
+      width: TILE_CONFIG.TILE_SIZE,
+      height: TILE_CONFIG.TILE_SIZE,
       color: ex.Color.fromHex('#2196f3') // Синий
     });
 
@@ -42,8 +43,8 @@ export class PlayerActor extends ex.Actor {
     this.handleInput(engine.input.keyboard);
 
     // Отправляем события в React при смене тайла
-    const currentTileX = Math.floor(this.pos.x / 32);
-    const currentTileY = Math.floor(this.pos.y / 32);
+    const currentTileX = Math.floor(this.pos.x / TILE_CONFIG.TILE_SIZE);
+    const currentTileY = Math.floor(this.pos.y / TILE_CONFIG.TILE_SIZE);
 
     if (currentTileX !== this.lastTileX || currentTileY !== this.lastTileY) {
       this.lastTileX = currentTileX;

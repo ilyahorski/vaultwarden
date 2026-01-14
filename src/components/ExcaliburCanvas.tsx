@@ -81,13 +81,49 @@ export const ExcaliburCanvas = forwardRef<ExcaliburCanvasRef, ExcaliburCanvasPro
       }
     }, [isEditorMode]);
 
-    // Синхронизация выбранного инструмента
+    // Обработка выбора тайла из тайлсета
     useEffect(() => {
-      const game = gameRef.current;
-      if (!game || !isEditorMode) return;
+      const handleTilesetTileSelected = (e: Event) => {
+        const customEvent = e as CustomEvent<{ tilesetId: string; x: number; y: number }>;
+        const { tilesetId, x, y } = customEvent.detail;
 
-      game.setEditorTool(selectedTool);
-    }, [selectedTool, isEditorMode]);
+        const game = gameRef.current;
+        if (!game) return;
+
+        // Используем новый метод setSelectedTile из ExcaliburGame
+        if (typeof (game as any).setSelectedTile === 'function') {
+          (game as any).setSelectedTile(tilesetId, x, y);
+        }
+      };
+
+      window.addEventListener('tileset:tileSelected', handleTilesetTileSelected);
+
+      return () => {
+        window.removeEventListener('tileset:tileSelected', handleTilesetTileSelected);
+      };
+    }, []);
+
+    // Обработка изменения размера кисти
+    useEffect(() => {
+      const handleBrushSizeChanged = (e: Event) => {
+        const customEvent = e as CustomEvent<{ width: number; height: number }>;
+        const { width, height } = customEvent.detail;
+
+        const game = gameRef.current;
+        if (!game) return;
+
+        // Используем новый метод setBrushSize из ExcaliburGame
+        if (typeof (game as any).setBrushSize === 'function') {
+          (game as any).setBrushSize(width, height);
+        }
+      };
+
+      window.addEventListener('brush:sizeChanged', handleBrushSizeChanged);
+
+      return () => {
+        window.removeEventListener('brush:sizeChanged', handleBrushSizeChanged);
+      };
+    }, []);
 
     return (
       <div

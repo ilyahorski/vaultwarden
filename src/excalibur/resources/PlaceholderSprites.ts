@@ -1,4 +1,5 @@
 import * as ex from 'excalibur';
+import { TILE_CONFIG } from '../config/TileConfig';
 
 /**
  * Цветовая схема для placeholder тайлов (32×32 px квадраты)
@@ -67,8 +68,8 @@ export function getSharedSprite(cellType: string): ex.Rectangle {
   const color = PLACEHOLDER_COLORS[cellType] || PLACEHOLDER_COLORS.default;
 
   const sprite = new ex.Rectangle({
-    width: 32,
-    height: 32,
+    width: TILE_CONFIG.TILE_SIZE,
+    height: TILE_CONFIG.TILE_SIZE,
     color: ex.Color.fromHex(color)
   });
 

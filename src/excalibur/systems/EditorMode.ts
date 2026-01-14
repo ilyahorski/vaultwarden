@@ -1,7 +1,19 @@
 import * as ex from 'excalibur';
 import { EventBridge } from '../utils/EventBridge';
-import { getSharedSprite, SOLID_TILE_TYPES } from '../resources/PlaceholderSprites';
-import type { CellType } from '../../types';
+import { TILE_CONFIG } from '../config/TileConfig';
+import { getSpriteFromTileset } from '../resources/ImageSprites';
+import { getTileMetadata } from '../config/TilesetConfig';
+
+interface TileSelection {
+  tilesetId: string;
+  tileX: number;
+  tileY: number;
+}
+
+interface BrushSize {
+  width: number;
+  height: number;
+}
 
 /**
  * EditorMode - система редактирования карты
@@ -17,9 +29,12 @@ export class EditorMode {
   private scene: ex.Scene;
   private tileMap: ex.TileMap;
   private camera: ex.Camera;
-  private selectedTool: CellType = 'floor';
+  private selectedTile: TileSelection | null = null;
+  private brushSize: BrushSize = { width: 1, height: 1 }; // Размер кисти по умолчанию 1x1
   private isActive = false;
   private isMouseDown = false;
+  private lastPanPosition: ex.Vector = ex.vec(0, 0);
+  private readonly CAMERA_PAN_SPEED = 300; // Пиксели в секунду при нажатии клавиш
 
   constructor(scene: ex.Scene, tileMap: ex.TileMap, camera: ex.Camera) {
     this.scene = scene;
@@ -32,22 +47,38 @@ export class EditorMode {
    * Настройка обработчиков ввода
    */
   private setupInput(): void {
-    // Клик мыши - размещение тайла
+    // Левая кнопка мыши - размещение тайла или панорамирование (с пробелом)
     this.scene.input.pointers.primary.on('down', (evt) => {
       if (!this.isActive) return;
       this.isMouseDown = true;
-      this.handlePointerDown(evt);
+      this.lastPanPosition = evt.screenPos.clone();
+
+      const keyboard = this.scene.engine.input.keyboard;
+      if (!keyboard.isHeld(ex.Keys.Space)) {
+        // Только если пробел НЕ зажат - размещаем тайл
+        this.handlePointerDown(evt);
+      }
     });
 
-    // Отпускание мыши
+    // Отпускание левой кнопки мыши
     this.scene.input.pointers.primary.on('up', () => {
       this.isMouseDown = false;
     });
 
-    // Перемещение мыши с зажатой кнопкой - "рисование"
+    // Панорамирование: пробел + зажатая мышь
     this.scene.input.pointers.primary.on('move', (evt) => {
       if (!this.isActive || !this.isMouseDown) return;
-      this.handlePointerDown(evt);
+
+      const keyboard = this.scene.engine.input.keyboard;
+      if (keyboard.isHeld(ex.Keys.Space)) {
+        // Режим панорамирования: пробел зажат
+        const delta = evt.screenPos.sub(this.lastPanPosition);
+        this.camera.pos = this.camera.pos.sub(delta);
+        this.lastPanPosition = evt.screenPos.clone();
+      } else {
+        // Режим рисования
+        this.handlePointerDown(evt);
+      }
     });
   }
 
@@ -59,8 +90,8 @@ export class EditorMode {
     const worldPos = this.camera.screenToWorld(evt.worldPos);
 
     // Конвертируем мировые координаты в координаты тайлов
-    const tileX = Math.floor(worldPos.x / 32);
-    const tileY = Math.floor(worldPos.y / 32);
+    const tileX = Math.floor(worldPos.x / TILE_CONFIG.TILE_SIZE);
+    const tileY = Math.floor(worldPos.y / TILE_CONFIG.TILE_SIZE);
 
     // Проверяем границы карты
     if (tileX < 0 || tileY < 0 ||
@@ -74,38 +105,108 @@ export class EditorMode {
   }
 
   /**
-   * Размещение тайла в указанных координатах
+   * Размещение тайла в указанных координатах с учетом размера кисти
    */
   private placeTile(x: number, y: number): void {
-    const tile = this.tileMap.getTile(x, y);
-    if (!tile) return;
+    if (!this.selectedTile) {
+      console.warn('[EditorMode] No tile selected');
+      return;
+    }
 
-    // Очищаем старую графику
-    tile.clearGraphics();
+    // Размещаем тайлы в области, определяемой размером кисти
+    for (let dy = 0; dy < this.brushSize.height; dy++) {
+      for (let dx = 0; dx < this.brushSize.width; dx++) {
+        const targetX = x + dx;
+        const targetY = y + dy;
 
-    // Добавляем новый спрайт
-    const sprite = getSharedSprite(this.selectedTool);
-    tile.addGraphic(sprite);
+        const tile = this.tileMap.getTile(targetX, targetY);
+        if (!tile) continue; // Пропускаем, если тайл за пределами карты
 
-    // Обновляем коллизию
-    tile.solid = SOLID_TILE_TYPES.has(this.selectedTool);
+        // Очищаем старую графику
+        tile.clearGraphics();
 
-    console.log(`[EditorMode] Placed ${this.selectedTool} at (${x}, ${y})`);
+        // Получаем спрайт из тайлсета
+        const sprite = getSpriteFromTileset(
+          this.selectedTile.tilesetId,
+          this.selectedTile.tileX,
+          this.selectedTile.tileY
+        );
 
-    // Отправляем событие в React для синхронизации state
-    EventBridge.emitTileChanged({
-      x,
-      y,
-      type: this.selectedTool
-    });
+        if (sprite) {
+          tile.addGraphic(sprite);
+
+          // Получаем метаданные для определения проходимости и типа
+          const metadata = getTileMetadata(
+            this.selectedTile.tilesetId,
+            this.selectedTile.tileX,
+            this.selectedTile.tileY
+          );
+
+          if (metadata) {
+            tile.solid = !metadata.passable;
+
+            // Отправляем событие в React с координатами тайлсета
+            EventBridge.emitTileChanged({
+              x: targetX,
+              y: targetY,
+              type: metadata.type,
+              tilesetX: this.selectedTile.tileX,
+              tilesetY: this.selectedTile.tileY,
+              tilesetSource: this.selectedTile.tilesetId
+            });
+          } else {
+            // Если метаданные не найдены, используем дефолтные значения
+            tile.solid = false;
+          }
+        }
+      }
+    }
+
+    console.log(`[EditorMode] Placed ${this.brushSize.width}x${this.brushSize.height} tiles at (${x}, ${y})`);
   }
 
   /**
-   * Устанавливает текущий инструмент (тип тайла)
+   * Устанавливает выбранный тайл из тайлсета
    */
-  setTool(tool: CellType): void {
-    this.selectedTool = tool;
-    console.log(`[EditorMode] Tool selected: ${tool}`);
+  setSelectedTile(tilesetId: string, tileX: number, tileY: number): void {
+    this.selectedTile = { tilesetId, tileX, tileY };
+
+    const metadata = getTileMetadata(tilesetId, tileX, tileY);
+    const tileName = metadata?.name || `(${tileX}, ${tileY})`;
+
+    console.log(`[EditorMode] Selected tile: ${tileName} from ${tilesetId}`);
+  }
+
+  /**
+   * Устанавливает размер кисти
+   */
+  setBrushSize(width: number, height: number): void {
+    this.brushSize = { width, height };
+    console.log(`[EditorMode] Brush size set to ${width}x${height}`);
+  }
+
+  /**
+   * Обновление каждый кадр - панорамирование клавишами WASD
+   */
+  update(delta: number): void {
+    if (!this.isActive) return;
+
+    const keyboard = this.scene.engine.input.keyboard;
+    const moveSpeed = (this.CAMERA_PAN_SPEED * delta) / 1000;
+
+    // WASD или стрелки для панорамирования камеры
+    if (keyboard.isHeld(ex.Keys.W) || keyboard.isHeld(ex.Keys.Up)) {
+      this.camera.pos = this.camera.pos.add(ex.vec(0, -moveSpeed));
+    }
+    if (keyboard.isHeld(ex.Keys.S) || keyboard.isHeld(ex.Keys.Down)) {
+      this.camera.pos = this.camera.pos.add(ex.vec(0, moveSpeed));
+    }
+    if (keyboard.isHeld(ex.Keys.A) || keyboard.isHeld(ex.Keys.Left)) {
+      this.camera.pos = this.camera.pos.add(ex.vec(-moveSpeed, 0));
+    }
+    if (keyboard.isHeld(ex.Keys.D) || keyboard.isHeld(ex.Keys.Right)) {
+      this.camera.pos = this.camera.pos.add(ex.vec(moveSpeed, 0));
+    }
   }
 
   /**
@@ -113,6 +214,8 @@ export class EditorMode {
    */
   enable(): void {
     this.isActive = true;
+    // Переключаем камеру на свободное перемещение (отключаем следование за игроком)
+    this.camera.clearAllStrategies();
     console.log('[EditorMode] Enabled');
   }
 

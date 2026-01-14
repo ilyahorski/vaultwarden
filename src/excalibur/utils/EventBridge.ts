@@ -47,8 +47,24 @@ class ExcaliburEventBridge extends EventTarget {
   }
 
   // Excalibur → React: изменение тайла в редакторе
-  emitTileChanged(data: { x: number; y: number; type: string }): void {
+  emitTileChanged(data: {
+    x: number;
+    y: number;
+    type: string;
+    tilesetX?: number;
+    tilesetY?: number;
+    tilesetSource?: string;
+  }): void {
     this.dispatchEvent(new CustomEvent('tile:changed', { detail: data }));
+  }
+
+  // React → Excalibur: выбор тайла из тайлсета в редакторе
+  emitTilesetTileSelected(data: {
+    tilesetId: string;
+    x: number;
+    y: number;
+  }): void {
+    this.dispatchEvent(new CustomEvent('tileset:tileSelected', { detail: data }));
   }
 
   // React → Excalibur: управление игрой

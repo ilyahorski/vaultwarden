@@ -1,5 +1,7 @@
 import * as ex from 'excalibur';
 import { getSharedSprite, SOLID_TILE_TYPES } from '../resources/PlaceholderSprites';
+import { getSpriteFromTileset } from '../resources/ImageSprites';
+import { getTileMetadata } from '../config/TilesetConfig';
 import type { CellData } from '../../types';
 
 export interface MapData {
@@ -50,7 +52,40 @@ export class MapLoader {
         const tile = tileMap.getTile(x, y);
         if (!tile) continue;
 
-        // Используем SHARED спрайт (один на все тайлы этого типа)
+        // ПРИОРИТЕТ 1: Координаты тайлсета (если есть)
+        if (cellData.tilesetX !== undefined &&
+            cellData.tilesetY !== undefined &&
+            cellData.tilesetSource) {
+
+          const sprite = getSpriteFromTileset(
+            cellData.tilesetSource,
+            cellData.tilesetX,
+            cellData.tilesetY
+          );
+
+          if (sprite) {
+            tile.addGraphic(sprite);
+
+            // Получаем проходимость из метаданных
+            const metadata = getTileMetadata(
+              cellData.tilesetSource,
+              cellData.tilesetX,
+              cellData.tilesetY
+            );
+
+            if (metadata) {
+              tile.solid = !metadata.passable;
+            }
+
+            processedTiles++;
+            if (processedTiles % BATCH_SIZE === 0) {
+              await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            continue; // Переходим к следующему тайлу
+          }
+        }
+
+        // ПРИОРИТЕТ 2: Fallback на PlaceholderSprites по типу
         const sprite = getSharedSprite(cellData.type);
         tile.addGraphic(sprite);
 

@@ -44,6 +44,9 @@ import { GEAR_STATS } from "../../constants";
 import { EventLog } from "../game/EventLog";
 import { MusicPlayer } from "../ui/MusicPlayer";
 import { useIsMobile } from "../../hooks/useMediaQuery";
+import { TilesetPicker } from "./TilesetPicker";
+import { BrushSizePicker } from "./BrushSizePicker";
+import { EventBridge } from "../../excalibur/utils/EventBridge";
 
 // Вертикальная кнопка таба для мобильных
 const MobileTabBtn = ({
@@ -239,10 +242,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {mode === "dm" && (
-        <div className="flex flex-1 min-h-0">
-          <div className={`flex flex-1 min-h-0 ${isMobile ? "" : "flex-col"}`}>
+        <div className="flex flex-1 w-full min-h-0">
+          <div className={`flex flex-1 w-full min-h-0 ${isMobile ? "" : "flex-col"}`}>
             {!isMobile && (
-              <div className="flex shrink-0 bg-slate-950 border-b border-slate-800">
+              <div className="flex flex-col shrink-0 bg-slate-950 border-b border-slate-800">
                 {renderTabButton(
                   "structure",
                   <LayoutGrid size={18} />,
@@ -260,147 +263,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">
-                        Базовые
+                        Выбор тайла из тайлсета
                       </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <ToolButton
-                          active={selectedTool === "start"}
-                          onClick={() => onToolChange("start")}
-                          icon={<User size={16} />}
-                          label="Точка старта"
-                        />
-                        <ToolButton
-                          active={selectedTool === "clear"}
-                          onClick={() => onToolChange("clear")}
-                          icon={<Trash2 size={16} />}
-                          label="Ластик"
-                        />
-                        <ToolButton
-                          active={selectedTool === "wall"}
-                          onClick={() => onToolChange("wall")}
-                          icon={<Box size={16} />}
-                          label="Стена"
-                        />
-                        <ToolButton
-                          active={selectedTool === "floor"}
-                          onClick={() => onToolChange("floor")}
-                          icon={<MapIcon size={16} />}
-                          label="Пол"
-                        />
-                        <ToolButton
-                          active={selectedTool === "door"}
-                          onClick={() => onToolChange("door")}
-                          icon={<DoorClosed size={16} />}
-                          label="Дверь"
-                        />
-                        <ToolButton
-                          active={selectedTool === "bonfire"}
-                          onClick={() => onToolChange("bonfire")}
-                          icon={<Flame size={16} className="text-orange-400" />}
-                          label="Костёр"
-                        />
-                      </div>
+                      <TilesetPicker
+                        onSelectTile={(tilesetId, x, y) => {
+                          EventBridge.emitTilesetTileSelected({ tilesetId, x, y });
+                        }}
+                      />
                     </div>
                     <div>
-                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">
-                        Ландшафт
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <ToolButton
-                          active={selectedTool === "water"}
-                          onClick={() => onToolChange("water")}
-                          icon={
-                            <Droplets size={16} className="text-blue-400" />
-                          }
-                          label="Вода"
-                        />
-                        <ToolButton
-                          active={selectedTool === "lava"}
-                          onClick={() => onToolChange("lava")}
-                          icon={<Flame size={16} className="text-red-500" />}
-                          label="Лава"
-                        />
-                        <ToolButton
-                          active={selectedTool === "grass"}
-                          onClick={() => onToolChange("grass")}
-                          icon={<Trees size={16} className="text-green-500" />}
-                          label="Лес"
-                        />
-                        <ToolButton
-                          active={selectedTool === "trap"}
-                          onClick={() => onToolChange("trap")}
-                          icon={<Shell size={16} />}
-                          label="Ловушка"
-                        />
-                        <ToolButton
-                          active={selectedTool === "torch"}
-                          onClick={() => onToolChange("torch")}
-                          icon={
-                            <FlameKindling
-                              size={16}
-                              className="text-orange-400"
-                            />
-                          }
-                          label="Факел"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">
-                        Переходы
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <ToolButton
-                          active={selectedTool === "stairs_down"}
-                          onClick={() => onToolChange("stairs_down")}
-                          icon={
-                            <ArrowDownCircle
-                              size={16}
-                              className="text-blue-400"
-                            />
-                          }
-                          label="Вниз"
-                        />
-                        <ToolButton
-                          active={selectedTool === "stairs_up"}
-                          onClick={() => onToolChange("stairs_up")}
-                          icon={
-                            <ArrowUpCircle
-                              size={16}
-                              className="text-blue-400"
-                            />
-                          }
-                          label="Вверх"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-purple-500 uppercase tracking-widest mb-3 pl-1">
-                        Секреты
-                      </h3>
-                      <div className="grid grid-cols-1 gap-3">
-                        <ToolButton
-                          active={selectedTool === "secret_button"}
-                          onClick={() => onToolChange("secret_button")}
-                          icon={
-                            <EyeOff size={16} className="text-purple-400" />
-                          }
-                          label="Секретная кнопка"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-3 pl-1">
-                        NPC
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <ToolButton
-                          active={selectedTool === "merchant"}
-                          onClick={() => onToolChange("merchant")}
-                          icon={<Store size={16} className="text-amber-400" />}
-                          label="Торговец"
-                        />
-                      </div>
+                      <BrushSizePicker
+                        onSelectBrushSize={(width, height) => {
+                          window.dispatchEvent(
+                            new CustomEvent('brush:sizeChanged', {
+                              detail: { width, height }
+                            })
+                          );
+                        }}
+                      />
                     </div>
                   </div>
                 )}

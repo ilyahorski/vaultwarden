@@ -96,15 +96,28 @@ export class ExcaliburGame extends ex.Engine {
   }
 
   /**
-   * Устанавливает выбранный инструмент в редакторе
+   * Устанавливает выбранный тайл из тайлсета в редакторе
    */
-  setEditorTool(tool: string): void {
+  setSelectedTile(tilesetId: string, tileX: number, tileY: number): void {
     const worldScene = this.getWorldScene();
     const editorMode = worldScene?.getEditorMode();
 
     if (editorMode) {
-      editorMode.setTool(tool as any);
-      console.log(`ExcaliburGame: Editor tool set to ${tool}`);
+      editorMode.setSelectedTile(tilesetId, tileX, tileY);
+      console.log(`ExcaliburGame: Selected tile (${tileX}, ${tileY}) from ${tilesetId}`);
+    }
+  }
+
+  /**
+   * Устанавливает размер кисти в редакторе
+   */
+  setBrushSize(width: number, height: number): void {
+    const worldScene = this.getWorldScene();
+    const editorMode = worldScene?.getEditorMode();
+
+    if (editorMode) {
+      editorMode.setBrushSize(width, height);
+      console.log(`ExcaliburGame: Brush size set to ${width}x${height}`);
     }
   }
 }

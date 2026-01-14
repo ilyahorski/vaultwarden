@@ -121,6 +121,12 @@ export interface CellData {
   x: number;
   y: number;
   type: CellType;
+
+  // Координаты тайлсета (для профессиональной системы тайлсетов)
+  tilesetX?: number;        // X координата в атласе тайлсета
+  tilesetY?: number;        // Y координата в атласе тайлсета
+  tilesetSource?: string;   // ID тайлсета ('world', 'town', 'dungeon')
+
   item: ItemType;
   enemy: EnemyType;
   enemyHp?: number;

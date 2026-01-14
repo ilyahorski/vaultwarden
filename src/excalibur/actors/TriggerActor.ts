@@ -1,6 +1,7 @@
 import * as ex from 'excalibur';
 import { PlayerActor } from './PlayerActor';
 import { EventBridge } from '../utils/EventBridge';
+import { TILE_CONFIG } from '../config/TileConfig';
 
 export type TriggerType = 'bonfire' | 'trap' | 'lava' | 'merchant';
 
@@ -25,9 +26,12 @@ export class TriggerActor extends ex.Actor {
 
   constructor(config: TriggerConfig) {
     super({
-      pos: new ex.Vector(config.x * 32 + 16, config.y * 32 + 16), // Центр тайла
-      width: 32,
-      height: 32,
+      pos: new ex.Vector(
+        config.x * TILE_CONFIG.TILE_SIZE + TILE_CONFIG.TILE_SIZE_HALF,
+        config.y * TILE_CONFIG.TILE_SIZE + TILE_CONFIG.TILE_SIZE_HALF
+      ), // Центр тайла
+      width: TILE_CONFIG.TILE_SIZE,
+      height: TILE_CONFIG.TILE_SIZE,
       collisionType: ex.CollisionType.Passive // Не блокирует движение
     });
 
@@ -49,8 +53,8 @@ export class TriggerActor extends ex.Actor {
       };
 
       const rect = new ex.Rectangle({
-        width: 32,
-        height: 32,
+        width: TILE_CONFIG.TILE_SIZE,
+        height: TILE_CONFIG.TILE_SIZE,
         color: ex.Color.fromHex(colors[this.triggerType])
       });
 
