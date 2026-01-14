@@ -25,6 +25,12 @@ export function useEnemyAI({
 }: UseEnemyAIProps) {
   
   const processEnemyTurn = (currentGrid: CellData[][], currentPlayer: Player) => {
+    // Для world map (уровень 1) враги обрабатываются через Excalibur CombatSystem (random encounters)
+    // Не нужно обрабатывать врагов на карте
+    if (currentPlayer.dungeonLevel === 1) {
+      return;
+    }
+
     let damageToPlayer = 0;
 
     // Сначала собираем врагов без создания копии grid
@@ -48,6 +54,13 @@ export function useEnemyAI({
 
       if (dist <= AGGRO_RADIUS && dist > 0) {
         const enemyStats = MONSTER_STATS[enemy.type];
+
+        // Проверка на случай, если враг не найден в MONSTER_STATS
+        if (!enemyStats) {
+          console.warn(`Enemy stats not found for type: ${enemy.type}`);
+          continue;
+        }
+
         const levelMultiplier = 1 + (currentPlayer.dungeonLevel - 1) * 0.1;
         const scaledAtk = Math.floor(enemyStats.atk * levelMultiplier);
 

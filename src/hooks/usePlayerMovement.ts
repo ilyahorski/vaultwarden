@@ -3,6 +3,7 @@ import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX
 import type { PotionType, WeaponType, ArmorType } from '../types';
 import { updateVisibility } from './useFogOfWar';
 import { checkPlayerDeath, clampHp } from '../utils';
+import { generateWorldMapGrid } from '../utils/townGenerator';
 
 // Вспомогательная функция проверки соседства с костром
 const checkAdjacentBonfire = (grid: CellData[][], x: number, y: number): boolean => {
@@ -34,6 +35,8 @@ interface UsePlayerMovementProps {
   generateDungeon: (level: number) => void;
   logs: LogEntry[];
   resetGame: () => void;
+  viewportOffset: { x: number; y: number };
+  setViewportOffset: (offset: { x: number; y: number }) => void;
 }
 
 export function usePlayerMovement({
@@ -52,15 +55,15 @@ export function usePlayerMovement({
   setLevelHistory,
   generateDungeon,
   logs,
-  resetGame
+  resetGame,
+  viewportOffset,
+  setViewportOffset
 }: UsePlayerMovementProps) {
   
   const movePlayer = (dx: number, dy: number) => {
-    if (player.moves <= 0) {
-      const lastLog = logs[logs.length - 1];
-      if (!lastLog || !lastLog.text.includes("Вы устали")) {
-        addLog("Вы устали! Нажмите БРОСОК D20, чтобы перевести дух.", 'fail');
-      }
+    // Для world map (уровень 1) движение управляется через Excalibur PlayerActor
+    // usePlayerMovement работает только для dungeon levels (2+)
+    if (player.dungeonLevel === 1) {
       return;
     }
 
@@ -85,27 +88,7 @@ export function usePlayerMovement({
       return;
     }
 
-    let moveCost = 1;
-    if (targetCell.type === 'water') moveCost = 2;
-    if (targetCell.type === 'lava') moveCost = 1;
-
-    if (player.moves < moveCost) {
-      addLog("Не хватает сил пробраться через это препятствие!", 'fail');
-      return;
-    }
-
     const updates = { ...player };
-
-    let roll = activeRoll;
-    let autoRolled = false;
-    if (roll === null) {
-      roll = Math.floor(Math.random() * 20) + 1;
-      autoRolled = true;
-    }
-    setActiveRoll(null);
-
-    const r = { val: roll, type: 'info' };
-
     let currentGrid = grid;
 
     // --- ЛОГИКА ЛЕСТНИЦ ---
@@ -116,7 +99,6 @@ export function usePlayerMovement({
       const nextLevel = updates.dungeonLevel + 1;
 
       updates.dungeonLevel = nextLevel;
-      updates.moves = updates.maxMoves;
 
       if (currentHistory[nextLevel]) {
         setGrid(currentHistory[nextLevel]);
@@ -172,31 +154,23 @@ export function usePlayerMovement({
     }
 
     if (targetCell.type === 'wall' || targetCell.type === 'torch' || targetCell.type === 'torch_lit' || targetCell.type === 'merchant' || targetCell.type === 'bonfire') {
-      if (!autoRolled) addLog(`Вы потратили подготовленный бросок ${r.val} в стену...`, 'info');
+      // Нельзя пройти через эти препятствия
       processEnemyTurn(currentGrid, updates);
       return;
     }
 
     if (targetCell.type === 'door') {
-      if (r.val <= 5) {
-        addLog(`[D20: ${r.val}] Дверь заклинило!`, 'fail');
-        updates.moves -= 1;
-        setPlayer(updates);
-        processEnemyTurn(currentGrid, updates);
-        return;
-      } else {
-        addLog(`[D20: ${r.val}] Дверь открыта.`, 'info');
-        const newGrid = currentGrid.map((row, ry) =>
-          row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'door_open' as const } : cell)
-        );
-        setGrid(newGrid);
-        currentGrid = newGrid;
+      // Двери открываются автоматически (без D20)
+      addLog('Дверь открыта.', 'info');
+      const newGrid = currentGrid.map((row, ry) =>
+        row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'door_open' as const } : cell)
+      );
+      setGrid(newGrid);
+      currentGrid = newGrid;
 
-        updates.moves -= 1;
-        setPlayer(updates);
-        processEnemyTurn(currentGrid, updates);
-        return;
-      }
+      setPlayer(updates);
+      processEnemyTurn(currentGrid, updates);
+      return;
     }
 
     if (targetCell.item) {
@@ -263,7 +237,8 @@ export function usePlayerMovement({
         updates.gold += goldAmount;
         addLog(`Найдено ${goldAmount} золота!`, 'loot');
       } else if (itemKey === 'chest') {
-        const isArtifact = r.val >= 15;
+        // 25% шанс на артефакт (без D20)
+        const isArtifact = Math.random() < 0.25;
         if (isArtifact) {
           const artifact = RARE_ARTIFACTS[Math.floor(Math.random() * RARE_ARTIFACTS.length)];
           addLog(`СОКРОВИЩЕ! Найден ${artifact.name}!`, 'loot');
@@ -286,24 +261,11 @@ export function usePlayerMovement({
     }
 
     if (targetCell.type === 'trap') {
-      if (r.val >= 12) {
-        addLog(`[D20: ${r.val}] Вы заметили ловушку и обезвредили её!`, 'success');
-        const newGrid = currentGrid.map((row, ry) =>
-          row.map((cell, rx) => rx === newX && ry === newY ? { ...cell, type: 'floor' as const } : cell)
-        );
-        setGrid(newGrid);
-        currentGrid = newGrid;
-      } else {
-        let dmg = 15;
-        if (r.val <= 5) {
-          dmg = 30;
-          addLog(`[D20: ${r.val}] КРИТИЧЕСКИЙ ПРОВАЛ! Ловушка сработала дважды!`, 'fail');
-        } else {
-          addLog(`[D20: ${r.val}] Вы наступили на ЛОВУШКУ!`, 'fail');
-        }
-        updates.hp = clampHp(updates.hp - dmg, updates.maxHp);
-        if (checkPlayerDeath(updates.hp, resetGame, addLog)) return;
-      }
+      // Ловушки наносят фиксированный урон (без D20)
+      const dmg = 15;
+      addLog('Вы наступили на ЛОВУШКУ!', 'fail');
+      updates.hp = clampHp(updates.hp - dmg, updates.maxHp);
+      if (checkPlayerDeath(updates.hp, resetGame, addLog)) return;
     }
 
     if (targetCell.type === 'lava') {
@@ -314,10 +276,134 @@ export function usePlayerMovement({
 
     updates.x = newX;
     updates.y = newY;
-    updates.moves -= moveCost;
     updates.facing = direction; // Сохраняем направление движения
 
     setPlayer(updates);
+
+    // Для уровня 1 (мировая карта) - инкрементальная прокрутка viewport
+    if (updates.dungeonLevel === 1) {
+      // Определяем пороги для прокрутки (ближе к краю = более частая прокрутка)
+      const scrollMargin = 10; // Начинаем прокрутку когда игрок в пределах 10 клеток от края
+
+      let shouldScroll = false;
+      let scrollDx = 0;
+      let scrollDy = 0;
+
+      // Определяем направление прокрутки на основе направления движения
+      if (direction === 'left' && updates.x < scrollMargin) {
+        scrollDx = -1;
+        shouldScroll = true;
+      } else if (direction === 'right' && updates.x >= GRID_SIZE - scrollMargin) {
+        scrollDx = 1;
+        shouldScroll = true;
+      }
+
+      if (direction === 'up' && updates.y < scrollMargin) {
+        scrollDy = -1;
+        shouldScroll = true;
+      } else if (direction === 'down' && updates.y >= GRID_SIZE - scrollMargin) {
+        scrollDy = 1;
+        shouldScroll = true;
+      }
+
+      if (shouldScroll) {
+        // Вычисляем новый offset viewport (сдвигаем на 1 тайл в направлении движения)
+        let newOffsetX = viewportOffset.x + scrollDx;
+        let newOffsetY = viewportOffset.y + scrollDy;
+
+        // Проверяем границы карты (не выходим за пределы)
+        if (newOffsetX < 0) newOffsetX = 0;
+        if (newOffsetY < 0) newOffsetY = 0;
+
+        // Вычисляем глобальные координаты для центрирования viewport
+        const halfSize = Math.floor(GRID_SIZE / 2);
+        const centerGlobalX = newOffsetX + halfSize;
+        const centerGlobalY = newOffsetY + halfSize;
+
+        // Генерируем новый viewport вокруг нового offset
+        const newGrid = generateWorldMapGrid(centerGlobalX, centerGlobalY);
+
+        // Обновляем позицию игрока: компенсируем сдвиг viewport
+        // Если viewport сдвинулся вправо (+1), игрок должен сдвинуться влево (-1) в локальных координатах
+        const compensatedX = updates.x - scrollDx;
+        const compensatedY = updates.y - scrollDy;
+
+        // Проверяем, что компенсированная позиция в пределах viewport
+        if (compensatedX >= 0 && compensatedX < GRID_SIZE &&
+            compensatedY >= 0 && compensatedY < GRID_SIZE) {
+
+          // Проверяем безопасность тайла под игроком
+          const cellUnderPlayer = newGrid[compensatedY]?.[compensatedX];
+          const isSafe = cellUnderPlayer &&
+                        cellUnderPlayer.type !== 'wall' &&
+                        cellUnderPlayer.type !== 'water' &&
+                        cellUnderPlayer.type !== 'lava' &&
+                        !cellUnderPlayer.enemy;
+
+          if (!isSafe) {
+            // Тайл небезопасен - ищем безопасное место рядом
+            let safeX = compensatedX;
+            let safeY = compensatedY;
+            let found = false;
+
+            for (let radius = 1; radius <= 3 && !found; radius++) {
+              for (let dy = -radius; dy <= radius && !found; dy++) {
+                for (let dx = -radius; dx <= radius && !found; dx++) {
+                  const checkY = compensatedY + dy;
+                  const checkX = compensatedX + dx;
+
+                  if (checkY >= 0 && checkY < GRID_SIZE && checkX >= 0 && checkX < GRID_SIZE) {
+                    const checkCell = newGrid[checkY][checkX];
+                    if (checkCell && checkCell.type === 'grass' && !checkCell.enemy) {
+                      safeX = checkX;
+                      safeY = checkY;
+                      found = true;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (found) {
+              updates.x = safeX;
+              updates.y = safeY;
+            } else {
+              // Не нашли безопасное место - отменяем прокрутку
+              console.log('[ViewportScroll] Unsafe ahead, scroll cancelled');
+              // Продолжаем без прокрутки
+              processEnemyTurn(currentGrid, updates);
+              return;
+            }
+          } else {
+            // Тайл безопасен - используем компенсированную позицию
+            updates.x = compensatedX;
+            updates.y = compensatedY;
+          }
+
+          // Обновляем viewport offset
+          setViewportOffset({ x: newOffsetX, y: newOffsetY });
+
+          // Обновляем grid
+          setGrid(newGrid);
+
+          // Обновляем позицию игрока
+          setPlayer(updates);
+
+          console.log(`[ViewportScroll] Scrolled viewport by (${scrollDx}, ${scrollDy}), offset now (${newOffsetX}, ${newOffsetY}), player at (${updates.x}, ${updates.y})`);
+
+          // Процессируем ход врагов с новым grid
+          processEnemyTurn(newGrid, updates);
+
+          // Проверяем костёр
+          const nowAdjacentBonfireNew = checkAdjacentBonfire(newGrid, updates.x, updates.y);
+          if (nowAdjacentBonfireNew) {
+            addLog('🔥 Вы нашли костёр! Можно отдохнуть и восстановить силы.', 'info');
+          }
+
+          return; // Выходим, viewport обновлён
+        }
+      }
+    }
 
     if (targetCell.type === 'secret_door') {
       addLog('Внимательный взгляд заметил скрытый проход!', 'info');
@@ -396,7 +482,7 @@ export function usePlayerMovement({
          row.map((cell, rx) => rx === x && ry === y ? { ...cell, type: 'torch_lit' as const } : cell)
        );
        // Обновляем видимость сразу после зажигания факела
-       const updatedGrid = updateVisibility(newGrid, player.x, player.y);
+       const updatedGrid = updateVisibility(newGrid, player.x, player.y, player.dungeonLevel);
        setGrid(updatedGrid);
        addLog('Вы зажгли факел! Область вокруг освещена.', 'success');
        return true;

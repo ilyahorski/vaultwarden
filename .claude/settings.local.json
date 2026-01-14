@@ -24,7 +24,8 @@
       "Bash(node scripts/convertMapImage.js:*)",
       "Bash(pkill:*)",
       "Bash(node scripts/convertMapToCompact.js:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(node scripts/convertMapToChunks.js:*)"
     ]
   }
 }

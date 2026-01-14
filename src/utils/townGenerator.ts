@@ -1,7 +1,6 @@
 import type { CellData, CellType } from '../types';
 import { GRID_SIZE } from '../constants';
 import { rand, createEmptyGrid } from './index';
-import { extractViewport } from './viewportUtils';
 
 /**
  * Загружает карту мира из JSON файла (поддерживает как обычный, так и компактный формат)
@@ -348,61 +347,12 @@ export const generateTownGrid = (): {
   return { grid: newGrid, buildings };
 };
 
-// Глобальная переменная для хранения предзагруженной большой карты
-let _preloadedWorldMap: CellData[][] | null = null;
-
 /**
- * Предзагружает большую карту мира для последующего использования
- * Должна быть вызвана один раз при инициализации приложения
+ * Генерирует базовую карту мира (fallback для уровней 2+)
+ * @returns сгенерированная сетка карты мира
  */
-export const preloadWorldMap = async (mapPath: string = '/maps/interdest_map.json'): Promise<void> => {
-  try {
-    _preloadedWorldMap = await loadMapFromJson(mapPath);
-    console.log('World map preloaded successfully');
-  } catch (error) {
-    console.error('Failed to preload world map:', error);
-    _preloadedWorldMap = null;
-  }
-};
-
-/**
- * Возвращает предзагруженную карту мира
- */
-export const getPreloadedWorldMap = (): CellData[][] | null => {
-  return _preloadedWorldMap;
-};
-
-/**
- * Генерирует базовую карту мира
- * @param playerX - X координата игрока для создания viewport (опционально)
- * @param playerY - Y координата игрока для создания viewport (опционально)
- * @returns сгенерированная сетка карты мира (либо полная, либо viewport)
- */
-export const generateWorldMapGrid = (playerX?: number, playerY?: number): CellData[][] => {
-  // Если большая карта предзагружена
-  if (_preloadedWorldMap) {
-    const mapHeight = _preloadedWorldMap.length;
-    const mapWidth = _preloadedWorldMap[0]?.length || 0;
-
-    console.log(`Using preloaded world map (${mapWidth}x${mapHeight})`);
-
-    // Если карта больше стандартного размера, создаём viewport
-    if (mapWidth > GRID_SIZE || mapHeight > GRID_SIZE) {
-      // Определяем центр для viewport (по умолчанию - центр карты)
-      const centerX = playerX !== undefined ? playerX : Math.floor(mapWidth / 2);
-      const centerY = playerY !== undefined ? playerY : Math.floor(mapHeight / 2);
-
-      console.log(`Creating viewport around (${centerX}, ${centerY})`);
-
-      const { viewport } = extractViewport(_preloadedWorldMap, centerX, centerY);
-      return viewport;
-    }
-
-    // Если карта маленькая, возвращаем как есть
-    return _preloadedWorldMap;
-  }
-
-  // Иначе генерируем маленькую процедурную карту (fallback)
+export const generateWorldMapGrid = (): CellData[][] => {
+  // Генерируем маленькую процедурную карту (fallback)
   console.log('Generating fallback world map');
   const newGrid = createEmptyGrid();
 

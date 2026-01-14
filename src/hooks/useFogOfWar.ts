@@ -11,7 +11,19 @@ interface UseFogOfWarProps {
 }
 
 // Экспортируем функцию обновления видимости для использования в других местах
-export function updateVisibility(currentGrid: CellData[][], px: number, py: number): CellData[][] {
+export function updateVisibility(currentGrid: CellData[][], px: number, py: number, dungeonLevel: number = 3): CellData[][] {
+  // Для уровней 1-2 (мировая карта и город) - нет тумана войны, всё видно
+  if (dungeonLevel <= 2) {
+    return currentGrid.map(row =>
+      row.map(cell => ({
+        ...cell,
+        isRevealed: true,
+        isVisible: true
+      }))
+    );
+  }
+
+  // Для подземелий (уровень 3+) - стандартная логика тумана войны
   const newGrid = currentGrid.map(row => row.map(cell => ({ ...cell, isVisible: false })));
 
   // 1. Освещение от игрока
@@ -55,7 +67,7 @@ export function useFogOfWar({ mode, player, grid, setGrid }: UseFogOfWarProps) {
 
     if (playerMoved) {
       prevPosRef.current = { x: player.x, y: player.y };
-      setGrid(prevGrid => updateVisibility(prevGrid, player.x, player.y));
+      setGrid(prevGrid => updateVisibility(prevGrid, player.x, player.y, player.dungeonLevel));
     }
-  }, [mode, player.x, player.y, setGrid, grid.length]);
+  }, [mode, player.x, player.y, player.dungeonLevel, setGrid, grid.length]);
 }

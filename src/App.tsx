@@ -1,7 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
@@ -9,24 +7,21 @@ import { useUIState } from './hooks/useUIState';
 import { usePlayerMovement } from './hooks/usePlayerMovement';
 import { useCombat } from './hooks/useCombat';
 import { useEnemyAI } from './hooks/useEnemyAI';
-import { useEditorHandlers } from './hooks/useEditorHandlers';
 import { useKeyboardControls } from './hooks/useKeyboardControls';
 import { useFogOfWar } from './hooks/useFogOfWar';
 import { useIsMobile } from './hooks/useMediaQuery';
+import { useEditorSync } from './hooks/useEditorSync';
 
 // Компоненты
-import { ClassSelection, PlayerHeader, GameGrid, CombatMenu, MobileControls, TutorialPopup } from './components/game';
+import { ClassSelection, PlayerHeader, CombatMenu, MobileControls, TutorialPopup } from './components/game';
 import { PlayerMenu } from './components/game/PlayerMenu';
 import { ShopMenu } from './components/game/ShopMenu';
 import { Sidebar } from './components/editor';
-
-// Константы
-import { CELL_SIZE } from './constants';
+import { ExcaliburCanvas } from './components/ExcaliburCanvas';
 
 // Утилиты
 import { rollActionDie } from './utils';
 import { CLASSES } from './constants';
-import { preloadWorldMap } from './utils/townGenerator';
 
 interface DungeonAppProps {
   initialMode?: 'player' | 'dm';
@@ -35,7 +30,7 @@ interface DungeonAppProps {
 export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const transformRef = useRef<ReactZoomPanPinchRef>(null);
+  const excaliburGameRef = useRef<any>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
   const isMobile = useIsMobile();
@@ -43,10 +38,12 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const {
     grid, setGrid,
     player, setPlayer,
-    logs, 
+    logs,
     mode, setMode,
     hasChosenClass,
     levelHistory, setLevelHistory,
+    viewportOffset, // Для больших карт (уровень 1)
+    setViewportOffset,
     addLog,
     generateDungeon,
     selectClass,
@@ -69,16 +66,8 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     subMenuIndex, setSubMenuIndex,
     activeRoll, setActiveRoll,
     selectedTool, setSelectedTool,
-    isMovingEnemy, setIsMovingEnemy,
     isMenuOpen, setIsMenuOpen
   } = useUIState();
-
-  // Предзагрузка большой карты мира при монтировании приложения
-  useEffect(() => {
-    preloadWorldMap('/maps/interdest_map_compact.json').catch(err => {
-      console.error('Failed to preload world map:', err);
-    });
-  }, []);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,7 +95,9 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     levelHistory, setLevelHistory,
     generateDungeon,
     logs,
-    resetGame
+    resetGame,
+    viewportOffset,
+    setViewportOffset
   });
 
   const { executeCombatAction } = useCombat({
@@ -119,16 +110,6 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     setMainMenuIndex,
     processEnemyTurn,
     resetGame
-  });
-
-  const { handleCellClick } = useEditorHandlers({
-    mode,
-    selectedTool,
-    isMovingEnemy,
-    setIsMovingEnemy,
-    grid,
-    setGrid,
-    setPlayer
   });
 
   const handleRollActionDie = useCallback(() => {
@@ -369,70 +350,12 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
     setGrid
   });
 
-  // Эффект следования камеры - центрирование игрока относительно фиксированной игровой области
-  useEffect(() => {
-    if (!transformRef.current || mode !== 'player' || !hasChosenClass) return;
+  useEditorSync({
+    grid,
+    setGrid
+  });
 
-    // Небольшая задержка чтобы TransformWrapper был полностью готов
-    const timeoutId = setTimeout(() => {
-      if (!transformRef.current) return;
-
-      const { setTransform, instance } = transformRef.current;
-
-      if (!setTransform || !instance) return;
-
-      // Позиция игрока в пикселях (центр клетки)
-      const playerPixelX = player.x * CELL_SIZE + CELL_SIZE / 2;
-      const playerPixelY = player.y * CELL_SIZE + CELL_SIZE / 2;
-
-      // Получаем текущий масштаб
-      const currentScale = instance.transformState.scale;
-
-      // Вычисляем размер фиксированной квадратной зоны просмотра
-      const headerHeight = isMobile ? 110 : 70;
-      const sidebarWidth = isMobile ? 0 : 384; // w-96 на desktop
-      const padding = isMobile ? 0 : 32; // 2rem отступы на desktop
-
-      // Доступное пространство для квадратной зоны
-      const availableWidth = window.innerWidth - sidebarWidth - padding;
-      const availableHeight = isMobile
-        ? window.innerHeight * 0.57
-        : window.innerHeight - headerHeight - padding;
-
-      // Размер квадратной зоны = минимум из доступных размеров
-      const viewportSize = Math.min(availableWidth, availableHeight);
-
-      // Центр квадратной зоны = половина её размера
-      const viewportCenterX = viewportSize / 2;
-      const viewportCenterY = viewportSize / 2;
-
-      // Вычисляем смещение для центрирования персонажа относительно центра зоны
-      const offsetX = viewportCenterX - playerPixelX * currentScale;
-      const offsetY = viewportCenterY - playerPixelY * currentScale;
-
-      // Применяем трансформацию с плавной анимацией (200ms)
-      setTransform(offsetX, offsetY, currentScale, 200);
-    }, 50);
-
-    return () => clearTimeout(timeoutId);
-  }, [player.x, player.y, player.dungeonLevel, mode, hasChosenClass, isMobile]);
-
-  // Используем ref для grid чтобы callback не пересоздавался на каждое изменение grid
-  const gridRef = useRef(grid);
-  useEffect(() => {
-    gridRef.current = grid;
-  }, [grid]);
-
-  const onGridClick = useCallback((x: number, y: number) => {
-    if (mode === 'dm') {
-      handleCellClick(x, y);
-    } else {
-      const cell = gridRef.current[y][x];
-      if (cell.type === 'door_open') {
-         toggleDoor(x, y);
-      }
-    }
-  }, [mode, handleCellClick, toggleDoor]);
+  // Excalibur управляет камерой сам через lockToActor в WorldScene
   
   // Расчет максимального этажа для пагинации в сайдбаре
   const maxLevel = Math.max(
@@ -537,52 +460,29 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                   aspectRatio: '1/1'
                 }}
               >
-                <TransformWrapper
-                  ref={transformRef}
-                  initialScale={isMobile ? 0.6 : 1}
-                  minScale={0.3}
-                  maxScale={2}
-                  centerOnInit={false}
-                  disabled={false}
-                  panning={{ disabled: false }}
-                  pinch={{ disabled: !isMobile }}
-                  doubleClick={{ disabled: true }}
-                  limitToBounds={false}
-                >
-                  <TransformComponent
-                    wrapperStyle={{ width: '100%', height: '100%' }}
-                    contentStyle={{ width: 'fit-content', height: 'fit-content' }}
-                  >
-                    <div className="relative">
-                      <GameGrid
-                        grid={grid}
-                        mode={mode}
-                        playerX={player.x}
-                        playerY={player.y}
-                        playerClass={player.class}
-                        playerDirection={player.facing}
-                        isMovingEnemy={isMovingEnemy}
-                        onCellClick={onGridClick}
-                      />
+                {/* Excalibur Canvas - управляет камерой и рендерингом сам */}
+                <ExcaliburCanvas ref={excaliburGameRef} />
 
-                      {combatTarget && (
-                        <CombatMenu
-                          combatTarget={combatTarget}
-                          player={player}
-                          activeMenu={activeMenu}
-                          mainMenuIndex={mainMenuIndex}
-                          subMenuIndex={subMenuIndex}
-                          onAttack={() => executeCombatAction(combatTarget, 'attack')}
-                          onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
-                          onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
-                          onFlee={() => setCombatTarget(null)}
-                          onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
-                          onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
-                        />
-                      )}
+                {/* CombatMenu поверх canvas */}
+                {combatTarget && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="pointer-events-auto">
+                      <CombatMenu
+                        combatTarget={combatTarget}
+                        player={player}
+                        activeMenu={activeMenu}
+                        mainMenuIndex={mainMenuIndex}
+                        subMenuIndex={subMenuIndex}
+                        onAttack={() => executeCombatAction(combatTarget, 'attack')}
+                        onSkill={(skillId) => executeCombatAction(combatTarget, 'skill', skillId)}
+                        onItem={(itemId) => executeCombatAction(combatTarget, 'item', undefined, itemId)}
+                        onFlee={() => setCombatTarget(null)}
+                        onOpenSkills={() => { setActiveMenu('skills'); setSubMenuIndex(0); }}
+                        onOpenItems={() => { setActiveMenu('items'); setSubMenuIndex(0); }}
+                      />
                     </div>
-                  </TransformComponent>
-                </TransformWrapper>
+                  </div>
+                )}
               </div>
 
               {/* PlayerMenu вне фиксированной зоны - позиционируется относительно viewport */}
@@ -630,35 +530,23 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
         {mode === 'dm' && (
           <>
-            <div className={`bg-slate-950 overflow-hidden flex relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[70vh]' : 'flex-1 p-4 overflow-auto'}`}>
-              <TransformWrapper
-                initialScale={isMobile ? 0.6 : 1}
-                minScale={0.3}
-                maxScale={2}
-                centerOnInit={true}
-                disabled={false}
-                panning={{ disabled: false }}
-                pinch={{ disabled: !isMobile }}
-                doubleClick={{ disabled: true }}
+            {/* Контейнер для редактора - аналогично режиму игрока */}
+            <div className={`bg-slate-950 flex items-center justify-center relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[70vh]' : 'flex-1'}`}>
+              <div
+                className="relative overflow-hidden bg-slate-900/50 border-2 border-slate-800/50 rounded-lg shadow-2xl"
+                style={{
+                  width: isMobile ? 'min(90vw, 70vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 4rem))',
+                  height: isMobile ? 'min(90vw, 70vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 4rem))',
+                  aspectRatio: '1/1'
+                }}
               >
-                <TransformComponent
-                  wrapperStyle={{ width: '100%', height: '100%' }}
-                  contentStyle={{ width: 'fit-content', height: 'fit-content' }}
-                >
-                  <div className="relative">
-                    <GameGrid
-                      grid={grid}
-                      mode={mode}
-                      playerX={player.x}
-                      playerY={player.y}
-                      playerClass={player.class}
-                      playerDirection={player.facing}
-                      isMovingEnemy={isMovingEnemy}
-                      onCellClick={onGridClick}
-                    />
-                  </div>
-                </TransformComponent>
-              </TransformWrapper>
+                {/* Excalibur Canvas в режиме редактора */}
+                <ExcaliburCanvas
+                  ref={excaliburGameRef}
+                  isEditorMode={true}
+                  selectedTool={selectedTool}
+                />
+              </div>
             </div>
           </>
         )}

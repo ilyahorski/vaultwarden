@@ -102,6 +102,10 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
   const [playerPositions, setPlayerPositions] = useState<Record<number, { x: number; y: number }>>(initialState.playerPositions || {});
   const [player, setPlayer] = useState<Player>(initialState.player);
   const [logs, setLogs] = useState<LogEntry[]>(initialState.logs);
+
+  // Viewport offset для большой карты (уровень 1)
+  // Хранит глобальное смещение viewport относительно полной карты
+  const [viewportOffset, setViewportOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   // Остальные стейты (UI) инициализируются стандартно
   const [selectedTool, setSelectedTool] = useState<string>('wall');
@@ -298,20 +302,31 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
        addLog(`Загружен уровень из кампании: ${currentCampaign.name}`, 'info');
     } else if (levelIndex === 1) {
        // Уровень 1 = Карта мира (ПРОТОТИП JRPG)
-       newGrid = generateWorldMapGrid();
-       // Ищем безопасную точку спавна (трава без врагов)
-       let foundStart = false;
-       for(let y=0; y<GRID_SIZE; y++){
-         for(let x=0; x<GRID_SIZE; x++){
-            if(newGrid[y][x].type === 'grass' && !newGrid[y][x].enemy) {
-               startPos = {x, y};
-               foundStart = true;
-               break;
-            }
-         }
-         if(foundStart) break;
-       }
-       if(!foundStart) startPos = {x: 22, y: 22}; // Центр карты как fallback
+       // Используем viewport систему: координаты игрока остаются локальными (0-44)
+       // Глобальные координаты = локальные + viewportOffset
+
+       // Определяем ГЛОБАЛЬНЫЕ координаты спавна (центр большой карты 402×305)
+       const globalSpawnX = 201;
+       const globalSpawnY = 152;
+
+       // Генерируем viewport вокруг глобального спавна
+       newGrid = generateWorldMapGrid(globalSpawnX, globalSpawnY);
+
+       // Вычисляем offset viewport (viewport центрирован на игроке)
+       const halfSize = Math.floor(GRID_SIZE / 2);
+       let offsetX = globalSpawnX - halfSize;
+       let offsetY = globalSpawnY - halfSize;
+
+       // Корректируем границы
+       if (offsetX < 0) offsetX = 0;
+       if (offsetY < 0) offsetY = 0;
+
+       // Сохраняем viewport offset
+       setViewportOffset({ x: offsetX, y: offsetY });
+
+       // Игрок спавнится в ЦЕНТРЕ viewport (локальные координаты)
+       startPos = { x: halfSize, y: halfSize };
+
        addLog('Вы оказались на карте мира...', 'info');
     } else if (levelIndex === 2) {
        // Уровень 2 = Город (ПРОТОТИП JRPG)
@@ -577,6 +592,8 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
     mainMenuIndex, setMainMenuIndex,
     subMenuIndex, setSubMenuIndex,
     fileInputRef,
+    viewportOffset, // Для больших карт (уровень 1)
+    setViewportOffset,
     addLog,
     generateDungeon,
     resetGame,
