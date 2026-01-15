@@ -12,38 +12,34 @@ interface UseEditorSyncProps {
  *
  * Обрабатывает событие tile:changed от Excalibur и обновляет grid
  */
-export const useEditorSync = ({
-  grid,
-  setGrid
-}: UseEditorSyncProps): void => {
+export const useEditorSync = ({ grid, setGrid }: UseEditorSyncProps): void => {
   useEffect(() => {
-    // Excalibur → React: тайл изменен в редакторе
-    const onTileChanged = (data: { x: number; y: number; type: string }) => {
-      console.log(`[useEditorSync] Tile changed at (${data.x}, ${data.y}) to ${data.type}`);
-
+    const onTileChanged = (data: { 
+      x: number; 
+      y: number; 
+      type: string; 
+      tilesetX?: number; 
+      tilesetY?: number 
+    }) => {
       setGrid(prevGrid => {
-        // Создаем копию grid для immutability
         const newGrid = prevGrid.map(row => [...row]);
 
-        // Проверяем границы
         if (data.y >= 0 && data.y < newGrid.length &&
             data.x >= 0 && data.x < newGrid[0].length) {
-          // Обновляем тип тайла
+          // ИСПРАВЛЕНО: сохраняем координаты тайлсета, чтобы они не терялись при сохранении JSON
           newGrid[data.y][data.x] = {
             ...newGrid[data.y][data.x],
-            type: data.type as any
+            type: data.type as any,
+            tileX: data.tilesetX,
+            tileY: data.tilesetY
           };
         }
-
         return newGrid;
       });
     };
 
     EventBridge.on('tile:changed', onTileChanged);
-
-    return () => {
-      EventBridge.off('tile:changed', onTileChanged);
-    };
+    return () => EventBridge.off('tile:changed', onTileChanged);
   }, [setGrid]);
 };
 

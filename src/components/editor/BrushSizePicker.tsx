@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface BrushSizePickerProps {
   onSelectBrushSize: (width: number, height: number) => void;
@@ -23,7 +23,14 @@ const BRUSH_SIZES: BrushSizeOption[] = [
 export const BrushSizePicker = ({ onSelectBrushSize }: BrushSizePickerProps) => {
   const [selectedBrush, setSelectedBrush] = useState<string>("1×1");
 
+  // Устанавливаем дефолтный размер кисти 1×1 при монтировании
+  useEffect(() => {
+    console.log('[BrushSizePicker] Setting default brush size 1×1');
+    onSelectBrushSize(1, 1);
+  }, [onSelectBrushSize]);
+
   const handleSelectBrush = (option: BrushSizeOption) => {
+    console.log('[BrushSizePicker] Selected brush size:', option);
     setSelectedBrush(option.label);
     onSelectBrushSize(option.width, option.height);
   };

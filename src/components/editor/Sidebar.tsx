@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Map as MapIcon,
   Settings,
@@ -6,22 +6,12 @@ import {
   RefreshCw,
   Download,
   Box,
-  Droplets,
-  Flame,
-  FlameKindling,
-  Trees,
-  DoorClosed,
-  EyeOff,
   Ghost,
   Skull,
   Crown,
   Footprints,
   Sword,
-  Shell,
   Shield,
-  Trash2,
-  ArrowDownCircle,
-  ArrowUpCircle,
   FlaskConical,
   LayoutGrid,
   Coins,
@@ -36,7 +26,6 @@ import {
   Info,
   Dices,
   RotateCcw,
-  Store,
 } from "lucide-react";
 import type { GameMode, LogEntry } from "../../types";
 import { ToolButton } from "../ui/ToolButton";
@@ -116,7 +105,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isEditorRoute,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("structure");
+  const [brushSize, setBrushSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const isMobile = useIsMobile();
+
+  // Стабильный колбек для BrushSizePicker (предотвращает бесконечный цикл)
+  const handleBrushSizeChange = useCallback((width: number, height: number) => {
+    console.log('[Sidebar] BrushSizePicker selected:', { width, height });
+    setBrushSize({ width, height });
+    EventBridge.emitBrushSizeChanged(width, height);
+  }, []);
 
   const renderTabButton = (
     id: TabType,
@@ -125,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 flex flex-col items-center justify-center p-2 text-[10px] font-bold uppercase tracking-wide transition-colors border-b-2 ${
+      className={`flex-1 flex flex-col max-w-30 items-center justify-center p-2 text-[10px] font-bold uppercase tracking-wide transition-colors border-b-2 ${
         activeTab === id
           ? "border-amber-500 text-amber-500 bg-slate-900"
           : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-900/50"
@@ -245,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex flex-1 w-full min-h-0">
           <div className={`flex flex-1 w-full min-h-0 ${isMobile ? "" : "flex-col"}`}>
             {!isMobile && (
-              <div className="flex flex-col shrink-0 bg-slate-950 border-b border-slate-800">
+              <div className="flex shrink-0 bg-slate-950 border-b border-slate-800">
                 {renderTabButton(
                   "structure",
                   <LayoutGrid size={18} />,
@@ -262,23 +259,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {activeTab === "structure" && (
                   <div className="space-y-4">
                     <div>
+                      <BrushSizePicker onSelectBrushSize={handleBrushSizeChange} />
+                    </div>
+                    <div>
                       <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">
                         Выбор тайла из тайлсета
                       </h3>
                       <TilesetPicker
-                        onSelectTile={(tilesetId, x, y) => {
-                          EventBridge.emitTilesetTileSelected({ tilesetId, x, y });
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <BrushSizePicker
-                        onSelectBrushSize={(width, height) => {
-                          window.dispatchEvent(
-                            new CustomEvent('brush:sizeChanged', {
-                              detail: { width, height }
-                            })
-                          );
+                        brushSize={brushSize}
+                        onSelectTile={(tilesetId, tiles) => {
+                          console.log(`[Sidebar] TilesetPicker selected ${tiles.length} tiles from ${tilesetId}:`, tiles);
+                          EventBridge.emitTilesetTileSelected({ tilesetId, tiles });
                         }}
                       />
                     </div>

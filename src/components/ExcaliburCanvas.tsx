@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { ExcaliburGame } from '../excalibur/ExcaliburGame';
+import { EventBridge } from '../excalibur/utils/EventBridge';
 
 interface ExcaliburCanvasProps {
   className?: string;
@@ -72,8 +73,12 @@ export const ExcaliburCanvas = forwardRef<ExcaliburCanvasRef, ExcaliburCanvasPro
     // Управление режимом редактирования
     useEffect(() => {
       const game = gameRef.current;
-      if (!game) return;
+      if (!game) {
+        console.warn('[ExcaliburCanvas] Cannot toggle editor mode - game not initialized');
+        return;
+      }
 
+      console.log('[ExcaliburCanvas] Editor mode changing to:', isEditorMode);
       if (isEditorMode) {
         game.enableEditorMode();
       } else {
@@ -81,49 +86,26 @@ export const ExcaliburCanvas = forwardRef<ExcaliburCanvasRef, ExcaliburCanvasPro
       }
     }, [isEditorMode]);
 
-    // Обработка выбора тайла из тайлсета
+    // Исправлено: Обработка выбора тайла через EventBridge вместо window
     useEffect(() => {
-      const handleTilesetTileSelected = (e: Event) => {
-        const customEvent = e as CustomEvent<{ tilesetId: string; x: number; y: number }>;
-        const { tilesetId, x, y } = customEvent.detail;
-
+      const handleTilesetTileSelected = (data: {
+        tilesetId: string;
+        tiles: Array<{ x: number; y: number }>;
+      }) => {
+        console.log('[ExcaliburCanvas] Received tileset:tileSelected event:', data);
         const game = gameRef.current;
-        if (!game) return;
-
-        // Используем новый метод setSelectedTile из ExcaliburGame
-        if (typeof (game as any).setSelectedTile === 'function') {
-          (game as any).setSelectedTile(tilesetId, x, y);
+        if (!game) {
+          console.warn('[ExcaliburCanvas] Game not initialized yet');
+          return;
         }
+        game.setSelectedTiles(data.tilesetId, data.tiles);
       };
 
-      window.addEventListener('tileset:tileSelected', handleTilesetTileSelected);
-
-      return () => {
-        window.removeEventListener('tileset:tileSelected', handleTilesetTileSelected);
-      };
+      console.log('[ExcaliburCanvas] Registering tileset:tileSelected listener');
+      EventBridge.on('tileset:tileSelected', handleTilesetTileSelected);
+      return () => EventBridge.off('tileset:tileSelected', handleTilesetTileSelected);
     }, []);
 
-    // Обработка изменения размера кисти
-    useEffect(() => {
-      const handleBrushSizeChanged = (e: Event) => {
-        const customEvent = e as CustomEvent<{ width: number; height: number }>;
-        const { width, height } = customEvent.detail;
-
-        const game = gameRef.current;
-        if (!game) return;
-
-        // Используем новый метод setBrushSize из ExcaliburGame
-        if (typeof (game as any).setBrushSize === 'function') {
-          (game as any).setBrushSize(width, height);
-        }
-      };
-
-      window.addEventListener('brush:sizeChanged', handleBrushSizeChanged);
-
-      return () => {
-        window.removeEventListener('brush:sizeChanged', handleBrushSizeChanged);
-      };
-    }, []);
 
     return (
       <div

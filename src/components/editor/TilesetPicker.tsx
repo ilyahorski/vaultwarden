@@ -1,12 +1,22 @@
 import { useRef, useEffect, useState } from "react";
 import { TILESET_REGISTRY } from "../../excalibur/config/TilesetConfig";
 
-interface TilesetPickerProps {
-  onSelectTile: (tilesetId: string, x: number, y: number) => void;
-  selectedTilesetId?: string;
+interface TileCoordinate {
+  x: number;
+  y: number;
 }
 
-export const TilesetPicker = ({ onSelectTile, selectedTilesetId = 'grassBiome' }: TilesetPickerProps) => {
+interface TilesetPickerProps {
+  onSelectTile: (tilesetId: string, tiles: TileCoordinate[]) => void;
+  selectedTilesetId?: string;
+  brushSize?: { width: number; height: number };
+}
+
+export const TilesetPicker = ({
+  onSelectTile,
+  selectedTilesetId = 'grassBiome',
+  brushSize = { width: 1, height: 1 }
+}: TilesetPickerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentTileset, setCurrentTileset] = useState(selectedTilesetId);
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
@@ -53,41 +63,59 @@ export const TilesetPicker = ({ onSelectTile, selectedTilesetId = 'grassBiome' }
         ctx.stroke();
       }
 
-      // Подсветка выбранного
+      // Подсветка выбранного (с учетом размера кисти)
       if (selectedTile) {
         ctx.strokeStyle = '#22c55e';
         ctx.lineWidth = 3;
         ctx.strokeRect(
           selectedTile.x * TILE_SIZE * DISPLAY_SCALE,
           selectedTile.y * TILE_SIZE * DISPLAY_SCALE,
-          TILE_SIZE * DISPLAY_SCALE,
-          TILE_SIZE * DISPLAY_SCALE
+          brushSize.width * TILE_SIZE * DISPLAY_SCALE,
+          brushSize.height * TILE_SIZE * DISPLAY_SCALE
         );
       }
 
-      // Подсветка наведенного
+      // Подсветка наведенного (с учетом размера кисти)
       if (hoveredTile && (hoveredTile.x !== selectedTile?.x || hoveredTile.y !== selectedTile?.y)) {
         ctx.strokeStyle = '#fbbf24';
         ctx.lineWidth = 2;
         ctx.strokeRect(
           hoveredTile.x * TILE_SIZE * DISPLAY_SCALE,
           hoveredTile.y * TILE_SIZE * DISPLAY_SCALE,
-          TILE_SIZE * DISPLAY_SCALE,
-          TILE_SIZE * DISPLAY_SCALE
+          brushSize.width * TILE_SIZE * DISPLAY_SCALE,
+          brushSize.height * TILE_SIZE * DISPLAY_SCALE
         );
       }
     };
-  }, [currentTileset, selectedTile, hoveredTile]);
+  }, [currentTileset, selectedTile, hoveredTile, brushSize]);
 
   const handleClick = (e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = Math.floor((e.clientX - rect.left) / (TILE_SIZE * DISPLAY_SCALE));
-    const y = Math.floor((e.clientY - rect.top) / (TILE_SIZE * DISPLAY_SCALE));
+    const tileset = TILESET_REGISTRY[currentTileset];
+    if (!tileset) return;
 
-    setSelectedTile({ x, y });
-    onSelectTile(currentTileset, x, y);
+    const startX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * DISPLAY_SCALE));
+    const startY = Math.floor((e.clientY - rect.top) / (TILE_SIZE * DISPLAY_SCALE));
+
+    // Создаем массив координат тайлов в зависимости от размера кисти
+    const tiles: TileCoordinate[] = [];
+    for (let dy = 0; dy < brushSize.height; dy++) {
+      for (let dx = 0; dx < brushSize.width; dx++) {
+        const tileX = startX + dx;
+        const tileY = startY + dy;
+
+        // Проверяем, что координаты в пределах тайлсета
+        if (tileX >= 0 && tileX < tileset.columns && tileY >= 0 && tileY < tileset.rows) {
+          tiles.push({ x: tileX, y: tileY });
+        }
+      }
+    }
+
+    console.log(`[TilesetPicker] Selected ${tiles.length} tiles starting at (${startX}, ${startY}) with brush ${brushSize.width}x${brushSize.height}`);
+    setSelectedTile({ x: startX, y: startY });
+    onSelectTile(currentTileset, tiles);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {

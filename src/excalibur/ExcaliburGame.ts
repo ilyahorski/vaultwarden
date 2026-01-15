@@ -3,6 +3,7 @@ import { WorldScene } from './scenes/WorldScene';
 
 export class ExcaliburGame extends ex.Engine {
   private worldScene?: WorldScene;
+  private editorModeRequested = false; // Флаг, если enableEditorMode был вызван до готовности сцены
 
   constructor(options: { canvasElementId: string }) {
     super({
@@ -34,8 +35,20 @@ export class ExcaliburGame extends ex.Engine {
     console.log('ExcaliburGame: Engine started');
 
     // Создаем и добавляем сцену мировой карты
-    const worldScene = new WorldScene();
-    this.addScene('world', worldScene);
+    this.worldScene = new WorldScene();
+    this.addScene('world', this.worldScene);
+
+    // Слушаем событие готовности сцены
+    this.worldScene.on('scene:ready', () => {
+      console.log('ExcaliburGame: Received scene:ready event');
+
+      // Если enableEditorMode был вызван до готовности сцены, активируем его сейчас
+      if (this.editorModeRequested) {
+        console.log('ExcaliburGame: Editor mode was requested early, enabling now');
+        this.enableEditorModeInternal();
+      }
+    });
+
     this.goToScene('world');
 
     console.log('ExcaliburGame: Initialized successfully');
@@ -70,15 +83,38 @@ export class ExcaliburGame extends ex.Engine {
   }
 
   /**
-   * Включает режим редактирования
+   * Включает режим редактирования (публичный метод, вызываемый из React)
    */
   enableEditorMode(): void {
+    console.log('ExcaliburGame: enableEditorMode called');
+    this.editorModeRequested = true;
+
+    const worldScene = this.getWorldScene();
+    console.log('ExcaliburGame: worldScene =', worldScene);
+    const editorMode = worldScene?.getEditorMode();
+    console.log('ExcaliburGame: editorMode =', editorMode);
+
+    if (editorMode) {
+      // Сцена готова, можем сразу включить режим редактирования
+      this.enableEditorModeInternal();
+    } else {
+      console.log('ExcaliburGame: Scene not ready yet, will enable editor mode after scene:ready event');
+    }
+  }
+
+  /**
+   * Внутренний метод для активации режима редактирования (только когда сцена готова)
+   */
+  private enableEditorModeInternal(): void {
+    console.log('ExcaliburGame: enableEditorModeInternal called');
     const worldScene = this.getWorldScene();
     const editorMode = worldScene?.getEditorMode();
 
     if (editorMode) {
       editorMode.enable();
-      console.log('ExcaliburGame: Editor mode enabled');
+      console.log('ExcaliburGame: Editor mode enabled successfully');
+    } else {
+      console.error('ExcaliburGame: CRITICAL - Cannot enable editor mode, editorMode still not found');
     }
   }
 
@@ -86,6 +122,9 @@ export class ExcaliburGame extends ex.Engine {
    * Выключает режим редактирования
    */
   disableEditorMode(): void {
+    console.log('ExcaliburGame: disableEditorMode called');
+    this.editorModeRequested = false;
+
     const worldScene = this.getWorldScene();
     const editorMode = worldScene?.getEditorMode();
 
@@ -96,30 +135,22 @@ export class ExcaliburGame extends ex.Engine {
   }
 
   /**
-   * Устанавливает выбранный тайл из тайлсета в редакторе
+   * Устанавливает выбранные тайлы из тайлсета в редакторе
    */
-  setSelectedTile(tilesetId: string, tileX: number, tileY: number): void {
+  setSelectedTiles(
+    tilesetId: string,
+    tiles: Array<{ x: number; y: number }>
+  ): void {
     const worldScene = this.getWorldScene();
     const editorMode = worldScene?.getEditorMode();
 
     if (editorMode) {
-      editorMode.setSelectedTile(tilesetId, tileX, tileY);
-      console.log(`ExcaliburGame: Selected tile (${tileX}, ${tileY}) from ${tilesetId}`);
+      editorMode.setSelectedTiles(tilesetId, tiles);
+      console.log(`ExcaliburGame: Selected ${tiles.length} tiles from ${tilesetId}`);
     }
   }
 
-  /**
-   * Устанавливает размер кисти в редакторе
-   */
-  setBrushSize(width: number, height: number): void {
-    const worldScene = this.getWorldScene();
-    const editorMode = worldScene?.getEditorMode();
-
-    if (editorMode) {
-      editorMode.setBrushSize(width, height);
-      console.log(`ExcaliburGame: Brush size set to ${width}x${height}`);
-    }
-  }
 }
+
 
 export default ExcaliburGame;

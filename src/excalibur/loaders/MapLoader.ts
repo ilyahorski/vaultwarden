@@ -52,6 +52,14 @@ export class MapLoader {
         const tile = tileMap.getTile(x, y);
         if (!tile) continue;
 
+        if (cellData.tileX !== undefined && cellData.tileY !== undefined) {
+             const sprite = getSpriteFromTileset('grassBiome', cellData.tileX, cellData.tileY); // или текущий биом
+             if (sprite) tile.addGraphic(sprite);
+        } else {
+             const sprite = getSharedSprite(cellData.type);
+             tile.addGraphic(sprite);
+        }
+
         // ПРИОРИТЕТ 1: Координаты тайлсета (если есть)
         if (cellData.tilesetX !== undefined &&
             cellData.tilesetY !== undefined &&

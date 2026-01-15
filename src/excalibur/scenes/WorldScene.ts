@@ -14,11 +14,11 @@ export class WorldScene extends ex.Scene {
   private tileMap?: ex.TileMap;
   private combatSystem?: CombatSystem;
   private editorMode?: EditorMode;
-  private isInitialized = false;
+  private sceneInitialized = false;
 
   async onInitialize(engine: ex.Engine): Promise<void> {
     // Защита от повторной инициализации
-    if (this.isInitialized) {
+    if (this.sceneInitialized) {
       console.log('WorldScene: Already initialized, skipping');
       return;
     }
@@ -61,7 +61,7 @@ export class WorldScene extends ex.Scene {
       this.camera.zoom = 0.5; // Уменьшение zoom для увеличения видимой области (20×20 вместо 10×10)
 
       console.log('WorldScene: Initialized successfully');
-      this.isInitialized = true;
+      this.sceneInitialized = true;
 
       // Этап 3 - Добавление триггеров
       this.addTriggersFromMap(mapData);
@@ -73,9 +73,12 @@ export class WorldScene extends ex.Scene {
       // Этап 6 - EditorMode
       this.editorMode = new EditorMode(this, this.tileMap, this.camera);
       console.log('WorldScene: EditorMode initialized');
+
+      // Важно: отправляем событие что сцена готова
+      this.emit('scene:ready', this);
     } catch (error) {
       console.error('WorldScene: Failed to initialize:', error);
-      this.isInitialized = false;
+      this.sceneInitialized = false;
       throw error;
     }
   }

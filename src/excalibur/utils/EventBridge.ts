@@ -21,32 +21,32 @@ class ExcaliburEventBridge extends EventTarget {
 
   // Excalibur → React: движение игрока
   emitPlayerMove(data: { x: number; y: number; facing: string }): void {
-    this.dispatchEvent(new CustomEvent('player:move', { detail: data }));
+    this.dispatchEvent(new CustomEvent("player:move", { detail: data }));
   }
 
   // Excalibur → React: триггеры
   emitTriggerBonfire(): void {
-    this.dispatchEvent(new CustomEvent('trigger:bonfire'));
+    this.dispatchEvent(new CustomEvent("trigger:bonfire"));
   }
 
   emitTriggerTrap(damage: number): void {
-    this.dispatchEvent(new CustomEvent('trigger:trap', { detail: { damage } }));
+    this.dispatchEvent(new CustomEvent("trigger:trap", { detail: { damage } }));
   }
 
   emitTriggerLava(damage: number): void {
-    this.dispatchEvent(new CustomEvent('trigger:lava', { detail: { damage } }));
+    this.dispatchEvent(new CustomEvent("trigger:lava", { detail: { damage } }));
   }
 
   emitTriggerMerchant(): void {
-    this.dispatchEvent(new CustomEvent('trigger:merchant'));
+    this.dispatchEvent(new CustomEvent("trigger:merchant"));
   }
 
   // Excalibur → React: случайный бой
   emitCombatStart(enemy: string): void {
-    this.dispatchEvent(new CustomEvent('combat:start', { detail: { enemy } }));
+    this.dispatchEvent(new CustomEvent("combat:start", { detail: { enemy } }));
   }
 
-  // Excalibur → React: изменение тайла в редакторе
+  // Исправлено: добавлены tilesetX/Y для корректной передачи метаданных
   emitTileChanged(data: {
     x: number;
     y: number;
@@ -55,25 +55,32 @@ class ExcaliburEventBridge extends EventTarget {
     tilesetY?: number;
     tilesetSource?: string;
   }): void {
-    this.dispatchEvent(new CustomEvent('tile:changed', { detail: data }));
+    this.dispatchEvent(new CustomEvent("tile:changed", { detail: data }));
   }
 
-  // React → Excalibur: выбор тайла из тайлсета в редакторе
   emitTilesetTileSelected(data: {
     tilesetId: string;
-    x: number;
-    y: number;
+    tiles: Array<{ x: number; y: number }>;
   }): void {
-    this.dispatchEvent(new CustomEvent('tileset:tileSelected', { detail: data }));
+    this.dispatchEvent(
+      new CustomEvent("tileset:tileSelected", { detail: data })
+    );
+  }
+
+  // Добавлено: метод для изменения размера кисти
+  emitBrushSizeChanged(width: number, height: number): void {
+    this.dispatchEvent(
+      new CustomEvent("brush:sizeChanged", { detail: { width, height } })
+    );
   }
 
   // React → Excalibur: управление игрой
   pauseGame(): void {
-    this.dispatchEvent(new CustomEvent('game:pause'));
+    this.dispatchEvent(new CustomEvent("game:pause"));
   }
 
   resumeGame(): void {
-    this.dispatchEvent(new CustomEvent('game:resume'));
+    this.dispatchEvent(new CustomEvent("game:resume"));
   }
 
   // Совместимость с EventEmitter API для удобства

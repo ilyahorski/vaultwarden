@@ -8,13 +8,18 @@ import { TILESET_REGISTRY } from '../config/TilesetConfig';
 const imageSourceCache = new Map<string, ex.ImageSource>();
 
 /**
+ * Кэш SpriteSheet (один на каждый тайлсет)
+ */
+const spriteSheetCache = new Map<string, ex.SpriteSheet>();
+
+/**
  * Кэш вырезанных спрайтов по координатам (кэш для оптимизации)
  */
 const spriteCache = new Map<string, ex.Sprite>();
 
 /**
- * Загружает ImageSource для тайлсета
- * @param tilesetId ID тайлсета ('world', 'town', 'dungeon')
+ * Загружает ImageSource и создает SpriteSheet для тайлсета
+ * @param tilesetId ID тайлсета ('grassBiome', 'desertBiome', и т.д.)
  * @returns Promise с загруженным ImageSource
  */
 export async function loadTilesetImage(tilesetId: string): Promise<ex.ImageSource> {
@@ -34,10 +39,24 @@ export async function loadTilesetImage(tilesetId: string): Promise<ex.ImageSourc
   // Загружаем изображение
   await imageSource.load();
 
-  // Кэшируем
+  // Кэшируем ImageSource
   imageSourceCache.set(tilesetId, imageSource);
 
-  console.log(`[ImageSprites] Loaded tileset: ${tilesetId} (${tileset.imagePath})`);
+  // Создаем SpriteSheet из загруженного изображения
+  const spriteSheet = ex.SpriteSheet.fromImageSource({
+    image: imageSource,
+    grid: {
+      rows: tileset.rows,
+      columns: tileset.columns,
+      spriteWidth: tileset.tileSize,
+      spriteHeight: tileset.tileSize
+    }
+  });
+
+  // Кэшируем SpriteSheet
+  spriteSheetCache.set(tilesetId, spriteSheet);
+
+  console.log(`[ImageSprites] Loaded tileset: ${tilesetId} (${tileset.columns}x${tileset.rows}, ${tileset.imagePath})`);
 
   return imageSource;
 }
@@ -45,8 +64,8 @@ export async function loadTilesetImage(tilesetId: string): Promise<ex.ImageSourc
 /**
  * Получает спрайт из тайлсета по координатам (с кэшированием)
  * @param tilesetId ID тайлсета
- * @param tileX X координата в атласе
- * @param tileY Y координата в атласе
+ * @param tileX X координата в атласе (0-based)
+ * @param tileY Y координата в атласе (0-based)
  * @returns Excalibur Sprite или null если тайлсет не загружен
  */
 export function getSpriteFromTileset(
@@ -61,12 +80,19 @@ export function getSpriteFromTileset(
     return spriteCache.get(cacheKey)!;
   }
 
-  // Получаем ImageSource
-  const imageSource = imageSourceCache.get(tilesetId);
-  if (!imageSource || !imageSource.isLoaded()) {
-    console.warn(`[ImageSprites] Tileset not loaded: ${tilesetId}`);
+  // Получаем SpriteSheet
+  const spriteSheet = spriteSheetCache.get(tilesetId);
+  if (!spriteSheet) {
+    console.warn(`[ImageSprites] SpriteSheet not loaded for tileset: ${tilesetId}`);
     return null;
   }
+
+  console.log(`[ImageSprites] SpriteSheet for ${tilesetId}:`, {
+    columns: spriteSheet.columns,
+    rows: spriteSheet.rows,
+    totalSprites: spriteSheet.sprites.length,
+    requestedTile: `(${tileX}, ${tileY})`
+  });
 
   const tileset = TILESET_REGISTRY[tilesetId];
   if (!tileset) {
@@ -74,19 +100,26 @@ export function getSpriteFromTileset(
     return null;
   }
 
-  // Вырезаем спрайт из атласа
-  const sprite = ex.Sprite.from(imageSource, {
-    sourceView: {
-      x: tileX * tileset.tileSize,
-      y: tileY * tileset.tileSize,
-      width: tileset.tileSize,
-      height: tileset.tileSize
-    },
-    destSize: {
-      width: TILE_CONFIG.TILE_SIZE,
-      height: TILE_CONFIG.TILE_SIZE
-    }
+  console.log(`[ImageSprites] Tileset config for ${tilesetId}:`, {
+    configColumns: tileset.columns,
+    configRows: tileset.rows,
+    expectedTotal: tileset.columns * tileset.rows
   });
+
+  // Проверяем валидность координат
+  if (tileX < 0 || tileX >= tileset.columns || tileY < 0 || tileY >= tileset.rows) {
+    console.warn(`[ImageSprites] Invalid tile coordinates: (${tileX}, ${tileY}) for tileset ${tilesetId} (max: ${tileset.columns}x${tileset.rows})`);
+    return null;
+  }
+
+  // ИСПРАВЛЕНО: getSprite принимает координаты (x, y), а не индекс!
+  const sprite = spriteSheet.getSprite(tileX, tileY);
+  console.log(`[ImageSprites] Got sprite at (${tileX}, ${tileY})`);
+
+  if (!sprite) {
+    console.warn(`[ImageSprites] Failed to get sprite at (${tileX}, ${tileY}) from ${tilesetId}`);
+    return null;
+  }
 
   // Кэшируем спрайт
   spriteCache.set(cacheKey, sprite);
@@ -124,11 +157,12 @@ export function clearSpriteCache(): void {
 }
 
 /**
- * Очистка всех кэшей (изображения и спрайты)
+ * Очистка всех кэшей (изображения, SpriteSheet и спрайты)
  * ВНИМАНИЕ: После этого нужно заново загружать тайлсеты
  */
 export function clearAllCaches(): void {
   spriteCache.clear();
+  spriteSheetCache.clear();
   imageSourceCache.clear();
   console.log('[ImageSprites] All caches cleared');
 }

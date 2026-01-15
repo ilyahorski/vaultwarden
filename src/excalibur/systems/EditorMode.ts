@@ -1,18 +1,17 @@
-import * as ex from 'excalibur';
-import { EventBridge } from '../utils/EventBridge';
-import { TILE_CONFIG } from '../config/TileConfig';
-import { getSpriteFromTileset } from '../resources/ImageSprites';
-import { getTileMetadata } from '../config/TilesetConfig';
+import * as ex from "excalibur";
+import { EventBridge } from "../utils/EventBridge";
+import { TILE_CONFIG } from "../config/TileConfig";
+import { getSpriteFromTileset } from "../resources/ImageSprites";
+import { getTileMetadata } from "../config/TilesetConfig";
 
 interface TileSelection {
   tilesetId: string;
-  tileX: number;
-  tileY: number;
-}
-
-interface BrushSize {
-  width: number;
-  height: number;
+  tiles: Array<{
+    x: number; // Координата в атласе
+    y: number; // Координата в атласе
+    offsetX: number; // Смещение от начала выделения
+    offsetY: number; // Смещение от начала выделения
+  }>;
 }
 
 /**
@@ -21,7 +20,7 @@ interface BrushSize {
  * Особенности:
  * - Обработка кликов мыши на canvas
  * - Конвертация экранных координат → координаты тайлов
- * - Размещение выбранных тайлов из Sidebar
+ * - Размещение выбранных тайлов из Sidebar (с поддержкой мульти-выделения)
  * - Обновление графики и коллизий TileMap
  * - События в React для сохранения изменений
  */
@@ -29,8 +28,7 @@ export class EditorMode {
   private scene: ex.Scene;
   private tileMap: ex.TileMap;
   private camera: ex.Camera;
-  private selectedTile: TileSelection | null = null;
-  private brushSize: BrushSize = { width: 1, height: 1 }; // Размер кисти по умолчанию 1x1
+  private selectedTiles: TileSelection | null = null;
   private isActive = false;
   private isMouseDown = false;
   private lastPanPosition: ex.Vector = ex.vec(0, 0);
@@ -48,7 +46,7 @@ export class EditorMode {
    */
   private setupInput(): void {
     // Левая кнопка мыши - размещение тайла или панорамирование (с пробелом)
-    this.scene.input.pointers.primary.on('down', (evt) => {
+    this.scene.input.pointers.primary.on("down", (evt) => {
       if (!this.isActive) return;
       this.isMouseDown = true;
       this.lastPanPosition = evt.screenPos.clone();
@@ -61,12 +59,12 @@ export class EditorMode {
     });
 
     // Отпускание левой кнопки мыши
-    this.scene.input.pointers.primary.on('up', () => {
+    this.scene.input.pointers.primary.on("up", () => {
       this.isMouseDown = false;
     });
 
     // Панорамирование: пробел + зажатая мышь
-    this.scene.input.pointers.primary.on('move', (evt) => {
+    this.scene.input.pointers.primary.on("move", (evt) => {
       if (!this.isActive || !this.isMouseDown) return;
 
       const keyboard = this.scene.engine.input.keyboard;
@@ -86,103 +84,113 @@ export class EditorMode {
    * Обработка клика/движения с зажатой кнопкой мыши
    */
   private handlePointerDown(evt: ex.Input.PointerEvent): void {
-    // Конвертируем экранные координаты в мировые
-    const worldPos = this.camera.screenToWorld(evt.worldPos);
+    // ИСПРАВЛЕНО: worldPos в Excalibur уже содержит мировые координаты,
+    // повторный вызов screenToWorld не требуется и ломает расчет
+    const worldPos = evt.worldPos;
 
-    // Конвертируем мировые координаты в координаты тайлов
     const tileX = Math.floor(worldPos.x / TILE_CONFIG.TILE_SIZE);
     const tileY = Math.floor(worldPos.y / TILE_CONFIG.TILE_SIZE);
 
-    // Проверяем границы карты
-    if (tileX < 0 || tileY < 0 ||
-        tileX >= this.tileMap.columns ||
-        tileY >= this.tileMap.rows) {
+    if (
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= this.tileMap.columns ||
+      tileY >= this.tileMap.rows
+    ) {
       return;
     }
 
-    // Размещаем тайл
     this.placeTile(tileX, tileY);
   }
 
-  /**
-   * Размещение тайла в указанных координатах с учетом размера кисти
-   */
   private placeTile(x: number, y: number): void {
-    if (!this.selectedTile) {
-      console.warn('[EditorMode] No tile selected');
+    if (!this.selectedTiles || this.selectedTiles.tiles.length === 0) {
+      console.warn('[EditorMode] Cannot place tile: no tiles selected');
       return;
     }
 
-    // Размещаем тайлы в области, определяемой размером кисти
-    for (let dy = 0; dy < this.brushSize.height; dy++) {
-      for (let dx = 0; dx < this.brushSize.width; dx++) {
-        const targetX = x + dx;
-        const targetY = y + dy;
+    console.log(`[EditorMode] Placing ${this.selectedTiles.tiles.length} tiles at (${x}, ${y})`);
+    console.log('[EditorMode] selectedTiles structure:', JSON.stringify(this.selectedTiles, null, 2));
 
-        const tile = this.tileMap.getTile(targetX, targetY);
-        if (!tile) continue; // Пропускаем, если тайл за пределами карты
+    // Размещаем каждый выбранный тайл с учетом его смещения
+    for (const tileInfo of this.selectedTiles.tiles) {
+      console.log('[EditorMode] Processing tileInfo:', tileInfo, 'keys:', Object.keys(tileInfo));
 
-        // Очищаем старую графику
+      const targetX = x + tileInfo.offsetX;
+      const targetY = y + tileInfo.offsetY;
+
+      const tile = this.tileMap.getTile(targetX, targetY);
+      if (!tile) continue;
+
+      console.log(`[EditorMode] Getting sprite for tileset=${this.selectedTiles.tilesetId}, tileX=${tileInfo.x}, tileY=${tileInfo.y}`);
+
+      const sprite = getSpriteFromTileset(
+        this.selectedTiles.tilesetId,
+        tileInfo.x,
+        tileInfo.y
+      );
+
+      if (sprite) {
         tile.clearGraphics();
+        tile.addGraphic(sprite);
 
-        // Получаем спрайт из тайлсета
-        const sprite = getSpriteFromTileset(
-          this.selectedTile.tilesetId,
-          this.selectedTile.tileX,
-          this.selectedTile.tileY
+        const metadata = getTileMetadata(
+          this.selectedTiles.tilesetId,
+          tileInfo.x,
+          tileInfo.y
         );
 
-        if (sprite) {
-          tile.addGraphic(sprite);
+        if (metadata) {
+          tile.solid = !metadata.passable;
 
-          // Получаем метаданные для определения проходимости и типа
-          const metadata = getTileMetadata(
-            this.selectedTile.tilesetId,
-            this.selectedTile.tileX,
-            this.selectedTile.tileY
-          );
-
-          if (metadata) {
-            tile.solid = !metadata.passable;
-
-            // Отправляем событие в React с координатами тайлсета
-            EventBridge.emitTileChanged({
-              x: targetX,
-              y: targetY,
-              type: metadata.type,
-              tilesetX: this.selectedTile.tileX,
-              tilesetY: this.selectedTile.tileY,
-              tilesetSource: this.selectedTile.tilesetId
-            });
-          } else {
-            // Если метаданные не найдены, используем дефолтные значения
-            tile.solid = false;
-          }
+          EventBridge.emitTileChanged({
+            x: targetX,
+            y: targetY,
+            type: metadata.type,
+            tilesetX: tileInfo.x,
+            tilesetY: tileInfo.y,
+            tilesetSource: this.selectedTiles.tilesetId,
+          });
         }
       }
     }
 
-    console.log(`[EditorMode] Placed ${this.brushSize.width}x${this.brushSize.height} tiles at (${x}, ${y})`);
+    console.log(`[EditorMode] Placed ${this.selectedTiles.tiles.length} tiles at (${x}, ${y})`);
   }
 
   /**
-   * Устанавливает выбранный тайл из тайлсета
+   * Устанавливает выбранные тайлы из тайлсета
+   * @param tilesetId ID тайлсета
+   * @param tiles Массив координат выбранных тайлов
    */
-  setSelectedTile(tilesetId: string, tileX: number, tileY: number): void {
-    this.selectedTile = { tilesetId, tileX, tileY };
+  setSelectedTiles(
+    tilesetId: string,
+    tiles: Array<{ x: number; y: number }>
+  ): void {
+    if (tiles.length === 0) {
+      console.warn('[EditorMode] No tiles selected');
+      this.selectedTiles = null;
+      return;
+    }
 
-    const metadata = getTileMetadata(tilesetId, tileX, tileY);
-    const tileName = metadata?.name || `(${tileX}, ${tileY})`;
+    console.log(`[EditorMode] setSelectedTiles received:`, tiles);
 
-    console.log(`[EditorMode] Selected tile: ${tileName} from ${tilesetId}`);
-  }
+    // Находим минимальные координаты (левый верхний угол выделения)
+    const minX = Math.min(...tiles.map(t => t.x));
+    const minY = Math.min(...tiles.map(t => t.y));
 
-  /**
-   * Устанавливает размер кисти
-   */
-  setBrushSize(width: number, height: number): void {
-    this.brushSize = { width, height };
-    console.log(`[EditorMode] Brush size set to ${width}x${height}`);
+    // Вычисляем смещения относительно левого верхнего угла
+    this.selectedTiles = {
+      tilesetId,
+      tiles: tiles.map(tile => ({
+        x: tile.x,
+        y: tile.y,
+        offsetX: tile.x - minX,
+        offsetY: tile.y - minY
+      }))
+    };
+
+    console.log(`[EditorMode] Selected ${tiles.length} tiles from ${tilesetId}, processed:`, this.selectedTiles.tiles);
   }
 
   /**
@@ -216,7 +224,7 @@ export class EditorMode {
     this.isActive = true;
     // Переключаем камеру на свободное перемещение (отключаем следование за игроком)
     this.camera.clearAllStrategies();
-    console.log('[EditorMode] Enabled');
+    console.log("[EditorMode] Enabled");
   }
 
   /**
@@ -225,7 +233,7 @@ export class EditorMode {
   disable(): void {
     this.isActive = false;
     this.isMouseDown = false;
-    console.log('[EditorMode] Disabled');
+    console.log("[EditorMode] Disabled");
   }
 
   /**
