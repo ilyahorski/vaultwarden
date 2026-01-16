@@ -117,14 +117,12 @@ export function useEditorHandlers({
             // Специальная обработка для секретных кнопок
             if (selectedTool === 'secret_button') {
               // Подсчитываем существующие кнопки на карте
-              let existingButtons = 0;
               let existingTriggers = 0;
 
               for (let y = 0; y < grid.length; y++) {
                 for (let x = 0; x < grid[0].length; x++) {
                   const cell = grid[y][x];
                   if (cell.type === 'secret_button' || cell.type === 'secret_button_activated') {
-                    existingButtons++;
                     if (cell.isSecretTrigger === true) {
                       existingTriggers++;
                     }

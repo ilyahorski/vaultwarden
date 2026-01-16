@@ -75,11 +75,35 @@ export class ExcaliburGame extends ex.Engine {
     }
   }
 
+  private _isPaused = false;
+
   /**
    * Проверяет, на паузе ли игра
    */
   isGamePaused(): boolean {
-    return this.clock.isPaused();
+    return this._isPaused;
+  }
+
+  /**
+   * Приостанавливает игру
+   */
+  pause(): void {
+    if (!this._isPaused) {
+      this._isPaused = true;
+      this.clock.stop();
+      console.log('ExcaliburGame: Game paused');
+    }
+  }
+
+  /**
+   * Возобновляет игру
+   */
+  resume(): void {
+    if (this._isPaused) {
+      this._isPaused = false;
+      this.clock.start();
+      console.log('ExcaliburGame: Game resumed');
+    }
   }
 
   /**

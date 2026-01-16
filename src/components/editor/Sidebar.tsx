@@ -6,18 +6,12 @@ import {
   RefreshCw,
   Download,
   Box,
-  Ghost,
-  Skull,
-  Crown,
-  Footprints,
   Sword,
   Shield,
   FlaskConical,
   LayoutGrid,
   Coins,
   Wrench,
-  Swords,
-  Bug,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +20,8 @@ import {
   Info,
   Dices,
   RotateCcw,
+  Paintbrush,
+  Users,
 } from "lucide-react";
 import type { GameMode, LogEntry } from "../../types";
 import { ToolButton } from "../ui/ToolButton";
@@ -35,7 +31,11 @@ import { MusicPlayer } from "../ui/MusicPlayer";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import { TilesetPicker } from "./TilesetPicker";
 import { BrushSizePicker } from "./BrushSizePicker";
+import { LogicBrushPanel, type BrushMode, type BrushShape } from "./LogicBrushPanel";
+import { EntityPlacer } from "./EntityPlacer";
 import { EventBridge } from "../../excalibur/utils/EventBridge";
+import type { EntityConfig, TriggerType } from "../../excalibur/config/TilesetConfig";
+import type { TimeLayer } from "../../types";
 
 // Вертикальная кнопка таба для мобильных
 const MobileTabBtn = ({
@@ -81,7 +81,7 @@ interface SidebarProps {
   isEditorRoute: boolean;
 }
 
-type TabType = "structure" | "enemies" | "loot" | "utils";
+type TabType = "structure" | "logic" | "entities" | "loot" | "utils";
 
 export const Sidebar: React.FC<SidebarProps> = ({
   mode,
@@ -107,6 +107,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>("structure");
   const [brushSize, setBrushSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const isMobile = useIsMobile();
+
+  // === Logic Brush State ===
+  const [brushMode, setBrushMode] = useState<BrushMode>('tile');
+  const [logicBrushSize, setLogicBrushSize] = useState(1);
+  const [brushShape, setBrushShape] = useState<BrushShape>('square');
+  const [passabilityValue, setPassabilityValue] = useState(false);
+  const [selectedTrigger, setSelectedTrigger] = useState<TriggerType>('on_enter');
+  const [selectedTimeLayer, setSelectedTimeLayer] = useState<TimeLayer>('present');
+
+  // === Entity Placer State ===
+  const [selectedEntity, setSelectedEntity] = useState<EntityConfig | null>(null);
+  const [placedEntities, setPlacedEntities] = useState<EntityConfig[]>([]);
 
   // Стабильный колбек для BrushSizePicker (предотвращает бесконечный цикл)
   const handleBrushSizeChange = useCallback((width: number, height: number) => {
@@ -246,9 +258,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {renderTabButton(
                   "structure",
                   <LayoutGrid size={18} />,
-                  "Структура"
+                  "Тайлы"
                 )}
-                {renderTabButton("enemies", <Swords size={18} />, "Враги")}
+                {renderTabButton("logic", <Paintbrush size={18} />, "Логика")}
+                {renderTabButton("entities", <Users size={18} />, "Сущности")}
                 {renderTabButton("loot", <Coins size={18} />, "Лут")}
                 {renderTabButton("utils", <Wrench size={18} />, "Разное")}
               </div>
@@ -276,363 +289,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 )}
 
-                {activeTab === "enemies" && (
+                {activeTab === "logic" && (
                   <div className="space-y-4">
-                    <div>
-                      <h3 className="text-xs font-bold text-lime-600 uppercase tracking-widest mb-2 pl-1 border-b border-lime-900/30 pb-1">
-                        Слабые враги
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_snake"}
-                          onClick={() => onToolChange("enemy_snake")}
-                          icon={<Bug size={16} className="text-lime-400" />}
-                          label="Змея"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_goblin"}
-                          onClick={() => onToolChange("enemy_goblin")}
-                          icon={<Ghost size={16} className="text-lime-500" />}
-                          label="Гоблин"
-                        />
-                      </div>
-                    </div>
+                    <LogicBrushPanel
+                      brushMode={brushMode}
+                      brushSize={logicBrushSize}
+                      brushShape={brushShape}
+                      passabilityValue={passabilityValue}
+                      selectedTrigger={selectedTrigger}
+                      selectedTimeLayer={selectedTimeLayer}
+                      onBrushModeChange={(mode) => {
+                        setBrushMode(mode);
+                        console.log('[Sidebar] Brush mode changed:', mode);
+                        EventBridge.emit('brushModeChanged', { mode });
+                      }}
+                      onBrushSizeChange={(size) => {
+                        setLogicBrushSize(size);
+                        console.log('[Sidebar] Logic brush size changed:', size);
+                        EventBridge.emit('logicBrushSizeChanged', { size });
+                      }}
+                      onBrushShapeChange={(shape) => {
+                        setBrushShape(shape);
+                        console.log('[Sidebar] Brush shape changed:', shape);
+                        EventBridge.emit('brushShapeChanged', { shape });
+                      }}
+                      onPassabilityChange={(value) => {
+                        setPassabilityValue(value);
+                        console.log('[Sidebar] Passability value changed:', value);
+                        EventBridge.emit('passabilityValueChanged', { value });
+                      }}
+                      onTriggerSelect={(trigger) => {
+                        setSelectedTrigger(trigger ?? 'on_enter');
+                        console.log('[Sidebar] Trigger changed:', trigger);
+                        EventBridge.emit('triggerChanged', { trigger });
+                      }}
+                      onTimeLayerSelect={(layer) => {
+                        setSelectedTimeLayer(layer);
+                        console.log('[Sidebar] Time layer changed:', layer);
+                        EventBridge.emit('timeLayerChanged', { layer });
+                      }}
+                    />
+                  </div>
+                )}
 
-                    <div>
-                      <h3 className="text-xs font-bold text-green-500 uppercase tracking-widest mb-2 pl-1 border-b border-green-900/30 pb-1">
-                        Гоблины
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_goblin_archer"}
-                          onClick={() => onToolChange("enemy_goblin_archer")}
-                          icon={<Ghost size={14} className="text-green-400" />}
-                          label="Лучник"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_goblin_fanatic"}
-                          onClick={() => onToolChange("enemy_goblin_fanatic")}
-                          icon={<Ghost size={14} className="text-green-500" />}
-                          label="Фанатик"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_goblin_fighter"}
-                          onClick={() => onToolChange("enemy_goblin_fighter")}
-                          icon={<Ghost size={14} className="text-green-600" />}
-                          label="Воин"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_goblin_occultist"}
-                          onClick={() => onToolChange("enemy_goblin_occultist")}
-                          icon={<Ghost size={14} className="text-green-700" />}
-                          label="Оккультист"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_goblin_wolf_rider"}
-                            onClick={() =>
-                              onToolChange("enemy_goblin_wolf_rider")
-                            }
-                            icon={
-                              <Ghost size={14} className="text-green-800" />
-                            }
-                            label="Наездник на волке"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-2 pl-1 border-b border-orange-900/30 pb-1">
-                        Халфлинги
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_halfling_assassin"}
-                          onClick={() =>
-                            onToolChange("enemy_halfling_assassin")
-                          }
-                          icon={<Ghost size={14} className="text-orange-400" />}
-                          label="Ассасин"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_halfling_bard"}
-                          onClick={() => onToolChange("enemy_halfling_bard")}
-                          icon={<Ghost size={14} className="text-orange-500" />}
-                          label="Бард"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_halfling_ranger"}
-                          onClick={() => onToolChange("enemy_halfling_ranger")}
-                          icon={<Ghost size={14} className="text-orange-600" />}
-                          label="Рейнджер"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_halfling_rogue"}
-                          onClick={() => onToolChange("enemy_halfling_rogue")}
-                          icon={<Ghost size={14} className="text-orange-700" />}
-                          label="Плут"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_halfling_slinger"}
-                            onClick={() =>
-                              onToolChange("enemy_halfling_slinger")
-                            }
-                            icon={
-                              <Ghost size={14} className="text-orange-800" />
-                            }
-                            label="Пращник"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-teal-500 uppercase tracking-widest mb-2 pl-1 border-b border-teal-900/30 pb-1">
-                        Ящеролюди
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_bestial_lizardfolk"}
-                          onClick={() =>
-                            onToolChange("enemy_bestial_lizardfolk")
-                          }
-                          icon={<Bug size={14} className="text-teal-400" />}
-                          label="Зверь"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_lizardfolk_archer"}
-                          onClick={() =>
-                            onToolChange("enemy_lizardfolk_archer")
-                          }
-                          icon={<Ghost size={14} className="text-teal-500" />}
-                          label="Лучник"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_lizardfolk_gladiator"}
-                          onClick={() =>
-                            onToolChange("enemy_lizardfolk_gladiator")
-                          }
-                          icon={<Sword size={14} className="text-teal-600" />}
-                          label="Гладиатор"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_lizardfolk_scout"}
-                          onClick={() => onToolChange("enemy_lizardfolk_scout")}
-                          icon={<Ghost size={14} className="text-teal-700" />}
-                          label="Разведчик"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={
-                              selectedTool === "enemy_lizardfolk_spearman"
-                            }
-                            onClick={() =>
-                              onToolChange("enemy_lizardfolk_spearman")
-                            }
-                            icon={<Sword size={14} className="text-teal-800" />}
-                            label="Копейщик"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 pl-1 border-b border-purple-900/30 pb-1">
-                        Нежить
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_skeleton"}
-                          onClick={() => onToolChange("enemy_skeleton")}
-                          icon={<Skull size={16} className="text-purple-500" />}
-                          label="Скелет"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_zombie"}
-                          onClick={() => onToolChange("enemy_zombie")}
-                          icon={<Ghost size={16} className="text-purple-600" />}
-                          label="Зомби"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_lich"}
-                            onClick={() => onToolChange("enemy_lich")}
-                            icon={
-                              <Crown size={16} className="text-purple-700" />
-                            }
-                            label="Лич (Босс)"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2 pl-1 border-b border-amber-900/30 pb-1">
-                        Гноллы
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_gnoll_brute"}
-                          onClick={() => onToolChange("enemy_gnoll_brute")}
-                          icon={<Skull size={14} className="text-amber-400" />}
-                          label="Громила"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnoll_grunt"}
-                          onClick={() => onToolChange("enemy_gnoll_grunt")}
-                          icon={<Ghost size={14} className="text-amber-500" />}
-                          label="Пехотинец"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnoll_pikeman"}
-                          onClick={() => onToolChange("enemy_gnoll_pikeman")}
-                          icon={<Sword size={14} className="text-amber-600" />}
-                          label="Пикинёр"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnoll_ripper"}
-                          onClick={() => onToolChange("enemy_gnoll_ripper")}
-                          icon={<Skull size={14} className="text-amber-700" />}
-                          label="Потрошитель"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_gnoll_warlord"}
-                            onClick={() => onToolChange("enemy_gnoll_warlord")}
-                            icon={
-                              <Crown size={14} className="text-amber-800" />
-                            }
-                            label="Полководец"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-2 pl-1 border-b border-cyan-900/30 pb-1">
-                        Гномы
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_gnome_alchemist"}
-                          onClick={() => onToolChange("enemy_gnome_alchemist")}
-                          icon={
-                            <FlaskConical size={14} className="text-cyan-400" />
-                          }
-                          label="Алхимик"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnome_mage"}
-                          onClick={() => onToolChange("enemy_gnome_mage")}
-                          icon={<Ghost size={14} className="text-cyan-500" />}
-                          label="Маг"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnome_tinkerer"}
-                          onClick={() => onToolChange("enemy_gnome_tinkerer")}
-                          icon={<Wrench size={14} className="text-cyan-600" />}
-                          label="Изобретатель"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_gnome_wanderer"}
-                          onClick={() => onToolChange("enemy_gnome_wanderer")}
-                          icon={<Ghost size={14} className="text-cyan-700" />}
-                          label="Странник"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_gnome_wizard"}
-                            onClick={() => onToolChange("enemy_gnome_wizard")}
-                            icon={<Ghost size={14} className="text-cyan-800" />}
-                            label="Волшебник"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2 pl-1 border-b border-red-900/30 pb-1">
-                        Орки
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <ToolButton
-                          active={selectedTool === "enemy_orc"}
-                          onClick={() => onToolChange("enemy_orc")}
-                          icon={<Skull size={14} className="text-red-300" />}
-                          label="Орк"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_orc_captain"}
-                          onClick={() => onToolChange("enemy_orc_captain")}
-                          icon={<Crown size={14} className="text-red-400" />}
-                          label="Капитан"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_orc_reaver"}
-                          onClick={() => onToolChange("enemy_orc_reaver")}
-                          icon={<Skull size={14} className="text-red-500" />}
-                          label="Налётчик"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_orc_savage"}
-                          onClick={() => onToolChange("enemy_orc_savage")}
-                          icon={<Skull size={14} className="text-red-600" />}
-                          label="Дикарь"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_orc_shaman"}
-                          onClick={() => onToolChange("enemy_orc_shaman")}
-                          icon={<Ghost size={14} className="text-red-700" />}
-                          label="Шаман"
-                        />
-                        <ToolButton
-                          active={selectedTool === "enemy_orc_warlock"}
-                          onClick={() => onToolChange("enemy_orc_warlock")}
-                          icon={<Ghost size={14} className="text-red-800" />}
-                          label="Колдун"
-                        />
-                        <div className="col-span-2">
-                          <ToolButton
-                            active={selectedTool === "enemy_orc_chief"}
-                            onClick={() => onToolChange("enemy_orc_chief")}
-                            icon={<Crown size={16} className="text-red-900" />}
-                            label="Вождь Орков"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-2 pl-1 border-b border-rose-900/30 pb-1">
-                        Эпические
-                      </h3>
-                      <div className="grid grid-cols-1">
-                        <ToolButton
-                          active={selectedTool === "enemy_boss"}
-                          onClick={() => onToolChange("enemy_boss")}
-                          icon={
-                            <Crown
-                              size={16}
-                              className="text-rose-900 animate-pulse"
-                            />
-                          }
-                          label="Тёмный Рыцарь"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-2 mt-4 border-t border-slate-800">
-                      <ToolButton
-                        active={selectedTool === "move_enemy"}
-                        onClick={() => onToolChange("move_enemy")}
-                        icon={
-                          <Footprints size={16} className="text-blue-500" />
-                        }
-                        label="Переместить врага"
-                      />
-                    </div>
+                {activeTab === "entities" && (
+                  <div className="space-y-4">
+                    <EntityPlacer
+                      selectedEntity={selectedEntity}
+                      onEntitySelect={(entity) => {
+                        setSelectedEntity(entity);
+                        console.log('[Sidebar] Entity selected:', entity);
+                        EventBridge.emit('entitySelected', { entity });
+                      }}
+                      placedEntities={placedEntities}
+                      onEntityRemove={(entityId) => {
+                        setPlacedEntities(prev => prev.filter(e => e.entityId !== entityId));
+                        console.log('[Sidebar] Entity removed:', entityId);
+                        EventBridge.emit('entityRemoved', { entityId });
+                      }}
+                    />
                   </div>
                 )}
 
@@ -900,9 +615,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   icon={<LayoutGrid size={16} />}
                 />
                 <MobileTabBtn
-                  active={activeTab === "enemies"}
-                  onClick={() => setActiveTab("enemies")}
-                  icon={<Swords size={16} />}
+                  active={activeTab === "logic"}
+                  onClick={() => setActiveTab("logic")}
+                  icon={<Paintbrush size={16} />}
+                />
+                <MobileTabBtn
+                  active={activeTab === "entities"}
+                  onClick={() => setActiveTab("entities")}
+                  icon={<Users size={16} />}
                 />
                 <MobileTabBtn
                   active={activeTab === "loot"}

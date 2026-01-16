@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/react';
 
 // Хуки
 import { useGameState } from './hooks/useGameState';
+import { usePartyState } from './hooks/usePartyState';
 import { useUIState } from './hooks/useUIState';
 import { usePlayerMovement } from './hooks/usePlayerMovement';
 import { useCombat } from './hooks/useCombat';
@@ -13,15 +14,27 @@ import { useIsMobile } from './hooks/useMediaQuery';
 import { useEditorSync } from './hooks/useEditorSync';
 
 // Компоненты
-import { ClassSelection, PlayerHeader, CombatMenu, MobileControls, TutorialPopup } from './components/game';
+import { ClassSelection, PlayerHeader, CombatMenu, MobileControls, TutorialPopup, PartyCreation, InventoryGrid } from './components/game';
 import { PlayerMenu } from './components/game/PlayerMenu';
 import { ShopMenu } from './components/game/ShopMenu';
-import { Sidebar } from './components/editor';
+import { Sidebar, TilemapEditorWrapper } from './components/editor';
 import { ExcaliburCanvas } from './components/ExcaliburCanvas';
+
+// Стили tilemap-editor
+import './styles/tilemap-editor-theme.css';
 
 // Утилиты
 import { rollActionDie } from './utils';
+import { convertToExcaliburFormat } from './utils/tilemapDataConverter';
 import { CLASSES } from './constants';
+import { EventBridge } from './excalibur/utils/EventBridge';
+
+// Типы tilemap-editor
+import type { TilemapEditorData, FlattenedMapData } from './config/tilemapEditorConfig';
+
+// Типы
+import type { DuoParty } from './types';
+import type { ExcaliburCanvasRef } from './components/ExcaliburCanvas';
 
 interface DungeonAppProps {
   initialMode?: 'player' | 'dm';
@@ -30,10 +43,25 @@ interface DungeonAppProps {
 export default function DungeonApp({ initialMode }: DungeonAppProps) {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const excaliburGameRef = useRef<any>(null);
+  const excaliburGameRef = useRef<ExcaliburCanvasRef | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [shopOpen, setShopOpen] = useState<{ x: number; y: number } | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
+  const [tilemapData, setTilemapData] = useState<TilemapEditorData | null>(null);
   const isMobile = useIsMobile();
+
+  // === НОВАЯ DUO СИСТЕМА (Aetheria) ===
+  const {
+    party,
+    isLoading: isPartyLoading,
+    hasStartedGame,
+    addLog: addPartyLog,
+    initializeParty,
+    switchActiveCharacter
+  } = usePartyState({ initialMode });
+
+  // Флаг использования новой системы (true = Duo, false = Legacy)
+  const useDuoSystem = true;
 
   const {
     grid, setGrid,
@@ -72,6 +100,32 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  // === Клавиша 'I' для открытия инвентаря (Duo система) ===
+  useEffect(() => {
+    if (!useDuoSystem || !hasStartedGame) return;
+
+    const handleInventoryKey = (e: KeyboardEvent) => {
+      if (e.key === 'i' || e.key === 'I' || e.key === 'ш' || e.key === 'Ш') {
+        // Не открывать в бою или других меню
+        if (!combatTarget && !shopOpen) {
+          setShowInventory(prev => !prev);
+        }
+      }
+      // Escape закрывает инвентарь
+      if (e.key === 'Escape' && showInventory) {
+        setShowInventory(false);
+      }
+      // Tab переключает персонажей
+      if (e.key === 'Tab' && hasStartedGame && !combatTarget) {
+        e.preventDefault();
+        switchActiveCharacter();
+      }
+    };
+
+    window.addEventListener('keydown', handleInventoryKey);
+    return () => window.removeEventListener('keydown', handleInventoryKey);
+  }, [useDuoSystem, hasStartedGame, combatTarget, shopOpen, showInventory, switchActiveCharacter]);
 
   const { processEnemyTurn } = useEnemyAI({
     mode,
@@ -351,9 +405,33 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   });
 
   useEditorSync({
-    grid,
     setGrid
   });
+
+  // Callback для применения данных из tilemap-editor к игре
+  const handleApplyToGame = useCallback((data: {
+    flattenedData?: FlattenedMapData;
+    maps: TilemapEditorData['maps'];
+    tileSets: TilemapEditorData['tileSets'];
+  }) => {
+    console.log('[App] Applying tilemap data to game:', data);
+
+    // Сохраняем данные tilemap-editor
+    setTilemapData({ maps: data.maps, tileSets: data.tileSets });
+
+    // Конвертируем в формат Excalibur и обновляем grid
+    const excaliburData = convertToExcaliburFormat(data);
+    setGrid(excaliburData.grid);
+
+    // Отправляем событие для обновления карты в Excalibur
+    EventBridge.emit('editor:mapUpdated', {
+      grid: excaliburData.grid,
+      width: excaliburData.width,
+      height: excaliburData.height
+    });
+
+    addLog('Карта обновлена из редактора', 'info');
+  }, [setGrid, addLog]);
 
   // Excalibur управляет камерой сам через lockToActor в WorldScene
   
@@ -406,28 +484,38 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
       <Analytics />
-      
-      <Sidebar
-        mode={mode}
-        selectedTool={selectedTool}
-        onModeChange={setMode}
-        onToolChange={setSelectedTool}
-        onResetGame={resetGame}
-        onResetCurrentLevel={resetCurrentLevel}
-        onGenerateRandomLevel={generateRandomLevel}
-        onExport={handleExport}
-        onImport={handleImport}
-        onExportCampaign={handleExportCampaign}
-        onAddLevel={createNewLevel}
-        onSwitchLevel={switchLevel}
-        currentLevel={player.dungeonLevel}
-        totalLevels={maxLevel}
-        fileInputRef={fileInputRef}
-        logs={logs}
-        logsEndRef={logsEndRef}
-        onShowTutorial={() => setShowTutorial(true)}
-        isEditorRoute={initialMode === 'dm'}
-      />
+
+      {/* В режиме dm показываем TilemapEditorWrapper, иначе Sidebar */}
+      {mode === 'dm' ? (
+        <TilemapEditorWrapper
+          mode={mode}
+          onModeChange={setMode}
+          onApplyToGame={handleApplyToGame}
+          initialData={tilemapData || undefined}
+        />
+      ) : (
+        <Sidebar
+          mode={mode}
+          selectedTool={selectedTool}
+          onModeChange={setMode}
+          onToolChange={setSelectedTool}
+          onResetGame={resetGame}
+          onResetCurrentLevel={resetCurrentLevel}
+          onGenerateRandomLevel={generateRandomLevel}
+          onExport={handleExport}
+          onImport={handleImport}
+          onExportCampaign={handleExportCampaign}
+          onAddLevel={createNewLevel}
+          onSwitchLevel={switchLevel}
+          currentLevel={player.dungeonLevel}
+          totalLevels={maxLevel}
+          fileInputRef={fileInputRef}
+          logs={logs}
+          logsEndRef={logsEndRef}
+          onShowTutorial={() => setShowTutorial(true)}
+          isEditorRoute={initialMode === 'dm'}
+        />
+      )}
 
       {showTutorial && (
         <TutorialPopup onClose={() => setShowTutorial(false)} />
@@ -435,11 +523,32 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
 
       <div className="flex-1 flex flex-col min-h-0 relative">
         
-        {mode === 'player' && !hasChosenClass && (
+        {/* === НОВАЯ DUO СИСТЕМА: PartyCreation === */}
+        {useDuoSystem && mode === 'player' && !isPartyLoading && !hasStartedGame && (
+          <PartyCreation
+            onCreateParty={(newParty: DuoParty) => {
+              initializeParty(newParty.hero.name, newParty.cat.name);
+            }}
+          />
+        )}
+
+        {/* === LEGACY СИСТЕМА: ClassSelection === */}
+        {!useDuoSystem && mode === 'player' && !hasChosenClass && (
           <ClassSelection onSelectClass={selectClass} onParseCampaign={parseCampaignFile} />
         )}
 
-        {mode === 'player' && hasChosenClass && (
+        {/* === Loading state для Duo системы === */}
+        {useDuoSystem && isPartyLoading && (
+          <div className="absolute inset-0 z-50 bg-slate-900 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full mb-4 mx-auto"></div>
+              <p className="text-slate-400">Загрузка...</p>
+            </div>
+          </div>
+        )}
+
+        {/* === Основной игровой контент === */}
+        {mode === 'player' && ((useDuoSystem && hasStartedGame && party) || (!useDuoSystem && hasChosenClass)) && (
           <>
             <PlayerHeader
               player={player}
@@ -515,6 +624,22 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
                   onClose={() => setShopOpen(null)}
                 />
               )}
+
+              {/* === InventoryGrid для Duo системы === */}
+              {useDuoSystem && showInventory && party && (
+                <InventoryGrid
+                  party={party}
+                  onClose={() => setShowInventory(false)}
+                  onUseItem={(slot) => {
+                    addPartyLog(`Использован предмет из слота ${slot}`, 'info');
+                    // TODO: Реализовать логику использования предмета
+                  }}
+                  onDropItem={(slot) => {
+                    addPartyLog(`Выброшен предмет из слота ${slot}`, 'info');
+                    // TODO: Реализовать логику выбрасывания предмета
+                  }}
+                />
+              )}
             </div>
 
             {/* MobileControls - фиксированная панель внизу на мобильных */}
@@ -528,28 +653,7 @@ export default function DungeonApp({ initialMode }: DungeonAppProps) {
           </>
         )}
 
-        {mode === 'dm' && (
-          <>
-            {/* Контейнер для редактора - аналогично режиму игрока */}
-            <div className={`bg-slate-950 flex items-center justify-center relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-size-[20px_20px] ${isMobile ? 'h-[70vh]' : 'flex-1'}`}>
-              <div
-                className="relative overflow-hidden bg-slate-900/50 border-2 border-slate-800/50 rounded-lg shadow-2xl"
-                style={{
-                  width: isMobile ? 'min(90vw, 70vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 4rem))',
-                  height: isMobile ? 'min(90vw, 70vh)' : 'min(calc(100vw - 384px - 4rem), calc(100vh - 4rem))',
-                  aspectRatio: '1/1'
-                }}
-              >
-                {/* Excalibur Canvas в режиме редактора */}
-                <ExcaliburCanvas
-                  ref={excaliburGameRef}
-                  isEditorMode={true}
-                  selectedTool={selectedTool}
-                />
-              </div>
-            </div>
-          </>
-        )}
+        {/* В режиме dm - tilemap-editor занимает всё пространство (его canvas уже в TilemapEditorWrapper) */}
       </div>
     </div>
   );

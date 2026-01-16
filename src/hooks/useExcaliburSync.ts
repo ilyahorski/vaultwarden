@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Player, CombatTarget } from '../types';
+import type { Player, CombatTarget, EnemyType } from '../types';
 import { EventBridge } from '../excalibur/utils/EventBridge';
 import type { ExcaliburGame } from '../excalibur/ExcaliburGame';
 
@@ -49,7 +49,7 @@ export const useExcaliburSync = ({
           ...prev,
           x: data.x,
           y: data.y,
-          facing: data.facing as any
+          facing: data.facing as 'up' | 'down' | 'left' | 'right'
         }));
       }
     };
@@ -102,7 +102,7 @@ export const useExcaliburSync = ({
       setCombatTarget({
         x: player.x,
         y: player.y,
-        enemy: data.enemy
+        enemy: data.enemy as EnemyType
       });
       gameRef.current?.game?.pause();
     };

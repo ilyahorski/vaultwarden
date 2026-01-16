@@ -22,13 +22,14 @@ export class PlayerActor extends ex.Actor {
     try {
       this.body.group = ex.CollisionGroupManager.groupByName('player') ||
                         ex.CollisionGroupManager.create('player');
-    } catch (e) {
+    } catch {
       // Группа уже существует, используем её
       this.body.group = ex.CollisionGroupManager.groupByName('player')!;
     }
   }
 
-  onInitialize(engine: ex.Engine): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onInitialize(_engine: ex.Engine): void {
     // Создаем placeholder спрайт (синий квадрат)
     const rect = new ex.Rectangle({
       width: TILE_CONFIG.TILE_SIZE,
@@ -39,7 +40,8 @@ export class PlayerActor extends ex.Actor {
     this.graphics.use(rect);
   }
 
-  onPreUpdate(engine: ex.Engine, delta: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onPreUpdate(engine: ex.Engine, _delta: number): void {
     this.handleInput(engine.input.keyboard);
 
     // Отправляем события в React при смене тайла

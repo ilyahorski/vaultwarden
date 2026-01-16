@@ -15,9 +15,12 @@
  * - game:pause - пауза игры (открыто меню или бой)
  * - game:resume - возобновление игры (меню закрыто)
  */
+// Тип для callback функций в EventBridge
+type EventCallback<T = unknown> = (data: T) => void;
+
 class ExcaliburEventBridge extends EventTarget {
   // Кэш обработчиков для корректной работы removeEventListener
-  private listenerMap = new WeakMap<Function, EventListener>();
+  private listenerMap = new WeakMap<EventCallback, EventListener>();
 
   // Excalibur → React: движение игрока
   emitPlayerMove(data: { x: number; y: number; facing: string }): void {
@@ -83,8 +86,13 @@ class ExcaliburEventBridge extends EventTarget {
     this.dispatchEvent(new CustomEvent("game:resume"));
   }
 
+  // Генерический emit для произвольных событий
+  emit<T = unknown>(event: string, data?: T): void {
+    this.dispatchEvent(new CustomEvent(event, { detail: data }));
+  }
+
   // Совместимость с EventEmitter API для удобства
-  on(event: string, callback: (event: any) => void): void {
+  on<T = unknown>(event: string, callback: EventCallback<T>): void {
     // Создаём обёртку для callback, которая извлекает detail из CustomEvent
     const wrappedListener: EventListener = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -92,17 +100,17 @@ class ExcaliburEventBridge extends EventTarget {
     };
 
     // Сохраняем обёртку для корректной работы off()
-    this.listenerMap.set(callback, wrappedListener);
+    this.listenerMap.set(callback as EventCallback, wrappedListener);
 
     this.addEventListener(event, wrappedListener);
   }
 
-  off(event: string, callback: (event: any) => void): void {
+  off<T = unknown>(event: string, callback: EventCallback<T>): void {
     // Получаем сохранённую обёртку
-    const wrappedListener = this.listenerMap.get(callback);
+    const wrappedListener = this.listenerMap.get(callback as EventCallback);
     if (wrappedListener) {
       this.removeEventListener(event, wrappedListener);
-      this.listenerMap.delete(callback);
+      this.listenerMap.delete(callback as EventCallback);
     }
   }
 }

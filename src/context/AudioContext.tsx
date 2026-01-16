@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { AudioContextProvider, type SoundEffectType } from './audioTypes';
 
 // Реэкспорт хука для обратной совместимости
+// eslint-disable-next-line react-refresh/only-export-components
 export { useAudio } from './audioTypes';
 
 // Список музыкальных треков
@@ -144,6 +145,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
         audioRef.current.pause();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Воспроизведение звукового эффекта

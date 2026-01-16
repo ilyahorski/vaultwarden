@@ -7,7 +7,7 @@ const CELL_TYPE_MAP: Record<CellType, string> = {
   trap: 'T', water: 'A', lava: 'L', grass: 'G',
   stairs_down: 'd', stairs_up: 'u', torch: 't', torch_lit: 'l',
   merchant: 'M', secret_button: 'B', secret_button_activated: 'b',
-  bonfire: 'f'
+  bonfire: 'f', chest: 'c'
 };
 const CELL_TYPE_REVERSE: Record<string, CellType> = Object.fromEntries(
   Object.entries(CELL_TYPE_MAP).map(([k, v]) => [v, k as CellType])
@@ -49,7 +49,9 @@ const ENEMY_MAP: Record<NonNullable<EnemyType>, string> = {
   gnome_wanderer: 'mw', gnome_wizard: 'mz',
   // Орки
   orc_captain: 'oa', orc_reaver: 'oe', orc_savage: 'os',
-  orc_shaman: 'oh', orc_warlock: 'ol'
+  orc_shaman: 'oh', orc_warlock: 'ol',
+  // Дополнительные враги
+  mummy: 'mu', orc_grunt: 'og', orc_warrior: 'ow', orc_berserker: 'ob'
 };
 const ENEMY_REVERSE: Record<string, EnemyType> = Object.fromEntries(
   Object.entries(ENEMY_MAP).map(([k, v]) => [v, k as EnemyType])

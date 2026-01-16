@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  // Инициализируем состояние на основе текущего media query
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     const media = window.matchMedia(query);
 
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
+    // Синхронизируем при изменении query (необходимо при изменении query prop)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMatches(media.matches);
 
     const listener = (e: MediaQueryListEvent) => setMatches(e.matches);
 
@@ -21,7 +27,7 @@ export function useMediaQuery(query: string): boolean {
       media.addListener(listener);
       return () => media.removeListener(listener);
     }
-  }, [matches, query]);
+  }, [query]);
 
   return matches;
 }

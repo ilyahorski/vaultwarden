@@ -1,7 +1,7 @@
 import React from 'react';
 
 // --- Типы ячеек ---
-export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit' | 'merchant' | 'secret_button' | 'secret_button_activated' | 'bonfire';
+export type CellType = 'wall' | 'floor' | 'door' | 'door_open' | 'secret_door' | 'trap' | 'water' | 'lava' | 'grass' | 'stairs_down' | 'stairs_up' | 'torch' | 'torch_lit' | 'merchant' | 'secret_button' | 'secret_button_activated' | 'bonfire' | 'chest';
 
 // --- Типы предметов ---
 // HP Зелья
@@ -59,6 +59,7 @@ export type EnemyType =
   | 'skeleton'
   | 'zombie'
   | 'lich'
+  | 'mummy'
   // Гноллы
   | 'gnoll_brute'
   | 'gnoll_grunt'
@@ -73,6 +74,9 @@ export type EnemyType =
   | 'gnome_wizard'
   // Орки
   | 'orc'
+  | 'orc_grunt'
+  | 'orc_warrior'
+  | 'orc_berserker'
   | 'orc_captain'
   | 'orc_reaver'
   | 'orc_savage'
@@ -83,8 +87,157 @@ export type EnemyType =
   | 'boss'
   | null;
 
-// --- Типы классов ---
+// --- Типы классов (DEPRECATED - используйте DuoParty) ---
+/** @deprecated Используйте DuoParty для новой системы персонажей */
 export type ClassType = 'warrior' | 'mage' | 'rogue';
+
+// ============================================
+// === DUO CHARACTER SYSTEM (Aetheria RPG) ===
+// ============================================
+
+// --- Временные слои ---
+export type TimeLayer = 'past' | 'present' | 'future';
+
+// --- Категории предметов для инвентаря 2.0 ---
+export type ItemCategory = 'weapon' | 'scroll' | 'clothing' | 'food' | 'quest';
+
+// --- Типы свитков ---
+export type ScrollType =
+  | 'scroll_fireball'
+  | 'scroll_heal'
+  | 'scroll_teleport'
+  | 'scroll_time_shift'
+  | 'scroll_reveal';
+
+// --- Типы еды ---
+export type FoodType =
+  | 'food_bread'
+  | 'food_meat'
+  | 'food_cheese'
+  | 'food_apple'
+  | 'food_fish'
+  | 'food_stew';
+
+// --- Типы одежды (для героини) ---
+export type ClothingType =
+  | 'clothing_explorer_hat'
+  | 'clothing_archaeologist_vest'
+  | 'clothing_travel_cloak'
+  | 'clothing_sturdy_boots';
+
+// --- Типы квестовых предметов ---
+export type QuestItemType =
+  | 'quest_ancient_key'
+  | 'quest_time_crystal'
+  | 'quest_cat_collar'
+  | 'quest_essence_past'
+  | 'quest_essence_present'
+  | 'quest_essence_future'
+  | 'quest_codex_page';
+
+// --- Расширенный тип предметов (без null для Record) ---
+export type ExtendedItemTypeNonNull =
+  | PotionType
+  | WeaponType
+  | ArmorType
+  | ScrollType
+  | FoodType
+  | ClothingType
+  | QuestItemType
+  | 'gold'
+  | 'chest';
+
+// --- Расширенный тип предметов (с null) ---
+export type ExtendedItemType = ExtendedItemTypeNonNull | null;
+
+// --- Навык инструмента (для героини) ---
+export interface ToolSkill {
+  id: string;
+  name: string;
+  desc: string;
+  staminaCost: number;
+  unlockLevel: number;
+}
+
+// --- Навык знаний (для кота) ---
+export interface LoreSkill {
+  id: string;
+  name: string;
+  desc: string;
+  manaCost: number;
+  unlockLevel: number;
+}
+
+// --- Статистика Героини (Археолог) ---
+export interface HeroStats {
+  name: string;
+  x: number;
+  y: number;
+  facing: Direction;
+  // Боевые статы
+  hp: number;
+  maxHp: number;
+  stamina: number;
+  maxStamina: number;
+  // Атрибуты
+  strength: number;     // Физический урон
+  dexterity: number;    // Уклонение, крит
+  // Прогрессия
+  xp: number;
+  level: number;
+  nextLevelXp: number;
+  // Снаряжение
+  equippedWeapon: WeaponType | null;
+  equippedArmor: ArmorType | null;
+  equippedClothing: ClothingType | null;
+  // Навыки
+  tools: ToolSkill[];
+}
+
+// --- Статистика Кота (бывший ученый) ---
+export interface CatStats {
+  name: string;
+  x: number;
+  y: number;
+  facing: Direction;
+  // Боевые статы
+  hp: number;
+  maxHp: number;
+  mana: number;
+  maxMana: number;
+  // Атрибуты
+  intelligence: number;  // Магический урон
+  wisdom: number;        // Мана реген, обнаружение
+  // Прогрессия
+  xp: number;
+  level: number;
+  nextLevelXp: number;
+  // Навыки
+  lore: LoreSkill[];
+}
+
+// --- Предмет инвентаря (новая система) ---
+export interface InventorySlot {
+  id: string;
+  slot: number;           // 0-199
+  itemType: ExtendedItemType;
+  category: ItemCategory;
+  stackable: boolean;
+  quantity: number;
+  // Для квестовых предметов
+  questId?: string;
+  description?: string;
+}
+
+// --- Дуэт персонажей (главная структура) ---
+export interface DuoParty {
+  hero: HeroStats;
+  cat: CatStats;
+  activeCharacter: 'hero' | 'cat';  // Кто управляется сейчас
+  gold: number;                      // Общее золото
+  inventory: InventorySlot[];        // Общий инвентарь (до 200 слотов)
+  currentTimeLayer: TimeLayer;       // Текущий временной слой
+}
 
 // --- Направления движения ---
 export type Direction = 'left' | 'right' | 'up' | 'down';
@@ -99,7 +252,8 @@ export interface Skill {
   heal?: number;
 }
 
-// --- Интерфейс класса ---
+// --- Интерфейс класса (DEPRECATED) ---
+/** @deprecated Используйте HeroStats и CatStats для новой системы персонажей */
 export interface ClassData {
   name: string;
   hp: number;
@@ -116,6 +270,17 @@ export interface ClassData {
   startingArmor?: ArmorType;
 }
 
+// --- Вариант тайла для Time-Shift ---
+export interface TileVariant {
+  tilesetX: number;
+  tilesetY: number;
+  tilesetSource: string;
+  passable: boolean;
+  type?: CellType;
+  enemy?: EnemyType;
+  item?: ItemType;
+}
+
 // --- Интерфейс ячейки ---
 export interface CellData {
   x: number;
@@ -127,6 +292,10 @@ export interface CellData {
   tilesetY?: number;        // Y координата в атласе тайлсета
   tilesetSource?: string;   // ID тайлсета ('world', 'town', 'dungeon')
 
+  // Альтернативные имена для совместимости
+  tileX?: number;           // Alias для tilesetX
+  tileY?: number;           // Alias для tilesetY
+
   item: ItemType;
   enemy: EnemyType;
   enemyHp?: number;
@@ -135,6 +304,17 @@ export interface CellData {
   isSecretTrigger?: boolean; // Для secret_button: true = открывает комнату, false = ложная кнопка
   isHiddenRoom?: boolean; // Помечает клетки, которые являются частью скрытой комнаты
   originalType?: CellType; // Сохраняет оригинальный тип клетки до скрытия
+
+  // === Time-Shift система ===
+  timeVariants?: {
+    past?: TileVariant;
+    present?: TileVariant;
+    future?: TileVariant;
+  };
+
+  // === Entity Layer ===
+  entityId?: string;        // ID сущности для спавна (NPC, враг)
+  entityType?: 'npc' | 'enemy' | 'trigger';
 }
 
 // --- Интерфейс записи лога ---
@@ -238,3 +418,6 @@ export interface MerchantData {
   greeting: string;
   items: ShopItem[];
 }
+
+// --- Alias для CellData (для совместимости) ---
+export type Cell = CellData;

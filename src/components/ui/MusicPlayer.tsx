@@ -57,6 +57,7 @@ export function MusicPlayer() {
       document.removeEventListener('mousemove', handleDragMove);
       document.removeEventListener('mouseup', handleDragEnd);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;

@@ -6,8 +6,9 @@ import { EditorMode } from '../systems/EditorMode';
 import { MapLoader } from '../loaders/MapLoader';
 import { TILE_CONFIG } from '../config/TileConfig';
 import { preloadAllTilesets } from '../resources/ImageSprites';
+import { EventBridge } from '../utils/EventBridge';
 import type { MapData } from '../loaders/MapLoader';
-import type { CellType } from '../../types';
+import type { CellData } from '../../types';
 
 export class WorldScene extends ex.Scene {
   private player?: PlayerActor;
@@ -16,7 +17,8 @@ export class WorldScene extends ex.Scene {
   private editorMode?: EditorMode;
   private sceneInitialized = false;
 
-  async onInitialize(engine: ex.Engine): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async onInitialize(_engine: ex.Engine): Promise<void> {
     // Защита от повторной инициализации
     if (this.sceneInitialized) {
       console.log('WorldScene: Already initialized, skipping');
@@ -74,6 +76,9 @@ export class WorldScene extends ex.Scene {
       this.editorMode = new EditorMode(this, this.tileMap, this.camera);
       console.log('WorldScene: EditorMode initialized');
 
+      // Подписываемся на события обновления карты из tilemap-editor
+      this.setupEditorMapListener();
+
       // Важно: отправляем событие что сцена готова
       this.emit('scene:ready', this);
     } catch (error) {
@@ -96,7 +101,7 @@ export class WorldScene extends ex.Scene {
     }
   }
 
-  onPreUpdate(engine: ex.Engine, delta: number): void {
+  onPreUpdate(_engine: ex.Engine, delta: number): void {
     // Обновляем систему случайных боев
     this.combatSystem?.update(delta);
 
@@ -123,6 +128,49 @@ export class WorldScene extends ex.Scene {
    */
   getEditorMode(): EditorMode | undefined {
     return this.editorMode;
+  }
+
+  /**
+   * Настраивает слушатель события обновления карты из tilemap-editor
+   */
+  private setupEditorMapListener(): void {
+    EventBridge.on('editor:mapUpdated', (data: {
+      grid: CellData[][];
+      width: number;
+      height: number;
+    }) => {
+      console.log('[WorldScene] Received editor:mapUpdated event', data.width, 'x', data.height);
+      this.updateMapFromEditor(data.grid, data.width, data.height);
+    });
+  }
+
+  /**
+   * Обновляет карту из данных tilemap-editor
+   */
+  private async updateMapFromEditor(grid: CellData[][], width: number, height: number): Promise<void> {
+    if (!this.tileMap) {
+      console.warn('[WorldScene] Cannot update map - tileMap not initialized');
+      return;
+    }
+
+    console.log(`[WorldScene] Updating map from editor (${width}x${height})`);
+
+    // Создаём MapData из grid
+    const mapData: MapData = {
+      version: 1,
+      name: 'Editor Map',
+      width,
+      height,
+      grid
+    };
+
+    // Обновляем TileMap
+    try {
+      await MapLoader.populateTileMap(this.tileMap, mapData);
+      console.log('[WorldScene] Map updated successfully from editor');
+    } catch (error) {
+      console.error('[WorldScene] Failed to update map from editor:', error);
+    }
   }
 }
 

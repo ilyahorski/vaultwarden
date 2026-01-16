@@ -25,7 +25,22 @@
       "Bash(pkill:*)",
       "Bash(node scripts/convertMapToCompact.js:*)",
       "Bash(npm run dev:*)",
-      "Bash(node scripts/convertMapToChunks.js:*)"
+      "Bash(node scripts/convertMapToChunks.js:*)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v22.14.0/bin:$PATH\")",
+      "Bash(npm --version:*)",
+      "Bash(/home/ily/.nvm/versions/node/*/bin/npm)",
+      "Bash(bun:*)",
+      "Bash(env -i HOME=$HOME PATH=/usr/local/bin:/usr/bin:/bin bash --noprofile --norc -c:*)",
+      "Bash(/home/ily/.nvm/versions/node/v22.21.1/bin/npm install dexie)",
+      "Bash(PATH=\"/home/ily/.nvm/versions/node/v22.21.1/bin:$PATH\" /home/ily/.nvm/versions/node/v22.21.1/bin/npm install:*)",
+      "Bash(PATH=\"/home/ily/.nvm/versions/node/v22.21.1/bin:$PATH\" /home/ily/.nvm/versions/node/v22.21.1/bin/npx tsc:*)",
+      "Bash(/home/ily/.nvm/versions/node/v22.21.1/bin/node /home/ily/.nvm/versions/node/v22.21.1/bin/npx tsc:*)",
+      "Bash(/home/ily/.nvm/versions/node/v22.21.1/bin/node ./node_modules/.bin/tsc:*)",
+      "Bash(/home/ily/.nvm/versions/node/v22.21.1/bin/node:*)",
+      "Bash(export PATH:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm i:*)",
+      "Read(//home/ily/.nvm/versions/node/**)"
     ]
   }
 }

@@ -44,8 +44,8 @@ export function usePlayerMovement({
   setGrid,
   player,
   setPlayer,
-  activeRoll,
-  setActiveRoll,
+  activeRoll: _activeRoll,
+  setActiveRoll: _setActiveRoll,
   addLog,
   setCombatTarget,
   setActiveMenu,
@@ -54,11 +54,15 @@ export function usePlayerMovement({
   levelHistory,
   setLevelHistory,
   generateDungeon,
-  logs,
+  logs: _logs,
   resetGame,
   viewportOffset,
   setViewportOffset
 }: UsePlayerMovementProps) {
+  // Unused props are prefixed with _ to suppress TypeScript errors
+  void _activeRoll;
+  void _setActiveRoll;
+  void _logs;
   
   const movePlayer = (dx: number, dy: number) => {
     // Для world map (уровень 1) движение управляется через Excalibur PlayerActor

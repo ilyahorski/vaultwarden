@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { ExcaliburGame } from '../excalibur/ExcaliburGame';
 import { EventBridge } from '../excalibur/utils/EventBridge';
 
 interface ExcaliburCanvasProps {
   className?: string;
   isEditorMode?: boolean;
-  selectedTool?: string;
 }
 
 export interface ExcaliburCanvasRef {
@@ -13,7 +12,7 @@ export interface ExcaliburCanvasRef {
 }
 
 export const ExcaliburCanvas = forwardRef<ExcaliburCanvasRef, ExcaliburCanvasProps>(
-  ({ className = '', isEditorMode = false, selectedTool = 'floor' }, ref) => {
+  ({ className = '', isEditorMode = false }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const gameRef = useRef<ExcaliburGame | null>(null);
 

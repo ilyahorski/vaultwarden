@@ -38,7 +38,8 @@ export class TriggerActor extends ex.Actor {
     this.triggerType = config.type;
   }
 
-  onInitialize(engine: ex.Engine): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onInitialize(_engine: ex.Engine): void {
     // Невидимая зона (opacity = 0)
     // Для дебага можно временно сделать полупрозрачной
     const debugMode = false;
@@ -79,7 +80,8 @@ export class TriggerActor extends ex.Actor {
     });
   }
 
-  private onPlayerEnter(player: PlayerActor): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private onPlayerEnter(_player: PlayerActor): void {
     // Предотвращаем повторные срабатывания
     if (this.hasTriggered) return;
     this.hasTriggered = true;

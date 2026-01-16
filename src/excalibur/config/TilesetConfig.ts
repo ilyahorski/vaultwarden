@@ -1,7 +1,45 @@
-import type { CellType } from '../../types';
+import type { CellType, TimeLayer, EnemyType } from '../../types';
+
+// === Типы триггеров для Visual Metadata Editor ===
+export type TriggerType =
+  | 'on_enter'          // При входе на клетку
+  | 'on_exit'           // При выходе из клетки
+  | 'on_interact'       // При взаимодействии (E)
+  | 'on_time_shift'     // При смене временного слоя
+  | 'on_item_use'       // При использовании предмета
+  | 'proximity'         // При приближении (радиус)
+  | 'timed'             // По таймеру
+  | 'conditional';      // По условию (флаг истории)
+
+// === Типы сущностей для Entity Layer ===
+export type EntityType = 'npc' | 'enemy' | 'trigger' | 'interactable' | 'spawn_point';
+
+// === Конфигурация триггера ===
+export interface TriggerConfig {
+  type: TriggerType;
+  action?: string;         // ID действия или скрипта
+  targetId?: string;       // ID целевой сущности/ячейки
+  condition?: string;      // Условие для conditional триггера
+  radius?: number;         // Радиус для proximity триггера
+  cooldown?: number;       // Кулдаун в мс
+  oneShot?: boolean;       // Срабатывает только один раз
+}
+
+// === Конфигурация сущности ===
+export interface EntityConfig {
+  entityId: string;        // Уникальный ID сущности
+  entityType: EntityType;  // Тип сущности
+  enemyType?: EnemyType;   // Тип врага (если entityType === 'enemy')
+  npcId?: string;          // ID NPC (если entityType === 'npc')
+  dialogueId?: string;     // ID диалога
+  patrolPath?: { x: number; y: number }[];  // Маршрут патрулирования
+  respawnable?: boolean;   // Можно ли респавнить
+  respawnTime?: number;    // Время респавна в мс
+}
 
 /**
  * Метаданные одного тайла в тайлсете
+ * Расширено для Visual Metadata Editor
  */
 export interface TilesetTileMetadata {
   x: number;           // X координата в атласе
@@ -10,6 +48,25 @@ export interface TilesetTileMetadata {
   passable: boolean;   // Проходимость (true = можно ходить, false = solid)
   name?: string;       // Человекочитаемое имя для UI
   category?: string;   // Категория (terrain, structure, decoration)
+
+  // === Time-Shift система ===
+  timeLayer?: TimeLayer;           // В каком временном слое существует (past/present/future)
+  timeExclusive?: boolean;         // true = существует ТОЛЬКО в указанном слое
+
+  // === Entity система ===
+  entitySpawnPoint?: boolean;      // Является точкой спавна сущности
+  defaultEntity?: EntityConfig;    // Сущность по умолчанию для этого тайла
+
+  // === Триггеры ===
+  triggers?: TriggerConfig[];      // Массив триггеров на этом тайле
+
+  // === Визуальные эффекты ===
+  animated?: boolean;              // Анимированный тайл
+  animationFrames?: number;        // Количество кадров анимации
+  animationSpeed?: number;         // Скорость анимации (мс на кадр)
+  emissive?: boolean;              // Излучает свет
+  lightRadius?: number;            // Радиус освещения
+  lightColor?: string;             // Цвет света (hex)
 }
 
 /**
@@ -200,3 +257,164 @@ export function getTilesByType(
 
   return tileset.tiles.filter(t => t.type === cellType);
 }
+
+/**
+ * Получить все тайлы по временному слою
+ */
+export function getTilesByTimeLayer(
+  tilesetId: string,
+  timeLayer: TimeLayer
+): TilesetTileMetadata[] {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return [];
+
+  return tileset.tiles.filter(t => t.timeLayer === timeLayer);
+}
+
+/**
+ * Получить все тайлы со спавн-точками
+ */
+export function getSpawnPointTiles(
+  tilesetId: string
+): TilesetTileMetadata[] {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return [];
+
+  return tileset.tiles.filter(t => t.entitySpawnPoint === true);
+}
+
+/**
+ * Обновить метаданные тайла (для редактора)
+ * Возвращает обновленный тайл или undefined если не найден
+ */
+export function updateTileMetadata(
+  tilesetId: string,
+  tileX: number,
+  tileY: number,
+  updates: Partial<TilesetTileMetadata>
+): TilesetTileMetadata | undefined {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return undefined;
+
+  const tileIndex = tileset.tiles.findIndex(t => t.x === tileX && t.y === tileY);
+
+  if (tileIndex === -1) {
+    // Тайл не найден - создаем новый
+    const newTile: TilesetTileMetadata = {
+      x: tileX,
+      y: tileY,
+      type: updates.type || 'floor',
+      passable: updates.passable ?? true,
+      ...updates
+    };
+    tileset.tiles.push(newTile);
+    return newTile;
+  }
+
+  // Обновляем существующий тайл
+  tileset.tiles[tileIndex] = {
+    ...tileset.tiles[tileIndex],
+    ...updates
+  };
+
+  return tileset.tiles[tileIndex];
+}
+
+/**
+ * Добавить триггер к тайлу
+ */
+export function addTriggerToTile(
+  tilesetId: string,
+  tileX: number,
+  tileY: number,
+  trigger: TriggerConfig
+): boolean {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return false;
+
+  const tile = tileset.tiles.find(t => t.x === tileX && t.y === tileY);
+  if (!tile) return false;
+
+  if (!tile.triggers) {
+    tile.triggers = [];
+  }
+
+  tile.triggers.push(trigger);
+  return true;
+}
+
+/**
+ * Удалить триггер с тайла по индексу
+ */
+export function removeTriggerFromTile(
+  tilesetId: string,
+  tileX: number,
+  tileY: number,
+  triggerIndex: number
+): boolean {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return false;
+
+  const tile = tileset.tiles.find(t => t.x === tileX && t.y === tileY);
+  if (!tile || !tile.triggers) return false;
+
+  if (triggerIndex >= 0 && triggerIndex < tile.triggers.length) {
+    tile.triggers.splice(triggerIndex, 1);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Установить сущность на тайл
+ */
+export function setEntityOnTile(
+  tilesetId: string,
+  tileX: number,
+  tileY: number,
+  entity: EntityConfig | undefined
+): boolean {
+  const tileset = TILESET_REGISTRY[tilesetId];
+  if (!tileset) return false;
+
+  const tile = tileset.tiles.find(t => t.x === tileX && t.y === tileY);
+  if (!tile) return false;
+
+  tile.defaultEntity = entity;
+  tile.entitySpawnPoint = !!entity;
+  return true;
+}
+
+// === Экспорт списка всех доступных категорий тайлов ===
+export const TILE_CATEGORIES = [
+  'terrain',     // Ландшафт (трава, песок, снег, вода)
+  'structure',   // Структуры (стены, двери, колонны)
+  'decoration',  // Декорации (мебель, растения)
+  'interactive', // Интерактивные (сундуки, рычаги)
+  'special'      // Специальные (порталы, точки спавна)
+] as const;
+
+export type TileCategory = typeof TILE_CATEGORIES[number];
+
+// === Экспорт списка типов ячеек с названиями ===
+export const CELL_TYPE_NAMES: Record<CellType, string> = {
+  floor: 'Пол',
+  wall: 'Стена',
+  door: 'Дверь (закрыта)',
+  door_open: 'Дверь (открыта)',
+  secret_door: 'Секретная дверь',
+  trap: 'Ловушка',
+  water: 'Вода',
+  lava: 'Лава',
+  grass: 'Трава',
+  stairs_down: 'Лестница вниз',
+  stairs_up: 'Лестница вверх',
+  torch: 'Факел (потух)',
+  torch_lit: 'Факел (горит)',
+  merchant: 'Торговец',
+  secret_button: 'Секретная кнопка',
+  secret_button_activated: 'Кнопка (активна)',
+  bonfire: 'Костёр',
+  chest: 'Сундук'
+};

@@ -1,0 +1,261 @@
+/**
+ * Кастомная тема для tilemap-editor
+ * Переопределяет стили библиотеки под тёмную тему Vaultwarden
+ */
+
+/* Обёртка для скоупинга стилей */
+.tilemap-editor-theme {
+  /* CSS переменные для темы */
+  --te-bg-primary: #0f172a;      /* slate-900 */
+  --te-bg-secondary: #1e293b;    /* slate-800 */
+  --te-bg-tertiary: #334155;     /* slate-700 */
+  --te-border-color: #475569;    /* slate-600 */
+  --te-text-primary: #f1f5f9;    /* slate-100 */
+  --te-text-secondary: #94a3b8;  /* slate-400 */
+  --te-accent: #d97706;          /* amber-600 */
+  --te-accent-hover: #b45309;    /* amber-700 */
+  --te-success: #22c55e;         /* green-500 */
+  --te-danger: #ef4444;          /* red-500 */
+}
+
+/* Основной контейнер редактора */
+.tilemap-editor-theme .tilemapjs_root,
+.tilemap-editor-theme #tilemapjs_root {
+  background-color: var(--te-bg-primary) !important;
+  color: var(--te-text-primary) !important;
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* Хедер */
+.tilemap-editor-theme .header {
+  background-color: var(--te-bg-secondary) !important;
+  border-bottom: 1px solid var(--te-border-color) !important;
+  padding: 8px 12px !important;
+}
+
+/* Меню */
+.tilemap-editor-theme .menu {
+  background-color: var(--te-bg-secondary) !important;
+  border: 1px solid var(--te-border-color) !important;
+}
+
+.tilemap-editor-theme .menu span,
+.tilemap-editor-theme .menu .item {
+  color: var(--te-text-primary) !important;
+}
+
+.tilemap-editor-theme .menu:hover,
+.tilemap-editor-theme .menu .item:hover {
+  background-color: var(--te-bg-tertiary) !important;
+}
+
+/* Dropdown меню */
+.tilemap-editor-theme .dropdown {
+  background-color: var(--te-bg-secondary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+
+.tilemap-editor-theme .dropdown .item {
+  color: var(--te-text-primary) !important;
+  padding: 8px 12px !important;
+}
+
+.tilemap-editor-theme .dropdown .item:hover {
+  background-color: var(--te-bg-tertiary) !important;
+}
+
+/* Кнопки */
+.tilemap-editor-theme button,
+.tilemap-editor-theme .button {
+  background-color: var(--te-bg-tertiary) !important;
+  color: var(--te-text-primary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  border-radius: 4px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.tilemap-editor-theme button:hover,
+.tilemap-editor-theme .button:hover {
+  background-color: var(--te-accent) !important;
+  border-color: var(--te-accent) !important;
+}
+
+/* Кнопка Apply (особая стилизация) */
+.tilemap-editor-theme button[class*="apply"],
+.tilemap-editor-theme .button.apply {
+  background-color: var(--te-accent) !important;
+  border-color: var(--te-accent) !important;
+  font-weight: 600 !important;
+}
+
+.tilemap-editor-theme button[class*="apply"]:hover,
+.tilemap-editor-theme .button.apply:hover {
+  background-color: var(--te-accent-hover) !important;
+  border-color: var(--te-accent-hover) !important;
+}
+
+/* Инпуты */
+.tilemap-editor-theme input,
+.tilemap-editor-theme select,
+.tilemap-editor-theme textarea {
+  background-color: var(--te-bg-primary) !important;
+  color: var(--te-text-primary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  border-radius: 4px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+}
+
+.tilemap-editor-theme input:focus,
+.tilemap-editor-theme select:focus,
+.tilemap-editor-theme textarea:focus {
+  outline: none !important;
+  border-color: var(--te-accent) !important;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2) !important;
+}
+
+/* Лейблы */
+.tilemap-editor-theme label {
+  color: var(--te-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Панели и карточки */
+.tilemap-editor-theme .card,
+.tilemap-editor-theme .panel {
+  background-color: var(--te-bg-secondary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  border-radius: 6px !important;
+}
+
+/* Боковая панель тайлсетов */
+.tilemap-editor-theme .tileset_opt_field {
+  background-color: var(--te-bg-secondary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  padding: 8px !important;
+  margin: 4px !important;
+  border-radius: 4px !important;
+}
+
+/* Canvas контейнер */
+.tilemap-editor-theme canvas {
+  border: 1px solid var(--te-border-color) !important;
+  border-radius: 4px !important;
+}
+
+/* Сетка на canvas */
+.tilemap-editor-theme .grid-overlay {
+  stroke: rgba(148, 163, 184, 0.3) !important; /* slate-400 с прозрачностью */
+}
+
+/* Выделение тайла */
+.tilemap-editor-theme .tile-selection {
+  border: 2px solid var(--te-accent) !important;
+  background-color: rgba(217, 119, 6, 0.2) !important;
+}
+
+/* Tabs */
+.tilemap-editor-theme .tab,
+.tilemap-editor-theme [class*="tab"] {
+  background-color: var(--te-bg-secondary) !important;
+  color: var(--te-text-secondary) !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 8px 12px !important;
+}
+
+.tilemap-editor-theme .tab.active,
+.tilemap-editor-theme .tab:hover,
+.tilemap-editor-theme [class*="tab"].active,
+.tilemap-editor-theme [class*="tab"]:hover {
+  color: var(--te-accent) !important;
+  border-bottom-color: var(--te-accent) !important;
+}
+
+/* Слои карты */
+.tilemap-editor-theme .layer-button {
+  background-color: var(--te-bg-tertiary) !important;
+  color: var(--te-text-primary) !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+}
+
+.tilemap-editor-theme .layer-button.active {
+  background-color: var(--te-accent) !important;
+}
+
+/* Попапы и модалки */
+.tilemap-editor-theme .overlay,
+.tilemap-editor-theme .popup {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.tilemap-editor-theme .popup {
+  background-color: var(--te-bg-secondary) !important;
+  border: 1px solid var(--te-border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  padding: 16px !important;
+}
+
+.tilemap-editor-theme .popup h4 {
+  color: var(--te-text-primary) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+}
+
+.tilemap-editor-theme .popup .close {
+  color: var(--te-text-secondary) !important;
+  font-size: 24px !important;
+}
+
+.tilemap-editor-theme .popup .close:hover {
+  color: var(--te-danger) !important;
+}
+
+/* Скроллбары */
+.tilemap-editor-theme ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.tilemap-editor-theme ::-webkit-scrollbar-track {
+  background: var(--te-bg-primary) !important;
+}
+
+.tilemap-editor-theme ::-webkit-scrollbar-thumb {
+  background: var(--te-bg-tertiary) !important;
+  border-radius: 4px !important;
+}
+
+.tilemap-editor-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--te-border-color) !important;
+}
+
+/* Тултипы */
+.tilemap-editor-theme [title]:hover::after {
+  background-color: var(--te-bg-tertiary) !important;
+  color: var(--te-text-primary) !important;
+  border: 1px solid var(--te-border-color) !important;
+}
+
+/* Анимации */
+.tilemap-editor-theme * {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-in-out;
+}
+
+/* Отключаем анимации для canvas */
+.tilemap-editor-theme canvas {
+  transition: none !important;
+}

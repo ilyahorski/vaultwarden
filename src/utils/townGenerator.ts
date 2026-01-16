@@ -1,4 +1,4 @@
-import type { CellData, CellType } from '../types';
+import type { CellData, CellType, EnemyType } from '../types';
 import { GRID_SIZE } from '../constants';
 import { rand, createEmptyGrid } from './index';
 
@@ -349,9 +349,15 @@ export const generateTownGrid = (): {
 
 /**
  * Генерирует базовую карту мира (fallback для уровней 2+)
+ * @param _centerX - опциональный центр X (игнорируется в fallback версии)
+ * @param _centerY - опциональный центр Y (игнорируется в fallback версии)
  * @returns сгенерированная сетка карты мира
  */
-export const generateWorldMapGrid = (): CellData[][] => {
+export const generateWorldMapGrid = (_centerX?: number, _centerY?: number): CellData[][] => {
+  // Параметры для совместимости с интерфейсом, но не используются в fallback версии
+  void _centerX;
+  void _centerY;
+
   // Генерируем маленькую процедурную карту (fallback)
   console.log('Generating fallback world map');
   const newGrid = createEmptyGrid();
@@ -428,7 +434,7 @@ export const generateWorldMapGrid = (): CellData[][] => {
 
   enemies.forEach(({ x, y, type }) => {
     if (newGrid[y][x].type === 'grass') {
-      newGrid[y][x].enemy = type as any;
+      newGrid[y][x].enemy = type as EnemyType;
     }
   });
 

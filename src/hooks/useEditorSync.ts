@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import { EventBridge } from '../excalibur/utils/EventBridge';
-import type { Cell } from '../types';
+import type { Cell, CellType } from '../types';
 
 interface UseEditorSyncProps {
-  grid: Cell[][];
   setGrid: React.Dispatch<React.SetStateAction<Cell[][]>>;
 }
 
@@ -12,14 +11,14 @@ interface UseEditorSyncProps {
  *
  * Обрабатывает событие tile:changed от Excalibur и обновляет grid
  */
-export const useEditorSync = ({ grid, setGrid }: UseEditorSyncProps): void => {
+export const useEditorSync = ({ setGrid }: UseEditorSyncProps): void => {
   useEffect(() => {
-    const onTileChanged = (data: { 
-      x: number; 
-      y: number; 
-      type: string; 
-      tilesetX?: number; 
-      tilesetY?: number 
+    const onTileChanged = (data: {
+      x: number;
+      y: number;
+      type: string;
+      tilesetX?: number;
+      tilesetY?: number
     }) => {
       setGrid(prevGrid => {
         const newGrid = prevGrid.map(row => [...row]);
@@ -29,7 +28,7 @@ export const useEditorSync = ({ grid, setGrid }: UseEditorSyncProps): void => {
           // ИСПРАВЛЕНО: сохраняем координаты тайлсета, чтобы они не терялись при сохранении JSON
           newGrid[data.y][data.x] = {
             ...newGrid[data.y][data.x],
-            type: data.type as any,
+            type: data.type as CellType,
             tileX: data.tilesetX,
             tileY: data.tilesetY
           };

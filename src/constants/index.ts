@@ -1,6 +1,17 @@
 import React from 'react';
 import { Sword, Shield, Zap } from 'lucide-react';
-import type { ClassData, MonsterStats, PotionStats, GearStats, Artifact } from '../types';
+import type {
+  ClassData,
+  MonsterStats,
+  PotionStats,
+  GearStats,
+  Artifact,
+  HeroStats,
+  CatStats,
+  DuoParty,
+  ToolSkill,
+  LoreSkill
+} from '../types';
 
 // --- Конфигурация карты ---
 export const GRID_SIZE = 45;
@@ -8,10 +19,20 @@ export const CELL_SIZE = 16; // Изменено с 15 на 16 для соотв
 export const VISIBILITY_RADIUS = 5;
 export const AGGRO_RADIUS = 4;
 export const TORCH_LIGHT_RADIUS = 8;
-export const MAX_INVENTORY_SIZE = 100;
-export const SAVE_KEY = 'dungeon_save_v1';
+export const MAX_INVENTORY_SIZE = 200;  // Расширено с 100 до 200 для Inventory 2.0
+export const SAVE_KEY = 'dungeon_save_v1';  // DEPRECATED - используем IndexedDB
 
-// --- Стартовый игрок ---
+// --- Категории предметов инвентаря ---
+export const ITEM_CATEGORIES = {
+  weapon: { name: 'Оружие', icon: 'sword', color: 'orange' },
+  scroll: { name: 'Свитки', icon: 'scroll', color: 'purple' },
+  clothing: { name: 'Одежда', icon: 'shirt', color: 'blue' },
+  food: { name: 'Еда', icon: 'apple', color: 'green' },
+  quest: { name: 'Квестовые', icon: 'star', color: 'yellow' }
+} as const;
+
+// --- Стартовый игрок (DEPRECATED) ---
+/** @deprecated Используйте INITIAL_PARTY для новой системы */
 export const INITIAL_PLAYER = {
   x: 1,
   y: 1,
@@ -34,6 +55,84 @@ export const INITIAL_PLAYER = {
   equippedArmor: null,
   dungeonLevel: 1,
   facing: 'down'
+};
+
+// ============================================
+// === DUO CHARACTER SYSTEM (Aetheria RPG) ===
+// ============================================
+
+// --- Начальные навыки инструментов героини ---
+export const INITIAL_HERO_TOOLS: ToolSkill[] = [
+  { id: 'pickaxe', name: 'Кирка', desc: 'Разрушает слабые стены', staminaCost: 10, unlockLevel: 1 },
+  { id: 'brush', name: 'Кисть', desc: 'Очищает древние надписи', staminaCost: 5, unlockLevel: 1 },
+  { id: 'rope', name: 'Верёвка', desc: 'Спуск в пропасти', staminaCost: 15, unlockLevel: 3 },
+  { id: 'magnifier', name: 'Лупа', desc: 'Обнаруживает скрытые механизмы', staminaCost: 8, unlockLevel: 5 }
+];
+
+// --- Начальные навыки знаний кота ---
+export const INITIAL_CAT_LORE: LoreSkill[] = [
+  { id: 'ancient_lang', name: 'Древние языки', desc: 'Читает забытые тексты', manaCost: 10, unlockLevel: 1 },
+  { id: 'magic_sense', name: 'Чутьё магии', desc: 'Обнаруживает магические предметы', manaCost: 15, unlockLevel: 1 },
+  { id: 'time_echo', name: 'Эхо времени', desc: 'Видит следы прошлого', manaCost: 25, unlockLevel: 4 },
+  { id: 'portal_key', name: 'Ключ портала', desc: 'Открывает временные врата', manaCost: 40, unlockLevel: 7 }
+];
+
+// --- Стартовая Героиня (Археолог) ---
+export const INITIAL_HERO: HeroStats = {
+  name: 'Археолог',
+  x: 1,
+  y: 1,
+  facing: 'down',
+  // Боевые статы
+  hp: 100,
+  maxHp: 100,
+  stamina: 80,
+  maxStamina: 80,
+  // Атрибуты
+  strength: 8,
+  dexterity: 6,
+  // Прогрессия
+  xp: 0,
+  level: 1,
+  nextLevelXp: 100,
+  // Снаряжение
+  equippedWeapon: 'weapon_dagger',
+  equippedArmor: 'armor_leather',
+  equippedClothing: 'clothing_archaeologist_vest',
+  // Навыки (разблокированы по уровню)
+  tools: INITIAL_HERO_TOOLS.filter(t => t.unlockLevel <= 1)
+};
+
+// --- Стартовый Кот (бывший ученый) ---
+export const INITIAL_CAT: CatStats = {
+  name: 'Кот-учёный',
+  x: 2,  // Рядом с героиней
+  y: 1,
+  facing: 'down',
+  // Боевые статы
+  hp: 60,
+  maxHp: 60,
+  mana: 120,
+  maxMana: 120,
+  // Атрибуты
+  intelligence: 10,
+  wisdom: 8,
+  // Прогрессия
+  xp: 0,
+  level: 1,
+  nextLevelXp: 100,
+  // Навыки (разблокированы по уровню)
+  lore: INITIAL_CAT_LORE.filter(l => l.unlockLevel <= 1)
+};
+
+// --- Стартовая группа (Дуэт) ---
+export const INITIAL_PARTY: DuoParty = {
+  hero: INITIAL_HERO,
+  cat: INITIAL_CAT,
+  activeCharacter: 'hero',
+  gold: 0,
+  inventory: [],
+  currentTimeLayer: 'present'
 };
 
 // --- Характеристики снаряжения ---
@@ -129,7 +228,8 @@ export const MONSTER_STATS: Record<string, MonsterStats> = {
   boss:          { hp: 300, atk: 45, xp: 1000, gold: 500, name: 'Тёмный Рыцарь', color: 'text-rose-900', iconType: 'crown' },
 };
 
-// --- Классы ---
+// --- Классы (DEPRECATED) ---
+/** @deprecated Используйте INITIAL_HERO и INITIAL_CAT для новой системы */
 export const CLASSES: Record<string, ClassData> = {
   warrior: {
     name: 'Воин',

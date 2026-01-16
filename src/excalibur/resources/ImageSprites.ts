@@ -1,5 +1,4 @@
 import * as ex from 'excalibur';
-import { TILE_CONFIG } from '../config/TileConfig';
 import { TILESET_REGISTRY } from '../config/TilesetConfig';
 
 /**
