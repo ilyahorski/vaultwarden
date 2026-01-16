@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'sprites/**/*'],
       manifest: {
-        name: 'Vaultwarden',
-        short_name: 'Vaultwarden',
+        name: 'Aetheria: The Cat’s Codex',
+        short_name: 'Aetheria: The Cat’s Codex',
         description: 'A turn-based roguelike in the style of classic dungeon crawlers',
         theme_color: '#0f172a',
         background_color: '#0f172a',

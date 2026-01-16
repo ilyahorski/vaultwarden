@@ -296,6 +296,10 @@ export interface CellData {
   tileX?: number;           // Alias для tilesetX
   tileY?: number;           // Alias для tilesetY
 
+  // === Система коллизий ===
+  passable?: boolean;       // Переопределение проходимости из логических тайлсетов
+                            // undefined = использовать metadata или SOLID_TILE_TYPES
+
   item: ItemType;
   enemy: EnemyType;
   enemyHp?: number;

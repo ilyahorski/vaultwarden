@@ -21,6 +21,43 @@ export interface ExcaliburMapData {
   grid: CellData[][];
 }
 
+// === Маппинг логических тайлсетов ===
+
+/**
+ * Маппинг тайлов collision.png → passable
+ */
+const COLLISION_TILESET_MAPPING: Record<number, boolean | undefined> = {
+  0: undefined,  // Прозрачный = использовать metadata
+  1: false,      // Красный = непроходимый
+  2: undefined,  // Желтый = особая логика (пока не используется)
+  3: true,       // Зеленый = проходимый
+};
+
+/**
+ * Маппинг тайлов triggers.png → type
+ */
+const TRIGGER_TILESET_MAPPING: Record<number, CellType> = {
+  0: 'bonfire',
+  1: 'trap',
+  2: 'lava',
+  3: 'merchant',
+  4: 'door', // portal -> используем существующий door
+  5: 'chest',
+  6: 'floor', // npc_spawn -> пока используем floor
+  7: 'floor', // enemy_spawn -> пока используем floor
+};
+
+/**
+ * Определяет является ли тайлсет логическим
+ */
+function isLogicalTileset(tilesetName: string): 'collision' | 'triggers' | 'time' | null {
+  const normalized = tilesetName.toLowerCase();
+  if (normalized.includes('collision')) return 'collision';
+  if (normalized.includes('trigger')) return 'triggers';
+  if (normalized.includes('time')) return 'time';
+  return null;
+}
+
 /**
  * Парсит символ тайла из tilemap-editor
  * Формат: "tilesetIndex:tileX:tileY" или null
@@ -119,6 +156,9 @@ export function convertToExcaliburFormat(
       // Обрабатываем слои в порядке приоритета
       const layerOrder: ('bottom' | 'middle' | 'top')[] = ['bottom', 'middle', 'top'];
 
+      // Переменные для логических слоев
+      let passableOverride: boolean | undefined;
+
       for (const layerName of layerOrder) {
         const layer = layers[layerName];
         if (!layer || !layer[y] || layer[y][x] === null) continue;
@@ -131,14 +171,40 @@ export function convertToExcaliburFormat(
         if (tileInfo) {
           const tileset = tileSetsList[tileInfo.tilesetIndex];
           if (tileset) {
+            const tilesetName = tileset.name || '';
+            const logicalType = isLogicalTileset(tilesetName);
+
+            // Обработка логических тайлсетов
+            if (logicalType === 'collision') {
+              // Collision Layer - определяет passable
+              const tileIndex = tileInfo.tileY * (tileset.columns || 16) + tileInfo.tileX;
+              passableOverride = COLLISION_TILESET_MAPPING[tileIndex];
+              continue; // Не сохраняем визуальные данные
+            } else if (logicalType === 'triggers') {
+              // Triggers Layer - определяет тип ячейки
+              const tileIndex = tileInfo.tileY * (tileset.columns || 16) + tileInfo.tileX;
+              const triggeredType = TRIGGER_TILESET_MAPPING[tileIndex];
+              if (triggeredType) {
+                cellType = triggeredType;
+              }
+              continue; // Не сохраняем визуальные данные
+            } else if (logicalType === 'time') {
+              // Time Layers - пока не обрабатываем
+              continue;
+            }
+
+            // Обычный визуальный тайлсет
             tilesetX = tileInfo.tileX;
             tilesetY = tileInfo.tileY;
-            tilesetSource = tileset.name || `tileset_${tileInfo.tilesetIndex}`;
+            tilesetSource = tilesetName || `tileset_${tileInfo.tilesetIndex}`;
 
             // Определяем тип ячейки из тегов тайла
             const tileKey = `${tileInfo.tileX}:${tileInfo.tileY}`;
             const tileData = tileset.tiles?.[tileKey];
-            cellType = getCellTypeFromTags(tileData?.tags);
+            const tagBasedType = getCellTypeFromTags(tileData?.tags);
+            if (tagBasedType !== 'floor') {
+              cellType = tagBasedType;
+            }
           }
         }
       }
@@ -150,6 +216,7 @@ export function convertToExcaliburFormat(
         tilesetX,
         tilesetY,
         tilesetSource,
+        passable: passableOverride, // Логический слой коллизий
         item: null,
         enemy: null,
         isRevealed: false,

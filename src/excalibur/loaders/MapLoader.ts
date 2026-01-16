@@ -74,15 +74,27 @@ export class MapLoader {
           if (sprite) {
             tile.addGraphic(sprite);
 
-            // Получаем проходимость из метаданных
-            const metadata = getTileMetadata(
-              cellData.tilesetSource,
-              cellData.tilesetX,
-              cellData.tilesetY
-            );
+            // === 3-уровневый приоритет проходимости ===
 
-            if (metadata) {
-              tile.solid = !metadata.passable;
+            // ПРИОРИТЕТ 1: Ручное переопределение из редактора (логические тайлсеты)
+            if (cellData.passable !== undefined) {
+              tile.solid = !cellData.passable;
+            }
+            // ПРИОРИТЕТ 2: Метаданные тайлсета
+            else {
+              const metadata = getTileMetadata(
+                cellData.tilesetSource,
+                cellData.tilesetX,
+                cellData.tilesetY
+              );
+
+              if (metadata) {
+                tile.solid = !metadata.passable;
+              }
+              // ПРИОРИТЕТ 3: Fallback на SOLID_TILE_TYPES
+              else if (SOLID_TILE_TYPES.has(cellData.type)) {
+                tile.solid = true;
+              }
             }
 
             processedTiles++;
@@ -97,8 +109,10 @@ export class MapLoader {
         const sprite = getSharedSprite(cellData.type);
         tile.addGraphic(sprite);
 
-        // Настраиваем коллизию для непроходимых тайлов
-        if (SOLID_TILE_TYPES.has(cellData.type)) {
+        // Применяем тот же 3-уровневый приоритет
+        if (cellData.passable !== undefined) {
+          tile.solid = !cellData.passable;
+        } else if (SOLID_TILE_TYPES.has(cellData.type)) {
           tile.solid = true;
         }
 

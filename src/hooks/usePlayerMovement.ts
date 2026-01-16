@@ -3,7 +3,6 @@ import { GRID_SIZE, MONSTER_STATS, POTION_STATS, GEAR_STATS, RARE_ARTIFACTS, MAX
 import type { PotionType, WeaponType, ArmorType } from '../types';
 import { updateVisibility } from './useFogOfWar';
 import { checkPlayerDeath, clampHp } from '../utils';
-import { generateWorldMapGrid } from '../utils/townGenerator';
 
 // Вспомогательная функция проверки соседства с костром
 const checkAdjacentBonfire = (grid: CellData[][], x: number, y: number): boolean => {
@@ -319,13 +318,10 @@ export function usePlayerMovement({
         if (newOffsetX < 0) newOffsetX = 0;
         if (newOffsetY < 0) newOffsetY = 0;
 
-        // Вычисляем глобальные координаты для центрирования viewport
-        const halfSize = Math.floor(GRID_SIZE / 2);
-        const centerGlobalX = newOffsetX + halfSize;
-        const centerGlobalY = newOffsetY + halfSize;
-
-        // Генерируем новый viewport вокруг нового offset
-        const newGrid = generateWorldMapGrid(centerGlobalX, centerGlobalY);
+        // ПРИМЕЧАНИЕ: Viewport прокрутка временно отключена
+        // TODO: Реализовать extractViewport через WorldRepository для viewport прокрутки
+        // Пока используем текущий grid (Excalibur camera обрабатывает прокрутку)
+        const newGrid = grid;
 
         // Обновляем позицию игрока: компенсируем сдвиг viewport
         // Если viewport сдвинулся вправо (+1), игрок должен сдвинуться влево (-1) в локальных координатах

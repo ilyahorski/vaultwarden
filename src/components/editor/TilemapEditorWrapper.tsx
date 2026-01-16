@@ -20,39 +20,7 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
 // Автосохранение интервал (мс)
 const AUTO_SAVE_DELAY = 2000;
 
-interface TilemapEditorConfig {
-  tileMapData?: TilemapEditorData;
-  tileSize?: number;
-  mapWidth?: number;
-  mapHeight?: number;
-  tileSetImages?: Array<{
-    src: string;
-    name: string;
-    description?: string;
-    link?: string;
-  }>;
-  tileSetLoaders?: Record<string, {
-    name: string;
-    prompt?: (setSrc: (src: string) => void) => void;
-    onSelectImage?: (setSrc: (src: string) => void, file: File, base64: string) => void;
-  }>;
-  onApply?: {
-    buttonText: string;
-    onClick: (data: {
-      flattenedData: FlattenedMapData;
-      maps: TilemapEditorData['maps'];
-      tileSets: TilemapEditorData['tileSets'];
-      activeMap: string;
-    }) => void;
-  };
-  onUpdate?: (event: { type: string; data?: unknown }) => void;
-}
-
-interface TilemapEditorState {
-  maps: TilemapEditorData['maps'];
-  tileSets: TilemapEditorData['tileSets'];
-  activeMap: string;
-}
+// Unused interfaces removed - tilemap-editor uses unknown types internally
 
 export interface TilemapEditorWrapperProps {
   /** Callback при применении изменений к игре */
@@ -147,8 +115,10 @@ export const TilemapEditorWrapper: React.FC<TilemapEditorWrapperProps> = ({
   }, []);
 
   // Дебаунсированное автосохранение
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSave = useCallback(
-    debounce((maps: TilemapEditorData['maps'], tileSets: TilemapEditorData['tileSets']) => {
+    debounce((...args: unknown[]) => {
+      const [maps, tileSets] = args as [TilemapEditorData['maps'], TilemapEditorData['tileSets']];
       saveToIndexedDB(maps, tileSets);
     }, AUTO_SAVE_DELAY),
     [saveToIndexedDB]
@@ -176,14 +146,42 @@ export const TilemapEditorWrapper: React.FC<TilemapEditorWrapperProps> = ({
     console.log('[TilemapEditorWrapper] Initializing tilemap-editor...', { hasLoadedData: !!loadedData, hasInitialData: !!initialData });
 
     try {
+      // Type assertion needed because tilemap-editor lacks complete TypeScript definitions
       TilemapEditor.init('tilemap-editor-container', {
         tileMapData: mapData,
         tileSize: DEFAULT_MAP_CONFIG.tileSize,
         mapWidth: DEFAULT_MAP_CONFIG.mapWidth,
         mapHeight: DEFAULT_MAP_CONFIG.mapHeight,
         tileSetImages: PRELOADED_TILESETS,
-        // Обязательные параметры - иначе библиотека падает
-        tileMapExporters: {},
+        // Экспорт карт
+        tileMapExporters: {
+          'Excalibur JSON': {
+            buttonText: '📥 Export as JSON',
+            onClick: (data: unknown) => {
+              const { maps, tileSets } = data as {
+                maps: TilemapEditorData['maps'];
+                tileSets: TilemapEditorData['tileSets'];
+              };
+
+              // Конвертируем в Excalibur формат
+              const excaliburData = convertToExcaliburFormat({ maps, tileSets });
+
+              // Создаем JSON blob
+              const jsonString = JSON.stringify(excaliburData, null, 2);
+              const blob = new Blob([jsonString], { type: 'application/json' });
+
+              // Скачиваем
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'interdest_map.json';
+              a.click();
+              URL.revokeObjectURL(url);
+
+              console.log('[TilemapEditorWrapper] Map exported as JSON');
+            },
+          },
+        },
         tileMapImporters: {},
         tileSetLoaders: {
           fromUrl: {
@@ -204,15 +202,21 @@ export const TilemapEditorWrapper: React.FC<TilemapEditorWrapperProps> = ({
         },
         onApply: {
           buttonText: '🎮 Применить к игре',
-          onClick: ({ flattenedData, maps, tileSets }: { flattenedData: FlattenedMapData; maps: TilemapEditorData['maps']; tileSets: TilemapEditorData['tileSets'] }) => {
+          onClick: (data: { flattenedData: unknown; maps: unknown; tileSets: unknown }) => {
+            const { flattenedData, maps, tileSets } = data as {
+              flattenedData: FlattenedMapData;
+              maps: TilemapEditorData['maps'];
+              tileSets: TilemapEditorData['tileSets'];
+            };
             console.log('[TilemapEditorWrapper] Applying to game:', { flattenedData, maps, tileSets });
             onApplyToGame({ flattenedData, maps, tileSets });
             // Также сохраняем при применении
             saveToIndexedDB(maps, tileSets);
           }
         },
-        onUpdate: (event: { type: string }) => {
-          console.log('[TilemapEditorWrapper] Update event:', event.type);
+        onUpdate: (event: unknown) => {
+          const typedEvent = event as { type: string };
+          console.log('[TilemapEditorWrapper] Update event:', typedEvent.type);
 
           // Получаем текущее состояние карты через API библиотеки
           try {
@@ -232,7 +236,8 @@ export const TilemapEditorWrapper: React.FC<TilemapEditorWrapperProps> = ({
             console.warn('[TilemapEditorWrapper] Could not get map data on update:', error);
           }
         }
-      });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any); // Type assertion needed - tilemap-editor lacks complete TypeScript definitions
       console.log('[TilemapEditorWrapper] Editor initialized successfully');
     } catch (error) {
       console.error('[TilemapEditorWrapper] Failed to initialize editor:', error);
@@ -272,7 +277,7 @@ export const TilemapEditorWrapper: React.FC<TilemapEditorWrapperProps> = ({
               </svg>
             </div>
             <div>
-              <h1 className="font-bold text-slate-100 text-sm">Vaultwarden</h1>
+              <h1 className="font-bold text-slate-100 text-sm">Aetheria: The Cat’s Codex</h1>
               <span className="text-slate-500 text-xs">Tilemap Editor</span>
             </div>
           </div>

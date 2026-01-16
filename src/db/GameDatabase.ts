@@ -5,9 +5,22 @@ import Dexie, { type Table } from 'dexie';
 export type TimeLayer = 'past' | 'present' | 'future';
 export type ItemCategory = 'weapon' | 'scroll' | 'clothing' | 'food' | 'quest';
 
+// Определение карты (метаданные)
+export interface MapDefinition {
+  id?: number;              // auto-increment primary key
+  mapId: string;            // Уникальный ID ('world', 'town_1', 'dungeon_1')
+  name: string;             // Название ('World Map', 'Town', 'Dungeon Level 1')
+  width: number;
+  height: number;
+  tileSize: number;
+  created: Date;
+  modified: Date;
+}
+
 // Тайл мира (хранится в IndexedDB)
 export interface WorldTile {
   id?: number;              // auto-increment
+  mapId: string;            // Связь с картой (по умолчанию 'world')
   x: number;
   y: number;
   type: string;             // CellType
@@ -102,27 +115,51 @@ export class GameDatabase extends Dexie {
   characters!: Table<CharacterData>;
   timeLayerCache!: Table<TimeLayerCache>;
   gameMeta!: Table<GameMeta>;
+  maps!: Table<MapDefinition>;
 
   constructor() {
     super('AetheriaGameDB');
 
+    // Version 1 - исходная схема
     this.version(1).stores({
-      // Индексы для быстрого поиска
       worldState: '++id, [x+y+timeLayer], timeLayer, type',
       inventory: '++id, slot, category, itemType',
-      storyFlags: '++id, &key',           // unique key
-      characters: '++id, &characterType', // unique characterType
+      storyFlags: '++id, &key',
+      characters: '++id, &characterType',
       timeLayerCache: '++id, [layer+x+y]',
       gameMeta: '++id, &key'
+    });
+
+    // Version 2 - добавлена поддержка множественных карт
+    this.version(2).stores({
+      worldState: '++id, [mapId+x+y+timeLayer], [mapId+timeLayer], mapId, timeLayer, type',
+      inventory: '++id, slot, category, itemType',
+      storyFlags: '++id, &key',
+      characters: '++id, &characterType',
+      timeLayerCache: '++id, [layer+x+y]',
+      gameMeta: '++id, &key',
+      maps: '++id, &mapId'  // mapId уникальный
+    }).upgrade(async (trans) => {
+      // Миграция существующих тайлов - добавляем mapId = 'world'
+      await trans.table('worldState').toCollection().modify((tile: WorldTile) => {
+        if (!tile.mapId) {
+          tile.mapId = 'world';
+        }
+      });
     });
   }
 
   // --- Вспомогательные методы ---
 
   // Получить тайл по координатам и слою времени
-  async getTile(x: number, y: number, layer: TimeLayer = 'present'): Promise<WorldTile | undefined> {
+  async getTile(
+    x: number,
+    y: number,
+    layer: TimeLayer = 'present',
+    mapId: string = 'world'
+  ): Promise<WorldTile | undefined> {
     return this.worldState
-      .where({ x, y, timeLayer: layer })
+      .where({ mapId, x, y, timeLayer: layer })
       .first();
   }
 
@@ -132,10 +169,11 @@ export class GameDatabase extends Dexie {
     startY: number,
     width: number,
     height: number,
-    layer: TimeLayer = 'present'
+    layer: TimeLayer = 'present',
+    mapId: string = 'world'
   ): Promise<WorldTile[]> {
     return this.worldState
-      .where('timeLayer').equals(layer)
+      .where('[mapId+timeLayer]').equals([mapId, layer])
       .filter(tile =>
         tile.x >= startX && tile.x < startX + width &&
         tile.y >= startY && tile.y < startY + height
@@ -233,6 +271,34 @@ export class GameDatabase extends Dexie {
     } else {
       await this.gameMeta.add({ key, value });
     }
+  }
+
+  // --- Методы для работы с картами ---
+
+  // Получить карту по mapId
+  async getMap(mapId: string): Promise<MapDefinition | undefined> {
+    return this.maps.where('mapId').equals(mapId).first();
+  }
+
+  // Создать или обновить карту
+  async upsertMap(map: Omit<MapDefinition, 'id'>): Promise<void> {
+    const existing = await this.maps.where('mapId').equals(map.mapId).first();
+    if (existing?.id) {
+      await this.maps.update(existing.id, { ...map, modified: new Date() });
+    } else {
+      await this.maps.add(map as MapDefinition);
+    }
+  }
+
+  // Получить все карты
+  async getAllMaps(): Promise<MapDefinition[]> {
+    return this.maps.toArray();
+  }
+
+  // Удалить карту и все её тайлы
+  async deleteMap(mapId: string): Promise<void> {
+    await this.worldState.where('mapId').equals(mapId).delete();
+    await this.maps.where('mapId').equals(mapId).delete();
   }
 }
 

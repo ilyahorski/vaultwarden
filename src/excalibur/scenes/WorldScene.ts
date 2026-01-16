@@ -4,6 +4,7 @@ import { TriggerActor } from '../actors/TriggerActor';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EditorMode } from '../systems/EditorMode';
 import { MapLoader } from '../loaders/MapLoader';
+import { MapManager } from '../../managers/MapManager';
 import { TILE_CONFIG } from '../config/TileConfig';
 import { preloadAllTilesets } from '../resources/ImageSprites';
 import { EventBridge } from '../utils/EventBridge';
@@ -33,9 +34,12 @@ export class WorldScene extends ex.Scene {
       await preloadAllTilesets();
       console.log('WorldScene: Tilesets preloaded');
 
-      // Загружаем карту из JSON
+      // Загружаем карту через MapManager (IndexedDB → JSON fallback)
       console.log('WorldScene: Loading map...');
-      const mapData = await MapLoader.load('/maps/interdest_map.json');
+      const mapData = await MapManager.loadMap(
+        'world',                          // mapId
+        '/maps/interdest_map.json'        // JSON fallback
+      );
       console.log(`WorldScene: Map loaded (${mapData.width}×${mapData.height})`);
 
       // Создаем TileMap
@@ -158,7 +162,7 @@ export class WorldScene extends ex.Scene {
     // Создаём MapData из grid
     const mapData: MapData = {
       version: 1,
-      name: 'Editor Map',
+      name: 'World Map',
       width,
       height,
       grid
@@ -168,6 +172,11 @@ export class WorldScene extends ex.Scene {
     try {
       await MapLoader.populateTileMap(this.tileMap, mapData);
       console.log('[WorldScene] Map updated successfully from editor');
+
+      // Сохраняем изменения в IndexedDB через MapManager
+      console.log('[WorldScene] Saving changes to IndexedDB...');
+      await MapManager.saveMap('world', 'World Map', grid);
+      console.log('[WorldScene] Changes saved to IndexedDB');
     } catch (error) {
       console.error('[WorldScene] Failed to update map from editor:', error);
     }

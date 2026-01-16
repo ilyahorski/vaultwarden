@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { CellData, Player, LogEntry, GameMode, ClassType, CombatTarget, ActiveMenu, PotionType, WeaponType, ArmorType, DungeonCampaign } from '../types';
 import { CLASSES, INITIAL_PLAYER, SAVE_KEY, POTION_STATS, GEAR_STATS, GRID_SIZE } from '../constants';
 import { createLogEntry, createEmptyGrid } from '../utils';
-import { generateDungeonGrid, getStartPosition } from '../utils/dungeonGenerator';
-import { generateWorldMapGrid, generateTownGrid } from '../utils/townGenerator';
+import { MapManager } from '../managers/MapManager';
 import { compressLevel, decompressLevel, type CompressedLevel } from '../utils/levelCompression';
 
 // Вспомогательная функция для распаковки истории уровней
@@ -67,15 +66,12 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
       }
     }
 
-    // Б) Если сохранения нет — генерируем новый уровень сразу
-    const gen = generateDungeonGrid(1);
-    const startPos = getStartPosition(gen.rooms);
-    const newGrid = gen.grid;
+    // Б) Если сохранения нет — создаем начальное состояние
+    // ВАЖНО: Реальная карта загрузится асинхронно в useEffect
+    const emptyGrid = createEmptyGrid();
 
-    // Для 1 уровня ставим пол, а не лестницу
-    newGrid[startPos.y][startPos.x].type = 'floor';
-    newGrid[startPos.y][startPos.x].enemy = null;
-    newGrid[startPos.y][startPos.x].item = null;
+    // Стартовая позиция в центре (будет обновлена после загрузки карты)
+    const startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
 
     const newPlayer = {
       ...(INITIAL_PLAYER as Player),
@@ -86,7 +82,7 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
 
     return {
       player: newPlayer,
-      grid: newGrid,
+      grid: emptyGrid,
       levelHistory: {},
       playerPositions: {},
       logs: [],
@@ -238,8 +234,8 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
     };
   }, [player, grid, levelHistory, playerPositions, hasChosenClass, logs]);
 
-  // Функция генерации уровня
-  const generateDungeon = useCallback((levelIndex: number = 1, campaignOverride?: DungeonCampaign) => {
+  // Функция генерации уровня (теперь асинхронная для MapManager)
+  const generateDungeon = useCallback(async (levelIndex: number = 1, campaignOverride?: DungeonCampaign) => {
     addLog(`--- ЭТАЖ ${levelIndex} ---`, 'info');
     setCombatTarget(null);
     setMainMenuIndex(0);
@@ -301,56 +297,116 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
 
        addLog(`Загружен уровень из кампании: ${currentCampaign.name}`, 'info');
     } else if (levelIndex === 1) {
-       // Уровень 1 = Карта мира (ПРОТОТИП JRPG)
-       // Используем viewport систему: координаты игрока остаются локальными (0-44)
-       // Глобальные координаты = локальные + viewportOffset
+       // Уровень 1 = Карта мира (загружаем через MapManager)
+       try {
+         const mapData = await MapManager.loadMap('world', '/maps/interdest_map.json');
+         console.log(`[generateDungeon] Loaded world map: ${mapData.width}x${mapData.height}`);
 
-       // Определяем ГЛОБАЛЬНЫЕ координаты спавна (центр большой карты 402×305)
-       const globalSpawnX = 201;
-       const globalSpawnY = 152;
+         // ВАЖНО: Для мировой карты используется viewport система
+         // Определяем ГЛОБАЛЬНЫЕ координаты спавна (центр карты)
+         const globalSpawnX = Math.floor(mapData.width / 2);
+         const globalSpawnY = Math.floor(mapData.height / 2);
 
-       // Генерируем viewport вокруг глобального спавна
-       newGrid = generateWorldMapGrid(globalSpawnX, globalSpawnY);
+         // Вычисляем offset viewport (viewport центрирован на игроке)
+         const halfSize = Math.floor(GRID_SIZE / 2);
+         let offsetX = globalSpawnX - halfSize;
+         let offsetY = globalSpawnY - halfSize;
 
-       // Вычисляем offset viewport (viewport центрирован на игроке)
-       const halfSize = Math.floor(GRID_SIZE / 2);
-       let offsetX = globalSpawnX - halfSize;
-       let offsetY = globalSpawnY - halfSize;
+         // Корректируем границы
+         if (offsetX < 0) offsetX = 0;
+         if (offsetY < 0) offsetY = 0;
+         if (offsetX + GRID_SIZE > mapData.width) offsetX = mapData.width - GRID_SIZE;
+         if (offsetY + GRID_SIZE > mapData.height) offsetY = mapData.height - GRID_SIZE;
 
-       // Корректируем границы
-       if (offsetX < 0) offsetX = 0;
-       if (offsetY < 0) offsetY = 0;
+         // Сохраняем viewport offset
+         setViewportOffset({ x: offsetX, y: offsetY });
 
-       // Сохраняем viewport offset
-       setViewportOffset({ x: offsetX, y: offsetY });
+         // Извлекаем viewport из большой карты
+         newGrid = [];
+         for (let y = 0; y < GRID_SIZE; y++) {
+           newGrid[y] = [];
+           for (let x = 0; x < GRID_SIZE; x++) {
+             const globalX = offsetX + x;
+             const globalY = offsetY + y;
+             if (globalY < mapData.height && globalX < mapData.width) {
+               newGrid[y][x] = mapData.grid[globalY][globalX];
+             } else {
+               // Fallback для выхода за границы
+               newGrid[y][x] = {
+                 x, y, type: 'water', item: null, enemy: null, isRevealed: false, isVisible: false
+               };
+             }
+           }
+         }
 
-       // Игрок спавнится в ЦЕНТРЕ viewport (локальные координаты)
-       startPos = { x: halfSize, y: halfSize };
+         // Игрок спавнится в ЦЕНТРЕ viewport (локальные координаты)
+         startPos = { x: halfSize, y: halfSize };
 
-       addLog('Вы оказались на карте мира...', 'info');
+         addLog('Вы оказались на карте мира...', 'info');
+       } catch (error) {
+         console.error('[generateDungeon] Failed to load world map:', error);
+         addLog('Ошибка загрузки карты мира!', 'fail');
+         newGrid = createEmptyGrid();
+         startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
+       }
     } else if (levelIndex === 2) {
-       // Уровень 2 = Город (ПРОТОТИП JRPG)
-       const gen = generateTownGrid();
-       newGrid = gen.grid;
-       // Ищем таверну (bonfire) или выход (stairs_up) для спавна
-       let foundStart = false;
-       for(let y=0; y<GRID_SIZE; y++){
-         for(let x=0; x<GRID_SIZE; x++){
-            if(newGrid[y][x].type === 'bonfire' || newGrid[y][x].type === 'stairs_up') {
-               startPos = {x, y};
+       // Уровень 2 = Город (загружаем через MapManager)
+       try {
+         const mapData = await MapManager.loadMap('town_1', '/maps/town_1.json');
+         console.log(`[generateDungeon] Loaded town map: ${mapData.width}x${mapData.height}`);
+         newGrid = mapData.grid;
+
+         // Ищем дверь (door), bonfire или stairs_up для спавна
+         let foundStart = false;
+         for (let y = 0; y < newGrid.length && y < GRID_SIZE; y++) {
+           for (let x = 0; x < newGrid[y].length && x < GRID_SIZE; x++) {
+             const cellType = newGrid[y][x].type;
+             if (cellType === 'door' || cellType === 'bonfire' || cellType === 'stairs_up') {
+               startPos = { x, y };
                foundStart = true;
                break;
-            }
+             }
+           }
+           if (foundStart) break;
          }
-         if(foundStart) break;
+         if (!foundStart) startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
+
+         addLog('Вы входите в город...', 'info');
+       } catch (error) {
+         console.error('[generateDungeon] Failed to load town map:', error);
+         addLog('Ошибка загрузки карты города!', 'fail');
+         newGrid = createEmptyGrid();
+         startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
        }
-       if(!foundStart) startPos = {x: 22, y: 22}; // Центр города как fallback
-       addLog('Вы входите в город...', 'info');
     } else {
-       // Уровни 3+ = Подземелья (как раньше)
-       const gen = generateDungeonGrid(levelIndex);
-       newGrid = gen.grid;
-       startPos = getStartPosition(gen.rooms);
+       // Уровни 3+ = Подземелья (загружаем через MapManager)
+       try {
+         const mapId = `dungeon_${levelIndex}`;
+         const jsonPath = `/maps/dungeon_${levelIndex}.json`;
+         const mapData = await MapManager.loadMap(mapId, jsonPath);
+         console.log(`[generateDungeon] Loaded dungeon map: ${mapData.width}x${mapData.height}`);
+         newGrid = mapData.grid;
+
+         // Ищем stairs_up для спавна
+         let foundStart = false;
+         for (let y = 0; y < newGrid.length && y < GRID_SIZE; y++) {
+           for (let x = 0; x < newGrid[y].length && x < GRID_SIZE; x++) {
+             if (newGrid[y][x].type === 'stairs_up' || newGrid[y][x].type === 'door') {
+               startPos = { x, y };
+               foundStart = true;
+               break;
+             }
+           }
+           if (foundStart) break;
+         }
+         if (!foundStart) startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
+
+       } catch (error) {
+         console.error(`[generateDungeon] Failed to load dungeon ${levelIndex}:`, error);
+         addLog(`Ошибка загрузки подземелья ${levelIndex}!`, 'fail');
+         newGrid = createEmptyGrid();
+         startPos = { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) };
+       }
     }
 
     newGrid[startPos.y][startPos.x].enemy = null;
@@ -393,25 +449,22 @@ export const useGameState = ({ initialMode = 'player' }: UseGameStateProps = {})
   }, [addLog, player.dungeonLevel]);
 
   // Генерация случайного подземелья для текущего этажа
-  const generateRandomLevel = useCallback(() => {
-    const { grid: newGrid, rooms } = generateDungeonGrid(player.dungeonLevel);
-    const startPos = getStartPosition(rooms);
+  // ПРИМЕЧАНИЕ: Теперь перезагружает уровень из MapManager
+  const generateRandomLevel = useCallback(async () => {
+    addLog(`Перезагрузка уровня ${player.dungeonLevel}...`, 'info');
 
-    // Очищаем стартовую позицию от врагов/предметов
-    newGrid[startPos.y][startPos.x].enemy = null;
-    newGrid[startPos.y][startPos.x].item = null;
+    // Удаляем текущий уровень из истории чтобы он перезагрузился
+    setLevelHistory(prev => {
+      const newHistory = { ...prev };
+      delete newHistory[player.dungeonLevel];
+      return newHistory;
+    });
 
-    setGrid(newGrid);
-    setPlayer(p => ({ ...p, x: startPos.x, y: startPos.y }));
+    // Перезагружаем через generateDungeon
+    await generateDungeon(player.dungeonLevel);
 
-    // Обновляем историю уровней
-    setLevelHistory(prev => ({
-      ...prev,
-      [player.dungeonLevel]: newGrid
-    }));
-
-    addLog(`Сгенерировано новое подземелье для этажа ${player.dungeonLevel}.`, 'info');
-  }, [addLog, player.dungeonLevel]);
+    addLog(`Уровень ${player.dungeonLevel} перезагружен.`, 'info');
+  }, [addLog, player.dungeonLevel, generateDungeon]);
 
   const selectClass = useCallback((classType: ClassType, name: string, campaign?: DungeonCampaign) => {
     const stats = CLASSES[classType];

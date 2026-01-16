@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Map as MapIcon,
   Settings,
@@ -9,7 +9,6 @@ import {
   Sword,
   Shield,
   FlaskConical,
-  LayoutGrid,
   Coins,
   Wrench,
   Plus,
@@ -20,8 +19,6 @@ import {
   Info,
   Dices,
   RotateCcw,
-  Paintbrush,
-  Users,
 } from "lucide-react";
 import type { GameMode, LogEntry } from "../../types";
 import { ToolButton } from "../ui/ToolButton";
@@ -29,13 +26,6 @@ import { GEAR_STATS } from "../../constants";
 import { EventLog } from "../game/EventLog";
 import { MusicPlayer } from "../ui/MusicPlayer";
 import { useIsMobile } from "../../hooks/useMediaQuery";
-import { TilesetPicker } from "./TilesetPicker";
-import { BrushSizePicker } from "./BrushSizePicker";
-import { LogicBrushPanel, type BrushMode, type BrushShape } from "./LogicBrushPanel";
-import { EntityPlacer } from "./EntityPlacer";
-import { EventBridge } from "../../excalibur/utils/EventBridge";
-import type { EntityConfig, TriggerType } from "../../excalibur/config/TilesetConfig";
-import type { TimeLayer } from "../../types";
 
 // Вертикальная кнопка таба для мобильных
 const MobileTabBtn = ({
@@ -81,7 +71,7 @@ interface SidebarProps {
   isEditorRoute: boolean;
 }
 
-type TabType = "structure" | "logic" | "entities" | "loot" | "utils";
+type TabType = "loot" | "utils";
 
 export const Sidebar: React.FC<SidebarProps> = ({
   mode,
@@ -104,28 +94,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowTutorial,
   isEditorRoute,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>("structure");
-  const [brushSize, setBrushSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
+  const [activeTab, setActiveTab] = useState<TabType>("loot");
   const isMobile = useIsMobile();
-
-  // === Logic Brush State ===
-  const [brushMode, setBrushMode] = useState<BrushMode>('tile');
-  const [logicBrushSize, setLogicBrushSize] = useState(1);
-  const [brushShape, setBrushShape] = useState<BrushShape>('square');
-  const [passabilityValue, setPassabilityValue] = useState(false);
-  const [selectedTrigger, setSelectedTrigger] = useState<TriggerType>('on_enter');
-  const [selectedTimeLayer, setSelectedTimeLayer] = useState<TimeLayer>('present');
-
-  // === Entity Placer State ===
-  const [selectedEntity, setSelectedEntity] = useState<EntityConfig | null>(null);
-  const [placedEntities, setPlacedEntities] = useState<EntityConfig[]>([]);
-
-  // Стабильный колбек для BrushSizePicker (предотвращает бесконечный цикл)
-  const handleBrushSizeChange = useCallback((width: number, height: number) => {
-    console.log('[Sidebar] BrushSizePicker selected:', { width, height });
-    setBrushSize({ width, height });
-    EventBridge.emitBrushSizeChanged(width, height);
-  }, []);
 
   const renderTabButton = (
     id: TabType,
@@ -184,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isMobile ? "text-sm" : "text-lg"
                 }`}
               >
-                Vaultwarden
+                Aetheria: The Cat’s Codex
               </h1>
               <span
                 className={`text-slate-500 ${
@@ -255,13 +225,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className={`flex flex-1 w-full min-h-0 ${isMobile ? "" : "flex-col"}`}>
             {!isMobile && (
               <div className="flex shrink-0 bg-slate-950 border-b border-slate-800">
-                {renderTabButton(
-                  "structure",
-                  <LayoutGrid size={18} />,
-                  "Тайлы"
-                )}
-                {renderTabButton("logic", <Paintbrush size={18} />, "Логика")}
-                {renderTabButton("entities", <Users size={18} />, "Сущности")}
                 {renderTabButton("loot", <Coins size={18} />, "Лут")}
                 {renderTabButton("utils", <Wrench size={18} />, "Разное")}
               </div>
@@ -269,88 +232,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
               <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                {activeTab === "structure" && (
-                  <div className="space-y-4">
-                    <div>
-                      <BrushSizePicker onSelectBrushSize={handleBrushSizeChange} />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">
-                        Выбор тайла из тайлсета
-                      </h3>
-                      <TilesetPicker
-                        brushSize={brushSize}
-                        onSelectTile={(tilesetId, tiles) => {
-                          console.log(`[Sidebar] TilesetPicker selected ${tiles.length} tiles from ${tilesetId}:`, tiles);
-                          EventBridge.emitTilesetTileSelected({ tilesetId, tiles });
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "logic" && (
-                  <div className="space-y-4">
-                    <LogicBrushPanel
-                      brushMode={brushMode}
-                      brushSize={logicBrushSize}
-                      brushShape={brushShape}
-                      passabilityValue={passabilityValue}
-                      selectedTrigger={selectedTrigger}
-                      selectedTimeLayer={selectedTimeLayer}
-                      onBrushModeChange={(mode) => {
-                        setBrushMode(mode);
-                        console.log('[Sidebar] Brush mode changed:', mode);
-                        EventBridge.emit('brushModeChanged', { mode });
-                      }}
-                      onBrushSizeChange={(size) => {
-                        setLogicBrushSize(size);
-                        console.log('[Sidebar] Logic brush size changed:', size);
-                        EventBridge.emit('logicBrushSizeChanged', { size });
-                      }}
-                      onBrushShapeChange={(shape) => {
-                        setBrushShape(shape);
-                        console.log('[Sidebar] Brush shape changed:', shape);
-                        EventBridge.emit('brushShapeChanged', { shape });
-                      }}
-                      onPassabilityChange={(value) => {
-                        setPassabilityValue(value);
-                        console.log('[Sidebar] Passability value changed:', value);
-                        EventBridge.emit('passabilityValueChanged', { value });
-                      }}
-                      onTriggerSelect={(trigger) => {
-                        setSelectedTrigger(trigger ?? 'on_enter');
-                        console.log('[Sidebar] Trigger changed:', trigger);
-                        EventBridge.emit('triggerChanged', { trigger });
-                      }}
-                      onTimeLayerSelect={(layer) => {
-                        setSelectedTimeLayer(layer);
-                        console.log('[Sidebar] Time layer changed:', layer);
-                        EventBridge.emit('timeLayerChanged', { layer });
-                      }}
-                    />
-                  </div>
-                )}
-
-                {activeTab === "entities" && (
-                  <div className="space-y-4">
-                    <EntityPlacer
-                      selectedEntity={selectedEntity}
-                      onEntitySelect={(entity) => {
-                        setSelectedEntity(entity);
-                        console.log('[Sidebar] Entity selected:', entity);
-                        EventBridge.emit('entitySelected', { entity });
-                      }}
-                      placedEntities={placedEntities}
-                      onEntityRemove={(entityId) => {
-                        setPlacedEntities(prev => prev.filter(e => e.entityId !== entityId));
-                        console.log('[Sidebar] Entity removed:', entityId);
-                        EventBridge.emit('entityRemoved', { entityId });
-                      }}
-                    />
-                  </div>
-                )}
-
                 {activeTab === "loot" && (
                   <div className="space-y-4">
                     <div className="mb-2">
@@ -609,21 +490,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {isMobile && (
               <div className="flex flex-col gap-1 p-1 bg-slate-950 border-l border-slate-800">
-                <MobileTabBtn
-                  active={activeTab === "structure"}
-                  onClick={() => setActiveTab("structure")}
-                  icon={<LayoutGrid size={16} />}
-                />
-                <MobileTabBtn
-                  active={activeTab === "logic"}
-                  onClick={() => setActiveTab("logic")}
-                  icon={<Paintbrush size={16} />}
-                />
-                <MobileTabBtn
-                  active={activeTab === "entities"}
-                  onClick={() => setActiveTab("entities")}
-                  icon={<Users size={16} />}
-                />
                 <MobileTabBtn
                   active={activeTab === "loot"}
                   onClick={() => setActiveTab("loot")}

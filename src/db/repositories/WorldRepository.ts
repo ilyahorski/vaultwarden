@@ -1,4 +1,4 @@
-import { gameDB, type WorldTile, type TimeLayer } from '../GameDatabase';
+import { gameDB, type WorldTile, type TimeLayer, type MapDefinition } from '../GameDatabase';
 import type { CellData, CellType, ItemType, EnemyType } from '../../types';
 
 /**
@@ -8,15 +8,22 @@ export class WorldRepository {
   /**
    * Конвертация CellData в WorldTile для хранения
    */
-  static cellDataToWorldTile(cell: CellData, timeLayer: TimeLayer = 'present'): Omit<WorldTile, 'id'> {
+  static cellDataToWorldTile(
+    cell: CellData,
+    timeLayer: TimeLayer = 'present',
+    mapId: string = 'world'
+  ): Omit<WorldTile, 'id'> {
     return {
+      mapId,
       x: cell.x,
       y: cell.y,
       type: cell.type,
       tilesetX: cell.tilesetX,
       tilesetY: cell.tilesetY,
       tilesetSource: cell.tilesetSource,
-      passable: !['wall', 'water', 'lava'].includes(cell.type),
+      passable: cell.passable !== undefined
+        ? cell.passable
+        : !['wall', 'water', 'lava'].includes(cell.type),
       item: cell.item,
       enemy: cell.enemy,
       enemyHp: cell.enemyHp,
@@ -37,6 +44,7 @@ export class WorldRepository {
       tilesetX: tile.tilesetX,
       tilesetY: tile.tilesetY,
       tilesetSource: tile.tilesetSource,
+      passable: tile.passable,
       item: tile.item as ItemType,
       enemy: tile.enemy as EnemyType,
       enemyHp: tile.enemyHp,
@@ -51,11 +59,12 @@ export class WorldRepository {
   static async loadWorldMap(
     width: number,
     height: number,
-    timeLayer: TimeLayer = 'present'
+    timeLayer: TimeLayer = 'present',
+    mapId: string = 'world'
   ): Promise<CellData[][]> {
     const tiles = await gameDB.worldState
-      .where('timeLayer')
-      .equals(timeLayer)
+      .where('[mapId+timeLayer]')
+      .equals([mapId, timeLayer])
       .toArray();
 
     // Создаем пустую сетку
@@ -89,18 +98,22 @@ export class WorldRepository {
    */
   static async saveWorldMap(
     grid: CellData[][],
-    timeLayer: TimeLayer = 'present'
+    timeLayer: TimeLayer = 'present',
+    mapId: string = 'world'
   ): Promise<void> {
     const tiles: Omit<WorldTile, 'id'>[] = [];
 
     for (let y = 0; y < grid.length; y++) {
       for (let x = 0; x < grid[y].length; x++) {
-        tiles.push(this.cellDataToWorldTile(grid[y][x], timeLayer));
+        tiles.push(this.cellDataToWorldTile(grid[y][x], timeLayer, mapId));
       }
     }
 
-    // Очищаем старые данные для этого слоя
-    await gameDB.worldState.where('timeLayer').equals(timeLayer).delete();
+    // Очищаем старые данные для этого слоя и карты
+    await gameDB.worldState
+      .where('[mapId+timeLayer]')
+      .equals([mapId, timeLayer])
+      .delete();
 
     // Записываем новые данные батчами по 10000
     const BATCH_SIZE = 10000;
@@ -117,9 +130,10 @@ export class WorldRepository {
     x: number,
     y: number,
     updates: Partial<CellData>,
-    timeLayer: TimeLayer = 'present'
+    timeLayer: TimeLayer = 'present',
+    mapId: string = 'world'
   ): Promise<void> {
-    const tile = await gameDB.getTile(x, y, timeLayer);
+    const tile = await gameDB.getTile(x, y, timeLayer, mapId);
     if (tile?.id) {
       await gameDB.worldState.update(tile.id, {
         ...updates,
@@ -136,9 +150,10 @@ export class WorldRepository {
     startY: number,
     width: number,
     height: number,
-    timeLayer: TimeLayer = 'present'
+    timeLayer: TimeLayer = 'present',
+    mapId: string = 'world'
   ): Promise<CellData[][]> {
-    const tiles = await gameDB.getTilesInViewport(startX, startY, width, height, timeLayer);
+    const tiles = await gameDB.getTilesInViewport(startX, startY, width, height, timeLayer, mapId);
 
     // Создаем локальную сетку
     const grid: CellData[][] = [];
@@ -172,16 +187,16 @@ export class WorldRepository {
   /**
    * Проверить существование мира в БД
    */
-  static async hasWorldData(): Promise<boolean> {
-    const count = await gameDB.worldState.count();
+  static async hasWorldData(mapId: string = 'world'): Promise<boolean> {
+    const count = await gameDB.worldState.where('mapId').equals(mapId).count();
     return count > 0;
   }
 
   /**
    * Получить размеры сохраненного мира
    */
-  static async getWorldDimensions(): Promise<{ width: number; height: number } | null> {
-    const tiles = await gameDB.worldState.toArray();
+  static async getWorldDimensions(mapId: string = 'world'): Promise<{ width: number; height: number } | null> {
+    const tiles = await gameDB.worldState.where('mapId').equals(mapId).toArray();
     if (tiles.length === 0) return null;
 
     let maxX = 0;
@@ -192,6 +207,60 @@ export class WorldRepository {
     }
 
     return { width: maxX + 1, height: maxY + 1 };
+  }
+
+  // --- Методы для работы с множественными картами ---
+
+  /**
+   * Сохранить карту для конкретного уровня
+   */
+  static async saveMap(
+    mapId: string,
+    mapName: string,
+    grid: CellData[][],
+    timeLayer: TimeLayer = 'present'
+  ): Promise<void> {
+    // Сохранить MapDefinition
+    await gameDB.upsertMap({
+      mapId,
+      name: mapName,
+      width: grid[0]?.length || 0,
+      height: grid.length,
+      tileSize: 16,
+      created: new Date(),
+      modified: new Date(),
+    });
+
+    // Сохранить тайлы
+    await this.saveWorldMap(grid, timeLayer, mapId);
+  }
+
+  /**
+   * Загрузить карту конкретного уровня
+   */
+  static async loadMap(
+    mapId: string,
+    timeLayer: TimeLayer = 'present'
+  ): Promise<{ mapDef: MapDefinition; grid: CellData[][] } | null> {
+    const mapDef = await gameDB.getMap(mapId);
+    if (!mapDef) return null;
+
+    const grid = await this.loadWorldMap(mapDef.width, mapDef.height, timeLayer, mapId);
+    return { mapDef, grid };
+  }
+
+  /**
+   * Получить список всех карт
+   */
+  static async getAllMaps(): Promise<MapDefinition[]> {
+    return await gameDB.getAllMaps();
+  }
+
+  /**
+   * Удалить карту
+   */
+  static async deleteMap(mapId: string): Promise<void> {
+    await gameDB.deleteMap(mapId);
   }
 }
 

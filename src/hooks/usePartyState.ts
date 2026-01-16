@@ -15,7 +15,7 @@ import type {
 } from '../types';
 import { INITIAL_PARTY, GRID_SIZE } from '../constants';
 import { createLogEntry, createEmptyGrid } from '../utils';
-import { generateWorldMapGrid } from '../utils/townGenerator';
+import { MapManager } from '../managers/MapManager';
 import { gameDB, WorldRepository, InventoryRepository, StoryFlagRepository } from '../db';
 
 interface UsePartyStateProps {
@@ -263,25 +263,66 @@ export const usePartyState = ({ initialMode = 'player' }: UsePartyStateProps = {
     // Очищаем старые данные
     await gameDB.clearAllData();
 
-    // Генерируем начальную карту мира
-    const worldGrid = generateWorldMapGrid(201, 152);
+    // Загружаем начальную карту мира через MapManager
+    try {
+      const mapData = await MapManager.loadMap('world', '/maps/interdest_map.json');
+      console.log(`[startNewGame] Loaded world map: ${mapData.width}x${mapData.height}`);
 
-    // Устанавливаем начальные позиции
-    const halfSize = Math.floor(GRID_SIZE / 2);
-    newParty.hero.x = halfSize;
-    newParty.hero.y = halfSize;
-    newParty.cat.x = halfSize + 1;
-    newParty.cat.y = halfSize;
+      // Для party mode используется полная карта, а не viewport
+      // Извлекаем viewport для совместимости с GRID_SIZE
+      const halfSize = Math.floor(GRID_SIZE / 2);
+      const centerX = Math.floor(mapData.width / 2);
+      const centerY = Math.floor(mapData.height / 2);
 
-    // Сохраняем карту в IndexedDB
-    await WorldRepository.saveWorldMap(worldGrid, 'present');
+      // Извлекаем viewport вокруг центра
+      let offsetX = centerX - halfSize;
+      let offsetY = centerY - halfSize;
+      if (offsetX < 0) offsetX = 0;
+      if (offsetY < 0) offsetY = 0;
+      if (offsetX + GRID_SIZE > mapData.width) offsetX = mapData.width - GRID_SIZE;
+      if (offsetY + GRID_SIZE > mapData.height) offsetY = mapData.height - GRID_SIZE;
 
-    setParty(newParty);
-    setGrid(worldGrid);
-    setHasStartedGame(true);
-    setCurrentTimeLayer('present');
+      const worldGrid: CellData[][] = [];
+      for (let y = 0; y < GRID_SIZE; y++) {
+        worldGrid[y] = [];
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const globalX = offsetX + x;
+          const globalY = offsetY + y;
+          if (globalY < mapData.height && globalX < mapData.width) {
+            worldGrid[y][x] = mapData.grid[globalY][globalX];
+          } else {
+            worldGrid[y][x] = {
+              x, y, type: 'water', item: null, enemy: null, isRevealed: false, isVisible: false
+            };
+          }
+        }
+      }
 
-    addLog(`${heroName || 'Археолог'} и ${catName || 'Кот-учёный'} начинают своё путешествие!`, 'info');
+      // Устанавливаем начальные позиции в центре viewport
+      newParty.hero.x = halfSize;
+      newParty.hero.y = halfSize;
+      newParty.cat.x = halfSize + 1;
+      newParty.cat.y = halfSize;
+
+      // Сохраняем карту в IndexedDB
+      await WorldRepository.saveWorldMap(worldGrid, 'present', 'world');
+
+      setParty(newParty);
+      setGrid(worldGrid);
+      setHasStartedGame(true);
+      setCurrentTimeLayer('present');
+
+      addLog(`${heroName || 'Археолог'} и ${catName || 'Кот-учёный'} начинают своё путешествие!`, 'info');
+    } catch (error) {
+      console.error('[startNewGame] Failed to load world map:', error);
+      addLog('Ошибка загрузки карты мира!', 'fail');
+      // Используем пустую сетку как fallback
+      const emptyGrid = createEmptyGrid();
+      setParty(newParty);
+      setGrid(emptyGrid);
+      setHasStartedGame(true);
+      setCurrentTimeLayer('present');
+    }
   }, [addLog]);
 
   // --- Переключение активного персонажа ---

@@ -121,6 +121,24 @@ export const PRELOADED_TILESETS: TilesetConfig[] = [
     src: '/maps/open_world_tiles/VillageInterior_Rugs.png',
     name: 'Interior Rugs',
     description: 'Ковры для интерьера'
+  },
+
+  // ЛОГИЧЕСКИЕ ТАЙЛСЕТЫ (для редактора)
+  // ПРИМЕЧАНИЕ: PNG файлы нужно создать вручную (см. план)
+  {
+    src: '/tilesets/logic/collision.png',
+    name: 'Collision Layer',
+    description: 'Коллизии и проходимость (4 тайла: прозрачный, красный=непроходимый, желтый=частично, зеленый=проходимый)'
+  },
+  {
+    src: '/tilesets/logic/triggers.png',
+    name: 'Triggers Layer',
+    description: 'Триггеры и интерактивные зоны (8 тайлов: bonfire, trap, lava, merchant, portal, chest, npc_spawn, enemy_spawn)'
+  },
+  {
+    src: '/tilesets/logic/time_layers.png',
+    name: 'Time Layers',
+    description: 'Временные слои (3 тайла: past=янтарный, present=зеленый, future=фиолетовый)'
   }
 ];
 
